@@ -516,10 +516,8 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Connect to server - UPDATE THIS URL after deploying to Render
-        // For local testing: io()
-        // For production: io('https://your-server-name.onrender.com')
-        const socket = io('https://ronnyio-server.onrender.com'); // Change this to your Render URL when deployed
+        // Connect to server - Render deployment
+        const socket = io('https://ronny-io.onrender.com');
         
         // Set canvas size
         canvas.width = window.innerWidth;
