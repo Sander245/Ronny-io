@@ -464,6 +464,10 @@ class Player extends GameObject {
 
     getMoveSpeed() {
         const tankConfig = TANK_TYPES[this.tankType];
+        if (!tankConfig) {
+            console.warn(`[PLAYER] Warning: Tank config not found for ${this.tankType}, using default speed`);
+            return 3; // Default speed
+        }
         const bonus = tankConfig.speedBonus || 1;
         return (3 + this.stats.movementSpeed * 0.3) * bonus;
     }

@@ -3458,7 +3458,7 @@
             // If in game, leave it before opening editor (despawn)
             if (playerId) {
                 console.log('[EDITOR] Leaving game before opening editor');
-                socket.emit('leaveGame');
+                socket.emit('playerLeaveGame');
                 playerId = null;
                 document.getElementById('hud').classList.remove('visible');
             }
@@ -3806,16 +3806,18 @@
                 // Leave game (despawn)
                 if (playerId) {
                     console.log('[TEST MODE] Leaving game');
-                    socket.emit('leaveGame');
+                    socket.emit('playerLeaveGame');
                     playerId = null;
                 }
                 
-                // Clean up test tank from server
-                console.log('[TEST MODE] Clearing test tank from server');
-                socket.emit('clearTestTank', testTankName);
-                
-                // Clean up local test tank
-                delete tankTypes[testTankName];
+                // Clean up test tank from server after a delay to allow game loop to finish
+                setTimeout(() => {
+                    console.log('[TEST MODE] Clearing test tank from server');
+                    socket.emit('clearTestTank', testTankName);
+                    
+                    // Clean up local test tank
+                    delete tankTypes[testTankName];
+                }, 500);
                 
                 // Return to builder (stay despawned)
                 document.getElementById('hud').classList.remove('visible');
