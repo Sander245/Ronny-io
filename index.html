@@ -1578,6 +1578,9 @@
         }
 
         function drawTank(player) {
+            // Don't draw if tank types haven't loaded yet
+            if (!tankTypes) return;
+            
             const screen = worldToScreen(player.x, player.y);
             const size = player.size * camera.zoom;
             
@@ -1589,7 +1592,7 @@
             ctx.translate(screen.x, screen.y);
 
             // Get tank config
-            const tankConfig = tankTypes ? tankTypes[player.tankType] : null;
+            const tankConfig = tankTypes[player.tankType];
 
             // LAYER 0: Draw guns first (so they appear under the base)
             if (tankConfig && tankConfig.guns) {
