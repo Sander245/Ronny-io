@@ -3455,7 +3455,7 @@
 
         // Open/Close Tank Editor
         document.getElementById('openTankEditorBtn').addEventListener('click', () => {
-            // If in game, leave it before opening editor
+            // If in game, leave it before opening editor (despawn)
             if (playerId) {
                 console.log('[EDITOR] Leaving game before opening editor');
                 socket.emit('leaveGame');
@@ -3463,15 +3463,21 @@
                 document.getElementById('hud').classList.remove('visible');
             }
             
+            // Open editor, hide menus (stay despawned)
             document.getElementById('tankEditor').style.display = 'block';
-            document.getElementById('startMenu').classList.remove('hidden');
+            document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('cheatPanel').style.display = 'none';
             cheatPanelActive = false;
+            
+            // Initialize editor UI
             populateBlockList();
             updateCurrentBlocksList();
             updateBladesList();
             updateBaseBlocksList();
+            updatePropertiesPanel();
             renderEditorCanvas();
+            
+            console.log('[EDITOR] Editor opened (despawned)');
         });
 
         // Base Mode Handler
@@ -3567,16 +3573,14 @@
                 updateBaseBlocksList();
                 updatePropertiesPanel();
                 renderEditorCanvas();
+                
+                // Close editor and return to main menu
                 document.getElementById('tankEditor').style.display = 'none';
+                document.getElementById('startMenu').classList.remove('hidden');
             }
         });
 
         document.getElementById('editorSaveBtn').addEventListener('click', () => {
-            if (editorState.blocks.length === 0) {
-                alert('Add at least one block before saving!');
-                return;
-            }
-            
             // Populate tank selector
             const tankSelectorGrid = document.getElementById('tankSelectorGrid');
             tankSelectorGrid.innerHTML = '';
@@ -3714,16 +3718,9 @@
             };
         });
 
-        // Test Area
-        // Test Area - Now uses real game with temporary tank
+        // Test Area - Spawn into game with temporary tank
         document.getElementById('editorTestBtn').addEventListener('click', () => {
             console.log('[TEST MODE] Test button clicked');
-            
-            if (editorState.blocks.length === 0) {
-                alert('Add at least one gun before testing!');
-                console.log('[TEST MODE] No guns added, aborting');
-                return;
-            }
             
             // Create temporary tank config matching tankUpgrades.json format
             const testTankName = '__TEST_TANK__' + Date.now();
@@ -3767,47 +3764,29 @@
             tankTypes[testTankName] = testTankConfig;
             console.log('[TEST MODE] Added to local tankTypes');
             
-            // Hide editor and menus
+            // Hide editor, show game
             document.getElementById('tankEditor').style.display = 'none';
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('hud').classList.add('visible');
             console.log('[TEST MODE] UI updated');
             
-            // Store current tank type to restore later
-            const originalTankType = playerId ? gameState.players.find(p => p.id === playerId)?.tankType : null;
-            const wasInGame = playerId !== null;
+            // Join game with test tank
+            console.log('[TEST MODE] Joining game with test tank...');
+            socket.emit('joinGame', 'Test Player');
             
-            console.log('[TEST MODE] Original tank type:', originalTankType);
-            console.log('[TEST MODE] Was in game:', wasInGame);
-            
-            // If not in game, join game first, otherwise just upgrade
-            if (!playerId) {
-                console.log('[TEST MODE] Not in game, joining...');
-                // Join game with test mode flag
-                socket.emit('joinGame', 'Test Player');
-                
-                // Wait for playerJoined event, then upgrade
-                const joinHandler = (data) => {
-                    console.log('[TEST MODE] Player joined, received data:', data);
-                    playerId = data.id;
-                    console.log('[TEST MODE] Set playerId to:', playerId);
-                    console.log('[TEST MODE] Waiting 500ms before upgrading...');
-                    setTimeout(() => {
-                        console.log('[TEST MODE] Sending upgradeTank request for:', testTankName);
-                        socket.emit('upgradeTank', testTankName);
-                    }, 500);
-                    socket.off('playerJoined', joinHandler);
-                };
-                socket.on('playerJoined', joinHandler);
-            } else {
-                console.log('[TEST MODE] Already in game, upgrading tank...');
-                // Already in game, just upgrade
+            // Wait for playerJoined event, then upgrade to test tank
+            const joinHandler = (data) => {
+                console.log('[TEST MODE] Player joined, received data:', data);
+                playerId = data.id;
+                console.log('[TEST MODE] Set playerId to:', playerId);
+                console.log('[TEST MODE] Waiting 500ms before upgrading...');
                 setTimeout(() => {
                     console.log('[TEST MODE] Sending upgradeTank request for:', testTankName);
                     socket.emit('upgradeTank', testTankName);
                 }, 500);
-            }
-            
+                socket.off('playerJoined', joinHandler);
+            };
+            socket.on('playerJoined', joinHandler);
             
             // Setup exit handler - Press ESC to exit test mode
             const exitHandler = (e) => {
@@ -3815,7 +3794,7 @@
                 
                 console.log('[TEST MODE] Exiting test mode...');
                 
-                // Leave game entirely
+                // Leave game (despawn)
                 if (playerId) {
                     console.log('[TEST MODE] Leaving game');
                     socket.emit('leaveGame');
@@ -3829,15 +3808,15 @@
                 // Clean up local test tank
                 delete tankTypes[testTankName];
                 
-                // Return to start menu (not editor)
+                // Return to builder (stay despawned)
                 document.getElementById('hud').classList.remove('visible');
-                document.getElementById('startMenu').classList.remove('hidden');
-                document.getElementById('tankEditor').style.display = 'none';
+                document.getElementById('startMenu').classList.add('hidden');
+                document.getElementById('tankEditor').style.display = 'block';
                 
                 // Remove event listener
                 window.removeEventListener('keydown', exitHandler);
                 
-                console.log('[TEST MODE] Test mode ended');
+                console.log('[TEST MODE] Returned to builder (despawned)');
             };
             
             // Add ESC key listener
@@ -3845,7 +3824,7 @@
             
             // Show instruction
             setTimeout(() => {
-                console.log('[TEST MODE] Press ESC to exit test mode');
+                console.log('[TEST MODE] Press ESC to return to builder');
             }, 500);
         });
     </script>
