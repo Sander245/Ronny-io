@@ -241,10 +241,10 @@ class Trap extends GameObject {
         this.rotation = 0;
         this.rotationSpeed = 0.05;
         
-        // Initial movement
-        this.vx = Math.cos(angle) * 3;
-        this.vy = Math.sin(angle) * 3;
-        this.friction = 0.9;
+        // Initial movement - shoot out faster
+        this.vx = Math.cos(angle) * 8; // Increased from 3 to 8
+        this.vy = Math.sin(angle) * 8;
+        this.friction = 0.92; // Slower deceleration (was 0.9)
     }
 
     update() {
@@ -262,12 +262,12 @@ class Trap extends GameObject {
 }
 
 class Minion extends GameObject {
-    constructor(x, y, owner, damage, speed) {
+    constructor(x, y, owner, damage, speed, size = 12) {
         super(x, y);
         this.owner = owner;
         this.damage = damage;
         this.speed = speed * 5;
-        this.size = 12;
+        this.size = size;
         this.health = 30;
         this.maxHealth = 30;
         this.targetX = x;
@@ -760,27 +760,29 @@ function gameLoop() {
                         } else if (gun.type === 'trap') {
                             const maxTraps = gun.maxTraps || 10;
                             const playerTraps = Array.from(traps.values()).filter(t => t.owner === player.id);
+                            const trapSize = (gun.trapSize || 1) * 15; // Base size 15, multiplied by trapSize
                             
                             if (playerTraps.length < maxTraps) {
-                                const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1));
+                                const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
                                 traps.set(trap.id, trap);
                                 player.gunRecoils[gunKey] = 10; // Set recoil animation
                             } else {
                                 // Remove oldest trap
                                 const oldest = playerTraps[0];
                                 traps.delete(oldest.id);
-                                const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1));
+                                const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
                                 traps.set(trap.id, trap);
                                 player.gunRecoils[gunKey] = 10; // Set recoil animation
                             }
                         } else if (gun.type === 'minion') {
                             const count = gun.count || 4;
                             const playerMinions = Array.from(minions.values()).filter(m => m.owner === player.id);
+                            const minionSize = (gun.minionSize || 1) * 12; // Base size 12, multiplied by minionSize
                             
                             if (playerMinions.length < count) {
                                 const minion = new Minion(startX, startY, player.id, 
                                                          player.getBulletDamage() * (gun.damage || 1),
-                                                         gun.speed || 1);
+                                                         gun.speed || 1, minionSize);
                                 minions.set(minion.id, minion);
                                 player.gunRecoils[gunKey] = 10; // Set recoil animation
                             }

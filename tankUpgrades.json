@@ -188,10 +188,10 @@
     "level": 45,
     "baseShape": "circle",
     "guns": [
-      {"type": "minion", "angle": 0, "count": 8, "damage": 1.5, "speed": 1.2},
-      {"type": "minion", "angle": 90, "count": 8, "damage": 1.5, "speed": 1.2},
-      {"type": "minion", "angle": 180, "count": 8, "damage": 1.5, "speed": 1.2},
-      {"type": "minion", "angle": 270, "count": 8, "damage": 1.5, "speed": 1.2}
+      {"type": "minion", "angle": 0, "count": 8, "damage": 1.5, "speed": 1.2, "minionSize": 1.3},
+      {"type": "minion", "angle": 90, "count": 8, "damage": 1.5, "speed": 1.2, "minionSize": 1.3},
+      {"type": "minion", "angle": 180, "count": 8, "damage": 1.5, "speed": 1.2, "minionSize": 1.3},
+      {"type": "minion", "angle": 270, "count": 8, "damage": 1.5, "speed": 1.2, "minionSize": 1.3}
     ],
     "fov": 1.3,
     "upgrades": []
@@ -256,7 +256,7 @@
     "name": "Mega Trapper",
     "level": 30,
     "baseShape": "circle",
-    "guns": [{"type": "trap", "angle": 0, "damage": 2.5, "speed": 0.6, "reload": 0.8, "maxTraps": 10}],
+    "guns": [{"type": "trap", "angle": 0, "damage": 2.5, "speed": 0.6, "reload": 0.8, "maxTraps": 10, "trapSize": 1.8}],
     "fov": 1,
     "upgrades": ["MEGA_TRAPPER_X"]
   },

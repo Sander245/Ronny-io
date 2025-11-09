@@ -665,8 +665,19 @@
                     socket.emit('cheatResetTank');
                     return;
                 }
-                if (e.key >= '1' && e.key <= '8') {
-                    const polygonType = parseInt(e.key);
+                // Handle numbers 1-8 (with shift, these become !, @, #, $, %, ^, &, *)(This may be a little spaghetti but it works)
+                const keyToNumber = {
+                    '1': 1, '!': 1,
+                    '2': 2, '@': 2,
+                    '3': 3, '#': 3,
+                    '4': 4, '$': 4,
+                    '5': 5, '%': 5,
+                    '6': 6, '^': 6,
+                    '7': 7, '&': 7,
+                    '8': 8, '*': 8
+                };
+                if (keyToNumber[e.key]) {
+                    const polygonType = keyToNumber[e.key];
                     socket.emit('cheatSpawnPolygon', { type: polygonType, x: mouseWorldX, y: mouseWorldY });
                     return;
                 }
@@ -1391,6 +1402,24 @@
                         ctx.strokeStyle = '#404040';
                         ctx.lineWidth = 1.5;
                         ctx.strokeRect(baseSize - 3 * scale, -trapSize / 2, trapSize, trapSize);
+                    } else if (gun.type === 'minion') {
+                        // Draw thin diamond/rhombus for minion spawner
+                        const length = 25 * scale;
+                        const width = 12 * scale;
+                        const baseX = baseSize - 5 * scale;
+                        
+                        ctx.fillStyle = '#999';
+                        ctx.strokeStyle = '#404040';
+                        ctx.lineWidth = 1.5;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(baseX, 0); // Back center
+                        ctx.lineTo(baseX + length * 0.3, -width / 2); // Top middle
+                        ctx.lineTo(baseX + length, 0); // Front point
+                        ctx.lineTo(baseX + length * 0.3, width / 2); // Bottom middle
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
                     }
                     
                     ctx.restore();
@@ -1682,7 +1711,7 @@
 
                         ctx.restore();
                     } else if (gun.type === 'minion') {
-                        // Draw spawner/drone barrel for Overlord-like tanks
+                        // Draw spawner/drone barrel as thin diamond/rhombus
                         const gunAngle = gun.angle * Math.PI / 180;
                         const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
@@ -1696,14 +1725,22 @@
                         ctx.strokeStyle = '#404040'; // Dark grey outline
                         ctx.lineWidth = 2 * camera.zoom;
                         
-                        // Draw wider, shorter barrel for spawner
-                        const gunLength = 15 * camera.zoom * sizeMultiplier;
-                        const gunWidth = 25 * camera.zoom * sizeMultiplier;
+                        // Draw thin diamond/rhombus shape pointing outward
+                        const length = 25 * camera.zoom * sizeMultiplier; // Length of diamond
+                        const width = 12 * camera.zoom * sizeMultiplier; // Width at widest point
+                        const baseX = size - 5 * camera.zoom;
                         
                         // Apply recoil offset (pushes gun back)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        ctx.fillRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
-                        ctx.strokeRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(baseX + recoilX, 0); // Back center point
+                        ctx.lineTo(baseX + length * 0.3 + recoilX, -width / 2); // Top middle
+                        ctx.lineTo(baseX + length + recoilX, 0); // Front point
+                        ctx.lineTo(baseX + length * 0.3 + recoilX, width / 2); // Bottom middle
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
 
                         ctx.restore();
                     }
