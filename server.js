@@ -1468,6 +1468,19 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Handle test tank registration
+    socket.on('setTestTank', ({ tankName, config }) => {
+        // Temporarily add test tank to server's TANK_TYPES
+        TANK_TYPES[tankName] = config;
+        console.log(`Test tank ${tankName} registered for testing`);
+    });
+
+    socket.on('clearTestTank', (tankName) => {
+        // Remove test tank from server
+        delete TANK_TYPES[tankName];
+        console.log(`Test tank ${tankName} removed`);
+    });
+
     socket.on('respawn', () => {
         const player = players.get(socket.id);
         if (player && player.health <= 0) {
