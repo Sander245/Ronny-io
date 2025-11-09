@@ -287,15 +287,12 @@
         }
 
         #leaderboard {
-            position: absolute;
-            top: 10px;
-            right: 10px;
             background: rgba(0, 0, 0, 0.7);
             padding: 15px;
             border-radius: 10px;
             color: white;
             min-width: 200px;
-            z-index: 100;
+            margin-bottom: 10px;
         }
 
         #leaderboard.hidden {
@@ -327,6 +324,46 @@
 
         .leaderboard-entry:nth-child(4) {
             color: #CD7F32;
+        }
+
+        #chatContainer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 230px;
+            z-index: 100;
+        }
+
+        #chatMessages {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+            color: white;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .chat-message {
+            margin: 3px 0;
+            word-wrap: break-word;
+        }
+
+        #chatInputBox {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #555;
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        #chatInputBox:focus {
+            outline: none;
+            border-color: #00B2E1;
         }
 
         #minimap {
@@ -473,9 +510,13 @@
         </div>
     </div>
 
-    <div id="leaderboard">
-        <div class="leaderboard-title">Leaderboard</div>
-        <div id="leaderboardList"></div>
+    <div id="chatContainer">
+        <div id="leaderboard">
+            <div class="leaderboard-title">Leaderboard</div>
+            <div id="leaderboardList"></div>
+        </div>
+        <div id="chatMessages"></div>
+        <input type="text" id="chatInputBox" placeholder="Press Enter to chat..." maxlength="100">
     </div>
 
     <div class="controls-help hidden" id="controlsHelp">
@@ -497,7 +538,12 @@
         </div>
         <div><strong>Shift+B</strong> - Max Stats (Level 1000)</div>
         <div><strong>Shift+I</strong> - Toggle Invincibility</div>
-        <div><strong>Shift+T</strong> - Teleport All Players to Cursor</div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <div><strong>Shift+T</strong> - Teleport</div>
+            <button id="tpModeAll" style="padding: 2px 8px; background: #44ff44; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">All</button>
+            <button id="tpModeOthers" style="padding: 2px 8px; background: #666; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">Others</button>
+            <button id="tpModeYou" style="padding: 2px 8px; background: #666; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">You</button>
+        </div>
         <div><strong>Shift+C</strong> - Clear All Polygons</div>
         <div><strong>Shift+A</strong> - Morph to ADMIN Tank</div>
         <div><strong>Shift+1-8</strong> - Spawn Polygon at Cursor</div>
@@ -648,7 +694,7 @@
                     return;
                 }
                 if (e.key === 't' || e.key === 'T') {
-                    socket.emit('cheatTeleportAllPlayers', { x: mouseWorldX, y: mouseWorldY });
+                    socket.emit('cheatTeleportPlayers', { x: mouseWorldX, y: mouseWorldY, mode: teleportMode });
                     return;
                 }
                 if (e.key === 'c' || e.key === 'C') {
@@ -692,32 +738,32 @@
             }
             
             // Toggle health bars with 'n' key
-            if (e.key === 'n' || e.key === 'N') {
+            if (!chatFocused && (e.key === 'n' || e.key === 'N')) {
                 showAllHealthBars = !showAllHealthBars;
                 console.log('Health bars:', showAllHealthBars ? 'ON' : 'OFF');
             }
             
-            if (e.key === 'w' || e.key === 'W') {
+            if (!chatFocused && (e.key === 'w' || e.key === 'W')) {
                 input.moving.up = true;
                 hasMovedOrShot = true;
                 hideHelpIfTimeout();
             }
-            if (e.key === 's' || e.key === 'S') {
+            if (!chatFocused && (e.key === 's' || e.key === 'S')) {
                 input.moving.down = true;
                 hasMovedOrShot = true;
                 hideHelpIfTimeout();
             }
-            if (e.key === 'a' || e.key === 'A') {
+            if (!chatFocused && (e.key === 'a' || e.key === 'A')) {
                 input.moving.left = true;
                 hasMovedOrShot = true;
                 hideHelpIfTimeout();
             }
-            if (e.key === 'd' || e.key === 'D') {
+            if (!chatFocused && (e.key === 'd' || e.key === 'D')) {
                 input.moving.right = true;
                 hasMovedOrShot = true;
                 hideHelpIfTimeout();
             }
-            if (e.key === 'e' || e.key === 'E') {
+            if (!chatFocused && (e.key === 'e' || e.key === 'E')) {
                 if (!keysPressed['e']) {
                     keysPressed['e'] = true;
                     autoFire = !autoFire;
@@ -728,14 +774,14 @@
                     updateControlHighlights();
                 }
             }
-            if (e.key === 'i' || e.key === 'I') {
+            if (!chatFocused && (e.key === 'i' || e.key === 'I')) {
                 if (!keysPressed['i']) {
                     keysPressed['i'] = true;
                     upgradeMenuVisible = !upgradeMenuVisible;
                     updateUIVisibility();
                 }
             }
-            if (e.key === 'h' || e.key === 'H') {
+            if (!chatFocused && (e.key === 'h' || e.key === 'H')) {
                 showingHelp = true;
                 document.getElementById('controlsHelp').classList.remove('hidden');
                 updateControlHighlights();
@@ -756,6 +802,68 @@
                 }
                 updateControlHighlights();
             }
+        });
+
+        // Chat system
+        let chatFocused = false;
+        const chatInputBox = document.getElementById('chatInputBox');
+        const chatMessages = document.getElementById('chatMessages');
+        const maxChatMessages = 20;
+
+        // Focus chat on Enter or click
+        chatInputBox.addEventListener('click', () => {
+            chatFocused = true;
+        });
+
+        chatInputBox.addEventListener('focus', () => {
+            chatFocused = true;
+        });
+
+        chatInputBox.addEventListener('blur', () => {
+            chatFocused = false;
+        });
+
+        // Handle Enter key for chat
+        chatInputBox.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const message = chatInputBox.value.trim();
+                if (message.length > 0) {
+                    // Send chat message to server
+                    socket.emit('chatMessage', message);
+                    chatInputBox.value = '';
+                }
+                chatInputBox.blur();
+                chatFocused = false;
+            } else if (e.key === 'Escape') {
+                chatInputBox.blur();
+                chatFocused = false;
+            }
+        });
+
+        // Listen for Enter key to focus chat (when not already focused)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !chatFocused && playerId) {
+                e.preventDefault();
+                chatInputBox.focus();
+                chatFocused = true;
+            }
+        });
+
+        // Receive chat messages from server
+        socket.on('chatMessage', (data) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.textContent = `${data.name}: ${data.message}`;
+            chatMessages.appendChild(messageDiv);
+            
+            // Remove old messages
+            while (chatMessages.children.length > maxChatMessages) {
+                chatMessages.removeChild(chatMessages.firstChild);
+            }
+            
+            // Auto-scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
         canvas.addEventListener('mousedown', () => {
@@ -966,6 +1074,8 @@
         });
 
         // XP amount control buttons
+        let teleportMode = 'all'; // 'all', 'others', or 'you'
+
         document.getElementById('decreaseXP').addEventListener('click', () => {
             xpAmount = Math.max(1, Math.floor(xpAmount / 2));
             document.getElementById('xpAmount').textContent = xpAmount;
@@ -974,6 +1084,28 @@
         document.getElementById('increaseXP').addEventListener('click', () => {
             xpAmount = Math.min(1000000, xpAmount * 2);
             document.getElementById('xpAmount').textContent = xpAmount;
+        });
+
+        // Teleport mode buttons
+        function updateTeleportButtons() {
+            document.getElementById('tpModeAll').style.background = teleportMode === 'all' ? '#44ff44' : '#666';
+            document.getElementById('tpModeOthers').style.background = teleportMode === 'others' ? '#44ff44' : '#666';
+            document.getElementById('tpModeYou').style.background = teleportMode === 'you' ? '#44ff44' : '#666';
+        }
+
+        document.getElementById('tpModeAll').addEventListener('click', () => {
+            teleportMode = 'all';
+            updateTeleportButtons();
+        });
+
+        document.getElementById('tpModeOthers').addEventListener('click', () => {
+            teleportMode = 'others';
+            updateTeleportButtons();
+        });
+
+        document.getElementById('tpModeYou').addEventListener('click', () => {
+            teleportMode = 'you';
+            updateTeleportButtons();
         });
 
         // Setup upgrade menu

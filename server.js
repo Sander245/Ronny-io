@@ -730,109 +730,88 @@ function gameLoop() {
         // Shooting
         if (player.shooting) {
             const now = Date.now();
-            const reloadTime = 500 / player.getReloadSpeed();
-            
             const tankConfig = TANK_TYPES[player.tankType];
             
-            // Check if reload cycle is complete
-            if (now >= player.lastShot + reloadTime) {
-                // Mark that we're starting a new reload cycle (only once per cycle)
-                const newCycleStarted = !player.currentCycleStart || player.currentCycleStart < player.lastShot + reloadTime;
-                if (newCycleStarted) {
-                    player.currentCycleStart = now; // Set to current time so delays work properly
-                }
+            tankConfig.guns.forEach((gun, gunIndex) => {
+                // Each gun has its own reload time based on gun.reload multiplier
+                const gunReloadTime = (500 / player.getReloadSpeed()) / (gun.reload || 1);
+                const gunDelay = (gun.delay || 0) * 1000;
+                const gunKey = `gun_${gunIndex}`;
+                const lastGunShot = player.gunCooldowns[gunKey] || 0;
                 
-                tankConfig.guns.forEach((gun, gunIndex) => {
-                    const gunDelay = (gun.delay || 0) * 1000;
-                    const gunKey = `gun_${gunIndex}`;
-                    const lastGunShot = player.gunCooldowns[gunKey] || 0;
+                // Check if this gun's reload time has passed
+                if (now >= lastGunShot + gunReloadTime) {
+                    const gunAngle = player.rotation + (gun.angle * Math.PI / 180);
+                    const offsetX = gun.offsetX || 0;
+                    const offsetY = gun.offsetY || 0;
                     
-                    // Check if this gun's specific delay has passed
-                    const gunReadyTime = player.currentCycleStart + gunDelay;
+                    const startX = player.x + Math.cos(gunAngle) * (player.size + 10) + 
+                                   Math.cos(gunAngle + Math.PI/2) * offsetY +
+                                   Math.cos(gunAngle) * offsetX;
+                    const startY = player.y + Math.sin(gunAngle) * (player.size + 10) + 
+                                   Math.sin(gunAngle + Math.PI/2) * offsetY +
+                                   Math.sin(gunAngle) * offsetX;
                     
-                    // Fire if ready and hasn't fired this cycle yet
-                    if (now >= gunReadyTime && lastGunShot < player.currentCycleStart) {
-                        const gunAngle = player.rotation + (gun.angle * Math.PI / 180);
-                        const offsetX = gun.offsetX || 0;
-                        const offsetY = gun.offsetY || 0;
+                    if (gun.type === 'normal') {
+                        const spread = gun.spread || 0;
+                        const actualAngle = gunAngle + (Math.random() - 0.5) * spread;
+                        const bulletSpeed = player.getBulletSpeed() * (gun.speed || 1);
+                        const bulletDamage = player.getBulletDamage() * (gun.damage || 1);
+                        // Bullet size scales with player size: base 8 * gun.size * player size factor
+                        const playerSizeFactor = player.size / 20; // Base size is 20, so at level 0 it's 1x
+                        const bulletSize = 8 * (gun.size || 1) * playerSizeFactor;
+                        const bulletHealth = player.getBulletHealth();
                         
-                        const startX = player.x + Math.cos(gunAngle) * (player.size + 10) + 
-                                       Math.cos(gunAngle + Math.PI/2) * offsetY +
-                                       Math.cos(gunAngle) * offsetX;
-                        const startY = player.y + Math.sin(gunAngle) * (player.size + 10) + 
-                                       Math.sin(gunAngle + Math.PI/2) * offsetY +
-                                       Math.sin(gunAngle) * offsetX;
+                        const bullet = new Bullet(startX, startY, actualAngle, player.id, 
+                                                 bulletDamage, bulletSpeed, bulletSize, bulletHealth);
+                        bullets.set(bullet.id, bullet);
                         
-                        if (gun.type === 'normal') {
-                            const spread = gun.spread || 0;
-                            const actualAngle = gunAngle + (Math.random() - 0.5) * spread;
-                            const bulletSpeed = player.getBulletSpeed() * (gun.speed || 1);
-                            const bulletDamage = player.getBulletDamage() * (gun.damage || 1);
-                            // Bullet size scales with player size: base 8 * gun.size * player size factor
-                            const playerSizeFactor = player.size / 20; // Base size is 20, so at level 0 it's 1x
-                            const bulletSize = 8 * (gun.size || 1) * playerSizeFactor;
-                            const bulletHealth = player.getBulletHealth();
-                            
-                            const bullet = new Bullet(startX, startY, actualAngle, player.id, 
-                                                     bulletDamage, bulletSpeed, bulletSize, bulletHealth);
-                            bullets.set(bullet.id, bullet);
-                            
-                            // Set gun recoil animation (10 pixels pushback)
-                            player.gunRecoils[gunKey] = 10;
-                            
-                            // Recoil from shooting
-                            const recoil = gun.recoil || 0;
-                            const shootingKnockback = 0.3; // Slight knockback from firing
-                            const totalKnockback = recoil + shootingKnockback;
-                            if (totalKnockback > 0) {
-                                player.vx -= Math.cos(gunAngle) * totalKnockback;
-                                player.vy -= Math.sin(gunAngle) * totalKnockback;
-                            }
-                        } else if (gun.type === 'trap') {
-                            const maxTraps = gun.maxTraps || 10;
-                            const playerTraps = Array.from(traps.values()).filter(t => t.owner === player.id);
-                            const trapSize = (gun.trapSize || 1) * 15; // Base size 15, multiplied by trapSize
-                            
-                            if (playerTraps.length < maxTraps) {
-                                const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
-                                traps.set(trap.id, trap);
-                                player.gunRecoils[gunKey] = 10; // Set recoil animation
-                            } else {
-                                // Remove oldest trap
-                                const oldest = playerTraps[0];
-                                traps.delete(oldest.id);
-                                const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
-                                traps.set(trap.id, trap);
-                                player.gunRecoils[gunKey] = 10; // Set recoil animation
-                            }
-                        } else if (gun.type === 'minion') {
-                            const count = gun.count || 4;
-                            const playerMinions = Array.from(minions.values()).filter(m => m.owner === player.id);
-                            const minionSize = (gun.minionSize || 1) * 12; // Base size 12, multiplied by minionSize
-                            
-                            if (playerMinions.length < count) {
-                                const minion = new Minion(startX, startY, player.id, 
-                                                         player.getBulletDamage() * (gun.damage || 1),
-                                                         gun.speed || 1, minionSize);
-                                minions.set(minion.id, minion);
-                                player.gunRecoils[gunKey] = 10; // Set recoil animation
-                            }
+                        // Set gun recoil animation (10 pixels pushback)
+                        player.gunRecoils[gunKey] = 10;
+                        
+                        // Recoil from shooting
+                        const recoil = gun.recoil || 0;
+                        const shootingKnockback = 0.3; // Slight knockback from firing
+                        const totalKnockback = recoil + shootingKnockback;
+                        if (totalKnockback > 0) {
+                            player.vx -= Math.cos(gunAngle) * totalKnockback;
+                            player.vy -= Math.sin(gunAngle) * totalKnockback;
                         }
+                    } else if (gun.type === 'trap') {
+                        const maxTraps = gun.maxTraps || 10;
+                        const playerTraps = Array.from(traps.values()).filter(t => t.owner === player.id);
+                        const trapSize = (gun.trapSize || 1) * 15; // Base size 15, multiplied by trapSize
                         
-                        // Update this gun's cooldown
-                        player.gunCooldowns[gunKey] = now;
+                        if (playerTraps.length < maxTraps) {
+                            const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
+                            traps.set(trap.id, trap);
+                            player.gunRecoils[gunKey] = 10; // Set recoil animation
+                        } else {
+                            // Remove oldest trap
+                            const oldest = playerTraps[0];
+                            traps.delete(oldest.id);
+                            const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
+                            traps.set(trap.id, trap);
+                            player.gunRecoils[gunKey] = 10; // Set recoil animation
+                        }
+                    } else if (gun.type === 'minion') {
+                        const count = gun.count || 4;
+                        const playerMinions = Array.from(minions.values()).filter(m => m.owner === player.id);
+                        const minionSize = (gun.minionSize || 1) * 12; // Base size 12, multiplied by minionSize
+                        
+                        if (playerMinions.length < count) {
+                            const minion = new Minion(startX, startY, player.id, 
+                                                     player.getBulletDamage() * (gun.damage || 1),
+                                                     gun.speed || 1, minionSize);
+                            minions.set(minion.id, minion);
+                            player.gunRecoils[gunKey] = 10; // Set recoil animation
+                        }
                     }
-                });
-                
-                // After all guns have had a chance to fire, update lastShot to start next reload
-                const allGunsFired = tankConfig.guns.every((gun, idx) => {
-                    const gunKey = `gun_${idx}`;
-                    return player.gunCooldowns[gunKey] >= player.currentCycleStart;
-                });
-                if (allGunsFired) {
-                    player.lastShot = now;
+                    
+                    // Update this gun's cooldown
+                    player.gunCooldowns[gunKey] = now;
                 }
-            }
+            });
         }
 
         // Player vs polygon collision (softer overlap before pushback)
@@ -1467,6 +1446,21 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('chatMessage', (message) => {
+        const player = players.get(socket.id);
+        if (player && message && typeof message === 'string') {
+            // Sanitize and limit message length
+            const sanitizedMessage = message.trim().substring(0, 100);
+            if (sanitizedMessage.length > 0) {
+                // Broadcast to all players
+                io.emit('chatMessage', {
+                    name: player.name,
+                    message: sanitizedMessage
+                });
+            }
+        }
+    });
+
     // Admin panel verification
     const ADMIN_CODE = 'ronnyisskibidi';
     const adminPlayers = new Set(); // Track verified admin players
@@ -1579,16 +1573,41 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('cheatTeleportAllPlayers', (data) => {
+    socket.on('cheatTeleportPlayers', (data) => {
         if (!adminPlayers.has(socket.id)) return;
-        const { x, y } = data;
-        players.forEach(player => {
-            player.x = x;
-            player.y = y;
-            player.vx = 0;
-            player.vy = 0;
-        });
-        console.log(`Teleported all players to (${x}, ${y})`);
+        const { x, y, mode } = data;
+        
+        if (mode === 'all') {
+            // Teleport all players
+            players.forEach(player => {
+                player.x = x;
+                player.y = y;
+                player.vx = 0;
+                player.vy = 0;
+            });
+            console.log(`Teleported all players to (${x}, ${y})`);
+        } else if (mode === 'others') {
+            // Teleport all except the admin
+            players.forEach((player, id) => {
+                if (id !== socket.id) {
+                    player.x = x;
+                    player.y = y;
+                    player.vx = 0;
+                    player.vy = 0;
+                }
+            });
+            console.log(`Teleported all other players to (${x}, ${y})`);
+        } else if (mode === 'you') {
+            // Teleport only the admin
+            const player = players.get(socket.id);
+            if (player) {
+                player.x = x;
+                player.y = y;
+                player.vx = 0;
+                player.vy = 0;
+                console.log(`Teleported admin to (${x}, ${y})`);
+            }
+        }
     });
 
     socket.on('cheatClearPolygons', () => {
