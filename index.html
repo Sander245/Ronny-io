@@ -490,11 +490,11 @@
             <div class="upgrade-title">Stats</div>
             <div id="upgradePointsDisplay" style="color: #ffd700; font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center;">Upgrade Points: 0</div>
             <div id="statUpgrades"></div>
+            <button id="viewUpgradeTreeBtn" style="display: none; margin-top: 10px; padding: 8px 16px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">View Full Upgrade Tree</button>
         </div>
         <div class="upgrade-section" id="tankUpgradeSection" style="display: none;">
             <div class="upgrade-title">Tank Upgrades</div>
             <div id="tankUpgrades"></div>
-            <button id="viewUpgradeTreeBtn" style="margin-top: 10px; padding: 8px 16px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">View Full Upgrade Tree</button>
         </div>
     </div>
 
@@ -549,6 +549,7 @@
         <div><strong>Shift+1-8</strong> - Spawn Polygon at Cursor</div>
         <div><strong>Shift+R</strong> - Reset Tank & Upgrades</div>
         <div><strong>ESC</strong> - Close Panel</div>
+        <button id="openTankEditorBtn" style="margin-top: 10px; padding: 5px 10px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;">🎨 Tank Editor</button>
         <button id="viewUpgradeTreeCheat" style="margin-top: 10px; padding: 5px 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">View Upgrade Tree (Click to Morph)</button>
     </div>
 
@@ -559,6 +560,72 @@
             <div id="killedByList"></div>
             <div class="respawn-timer">Respawning...</div>
         </div>
+    </div>
+
+    <!-- Tank Editor -->
+    <div id="tankEditor" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; z-index: 20000;">
+        <!-- Left Panel - Block Menu -->
+        <div id="editorLeftPanel" style="position: absolute; left: 0; top: 0; width: 250px; height: 100%; background: #2a2a2a; border-right: 2px solid #444; overflow-y: auto; padding: 15px; box-sizing: border-box;">
+            <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Gun Blocks</h2>
+            <div id="gunBlocksList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+
+        <!-- Center Panel - Visual Editor -->
+        <div id="editorCenterPanel" style="position: absolute; left: 250px; top: 0; right: 300px; height: 100%; background: #1a1a1a; display: flex; flex-direction: column;">
+            <div style="background: #2a2a2a; padding: 15px; border-bottom: 2px solid #444; display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="color: #fff; margin: 0;">Tank Editor</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button id="editorTestBtn" style="padding: 10px 20px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Test</button>
+                    <button id="editorCancelBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancel</button>
+                    <button id="editorSaveBtn" style="padding: 10px 20px; background: #44ff44; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Save</button>
+                </div>
+            </div>
+            <div style="flex: 1; position: relative; overflow: hidden;">
+                <canvas id="editorCanvas" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f0f0f; cursor: grab;"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Panel - Properties -->
+        <div id="editorRightPanel" style="position: absolute; right: 0; top: 0; width: 300px; height: 100%; background: #2a2a2a; border-left: 2px solid #444; overflow-y: auto; padding: 15px; box-sizing: border-box;">
+            <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Properties</h2>
+            <div id="editorPropertiesContent" style="color: #aaa; font-size: 14px;">
+                Select a block to edit its properties
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Tank Modal -->
+    <div id="saveTankModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 30000; justify-content: center; align-items: center;">
+        <div style="background: #2a2a2a; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; color: white;">
+            <h2 style="margin-top: 0;">Save Tank</h2>
+            
+            <label style="display: block; margin-bottom: 5px; color: #aaa;">Tank Name:</label>
+            <input id="saveTankName" type="text" placeholder="Enter tank name" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box;">
+            
+            <label style="display: block; margin-bottom: 5px; color: #aaa;">Required Level:</label>
+            <input id="saveTankLevel" type="number" value="1" min="1" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box;">
+            
+            <label style="display: block; margin-bottom: 5px; color: #aaa;">Upgrade From (comma-separated tank names):</label>
+            <input id="saveTankUpgrades" type="text" placeholder="e.g. TANK, TWIN, SNIPER" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box;">
+            
+            <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                <input id="saveTankHideFromTree" type="checkbox" style="margin-right: 10px;">
+                <span>Hide from upgrade tree</span>
+            </label>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="saveTankCancelBtn" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                <button id="saveTankConfirmBtn" style="padding: 10px 20px; background: #44ff44; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Area -->
+    <div id="testArea" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0a; z-index: 25000;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 1;">
+            <button id="exitTestBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">Exit Test</button>
+        </div>
+        <canvas id="testCanvas" style="display: block; background: #0a0a0a;"></canvas>
     </div>
 
     <!-- Load Socket.IO from CDN for GitHub Pages compatibility -->
@@ -1182,6 +1249,7 @@
             // Update tank upgrades - only rebuild if tank type changed
             const tankUpgradeSection = document.getElementById('tankUpgradeSection');
             const tankUpgradesDiv = document.getElementById('tankUpgrades');
+            const viewUpgradeTreeBtn = document.getElementById('viewUpgradeTreeBtn');
             
             if (tankTypes && player && player.tankType) {
                 const currentTank = tankTypes[player.tankType];
@@ -1191,6 +1259,7 @@
                 
                 if (availableUpgrades && availableUpgrades.length > 0) {
                     tankUpgradeSection.style.display = 'block';
+                    viewUpgradeTreeBtn.style.display = 'none'; // Hide button when tank upgrades are shown
                     
                     // Only rebuild if tank type changed
                     if (tankUpgradesDiv.dataset.currentTank !== player.tankType) {
@@ -1234,6 +1303,7 @@
                     });
                 } else {
                     tankUpgradeSection.style.display = 'none';
+                    viewUpgradeTreeBtn.style.display = 'block'; // Show button when tank upgrades are hidden
                 }
             }
         }
@@ -1295,8 +1365,8 @@
             const canvas = document.getElementById('upgradeTreeCanvas');
             modal.style.display = 'block';
             
-            // Build tree structure
-            const treeData = buildTreeStructure();
+            // Build tree structure (show hidden tanks when morphing is allowed)
+            const treeData = buildTreeStructure(allowMorphing);
             
             // Calculate canvas size based on viewport
             const width = window.innerWidth - 100;
@@ -1398,15 +1468,15 @@
             }, { passive: false });
         }
         
-        function buildTreeStructure() {
+        function buildTreeStructure(showHiddenTanks = false) {
             if (!tankUpgrades || !tankTypes) return null;
             
             const levels = {};
             
-            // Group tanks by level (exclude tanks with hideFromTree)
+            // Group tanks by level (optionally include hidden tanks)
             for (const tankKey in tankTypes) {
                 const tank = tankTypes[tankKey];
-                if (tank.hideFromTree) continue; // Skip hidden tanks
+                if (!showHiddenTanks && tank.hideFromTree) continue; // Skip hidden tanks unless requested
                 const level = tank.level;
                 if (!levels[level]) levels[level] = [];
                 levels[level].push(tankKey);
@@ -2477,6 +2547,502 @@
 
         // Initialize UI state
         updateControlHighlights();
+
+        // ===== TANK EDITOR =====
+        
+        let editorState = {
+            blocks: [],
+            selectedBlock: null,
+            rotation: 0,
+            dragging: false,
+            lastMousePos: { x: 0, y: 0 }
+        };
+
+        const blockTypes = {
+            gun: {
+                name: 'Gun',
+                defaultProps: {
+                    width: 15,
+                    length: 50,
+                    delay: 0,
+                    offsetX: 0,
+                    offsetY: 0,
+                    angle: 0,
+                    color: '#999999',
+                    reload: 1,
+                    recoil: 1,
+                    damage: 1,
+                    penetration: 1,
+                    speed: 1,
+                    health: 1
+                }
+            },
+            autoTurret: {
+                name: 'Auto Turret',
+                defaultProps: {
+                    size: 20,
+                    offsetX: 0,
+                    offsetY: 0,
+                    gunWidth: 10,
+                    gunLength: 30,
+                    delay: 0,
+                    color: '#999999',
+                    reload: 1,
+                    damage: 1,
+                    penetration: 1,
+                    speed: 1,
+                    health: 1
+                }
+            },
+            trap: {
+                name: 'Trap Launcher',
+                defaultProps: {
+                    width: 20,
+                    length: 40,
+                    delay: 0,
+                    offsetX: 0,
+                    offsetY: 0,
+                    angle: 0,
+                    color: '#999999',
+                    reload: 1.5,
+                    trapSize: 15
+                }
+            }
+        };
+
+        // Populate block list
+        function populateBlockList() {
+            const gunBlocksList = document.getElementById('gunBlocksList');
+            gunBlocksList.innerHTML = '';
+            
+            for (const [type, config] of Object.entries(blockTypes)) {
+                const btn = document.createElement('button');
+                btn.textContent = '+ ' + config.name;
+                btn.style.cssText = 'padding: 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;';
+                btn.addEventListener('click', () => addBlock(type));
+                gunBlocksList.appendChild(btn);
+            }
+        }
+
+        function addBlock(type) {
+            const block = {
+                id: Date.now(),
+                type: type,
+                props: { ...blockTypes[type].defaultProps }
+            };
+            editorState.blocks.push(block);
+            editorState.selectedBlock = block;
+            updatePropertiesPanel();
+            renderEditorCanvas();
+        }
+
+        function updatePropertiesPanel() {
+            const panel = document.getElementById('editorPropertiesContent');
+            
+            if (!editorState.selectedBlock) {
+                panel.innerHTML = '<div style="color: #aaa; font-size: 14px;">Select a block to edit its properties</div>';
+                return;
+            }
+
+            const block = editorState.selectedBlock;
+            panel.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: #4a9eff;">${blockTypes[block.type].name}</strong>
+                    <button id="deleteBlockBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                </div>
+            `;
+
+            for (const [key, value] of Object.entries(block.props)) {
+                const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                const propDiv = document.createElement('div');
+                propDiv.style.marginBottom = '12px';
+
+                const labelEl = document.createElement('label');
+                labelEl.textContent = label + ':';
+                labelEl.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
+                propDiv.appendChild(labelEl);
+
+                let input;
+                if (key === 'color') {
+                    input = document.createElement('input');
+                    input.type = 'color';
+                    input.value = value;
+                    input.style.cssText = 'width: 100%; height: 35px; border: none; border-radius: 4px; cursor: pointer;';
+                } else if (typeof value === 'boolean') {
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.checked = value;
+                    input.style.cssText = 'width: 20px; height: 20px; cursor: pointer;';
+                } else {
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = value;
+                    input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') ? '0.1' : '1';
+                    input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
+                }
+
+                input.addEventListener('change', (e) => {
+                    if (input.type === 'checkbox') {
+                        block.props[key] = e.target.checked;
+                    } else if (input.type === 'color') {
+                        block.props[key] = e.target.value;
+                    } else {
+                        block.props[key] = parseFloat(e.target.value) || 0;
+                    }
+                    renderEditorCanvas();
+                });
+
+                propDiv.appendChild(input);
+                panel.appendChild(propDiv);
+            }
+
+            document.getElementById('deleteBlockBtn').addEventListener('click', () => {
+                editorState.blocks = editorState.blocks.filter(b => b.id !== block.id);
+                editorState.selectedBlock = null;
+                updatePropertiesPanel();
+                renderEditorCanvas();
+            });
+        }
+
+        function renderEditorCanvas() {
+            const canvas = document.getElementById('editorCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = 800;
+            canvas.height = 600;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const tankSize = 40;
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(editorState.rotation);
+
+            // Draw tank body
+            ctx.fillStyle = '#00b2e1';
+            ctx.beginPath();
+            ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Draw blocks
+            editorState.blocks.forEach(block => {
+                ctx.save();
+                
+                if (block.type === 'gun') {
+                    ctx.rotate(block.props.angle * Math.PI / 180);
+                    ctx.translate(block.props.offsetX, block.props.offsetY);
+                    
+                    ctx.fillStyle = block.props.color;
+                    ctx.fillRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                    
+                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
+                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                    ctx.strokeRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                    
+                } else if (block.type === 'autoTurret') {
+                    ctx.translate(block.props.offsetX, block.props.offsetY);
+                    
+                    ctx.fillStyle = block.props.color;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, block.props.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
+                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                    ctx.stroke();
+                    
+                    ctx.fillRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
+                    ctx.strokeRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
+                    
+                } else if (block.type === 'trap') {
+                    ctx.rotate(block.props.angle * Math.PI / 180);
+                    ctx.translate(block.props.offsetX, block.props.offsetY);
+                    
+                    ctx.fillStyle = block.props.color;
+                    ctx.fillRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                    
+                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
+                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                    ctx.strokeRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                }
+                
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        // Editor canvas mouse interactions
+        const editorCanvas = document.getElementById('editorCanvas');
+        
+        editorCanvas.addEventListener('mousedown', (e) => {
+            const rect = editorCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Check if clicking on a block
+            const centerX = editorCanvas.width / 2;
+            const centerY = editorCanvas.height / 2;
+            
+            let clickedBlock = null;
+            for (let i = editorState.blocks.length - 1; i >= 0; i--) {
+                const block = editorState.blocks[i];
+                // Simple hit detection (can be improved)
+                const blockX = centerX + block.props.offsetX;
+                const blockY = centerY + block.props.offsetY;
+                const dist = Math.sqrt((x - blockX) ** 2 + (y - blockY) ** 2);
+                
+                if (dist < 50) {
+                    clickedBlock = block;
+                    break;
+                }
+            }
+            
+            if (clickedBlock) {
+                editorState.selectedBlock = clickedBlock;
+                updatePropertiesPanel();
+                renderEditorCanvas();
+            } else {
+                editorState.dragging = true;
+                editorState.lastMousePos = { x: e.clientX, y: e.clientY };
+                editorCanvas.style.cursor = 'grabbing';
+            }
+        });
+
+        editorCanvas.addEventListener('mousemove', (e) => {
+            if (editorState.dragging) {
+                const dx = e.clientX - editorState.lastMousePos.x;
+                editorState.rotation += dx * 0.01;
+                editorState.lastMousePos = { x: e.clientX, y: e.clientY };
+                renderEditorCanvas();
+            }
+        });
+
+        editorCanvas.addEventListener('mouseup', () => {
+            editorState.dragging = false;
+            editorCanvas.style.cursor = 'grab';
+        });
+
+        editorCanvas.addEventListener('mouseleave', () => {
+            editorState.dragging = false;
+            editorCanvas.style.cursor = 'grab';
+        });
+
+        // Open/Close Tank Editor
+        document.getElementById('openTankEditorBtn').addEventListener('click', () => {
+            document.getElementById('tankEditor').style.display = 'block';
+            document.getElementById('cheatPanel').style.display = 'none';
+            cheatPanelActive = false;
+            populateBlockList();
+            renderEditorCanvas();
+        });
+
+        document.getElementById('editorCancelBtn').addEventListener('click', () => {
+            if (confirm('Are you sure? This will delete your current tank design.')) {
+                editorState = {
+                    blocks: [],
+                    selectedBlock: null,
+                    rotation: 0,
+                    dragging: false,
+                    lastMousePos: { x: 0, y: 0 }
+                };
+                document.getElementById('tankEditor').style.display = 'none';
+            }
+        });
+
+        document.getElementById('editorSaveBtn').addEventListener('click', () => {
+            if (editorState.blocks.length === 0) {
+                alert('Add at least one block before saving!');
+                return;
+            }
+            document.getElementById('saveTankModal').style.display = 'flex';
+        });
+
+        document.getElementById('saveTankCancelBtn').addEventListener('click', () => {
+            document.getElementById('saveTankModal').style.display = 'none';
+        });
+
+        document.getElementById('saveTankConfirmBtn').addEventListener('click', () => {
+            const name = document.getElementById('saveTankName').value.trim().toUpperCase();
+            const level = parseInt(document.getElementById('saveTankLevel').value) || 1;
+            const upgradesFrom = document.getElementById('saveTankUpgrades').value.trim();
+            const hideFromTree = document.getElementById('saveTankHideFromTree').checked;
+            
+            if (!name) {
+                alert('Please enter a tank name!');
+                return;
+            }
+
+            // Convert blocks to tank config format
+            const guns = editorState.blocks.map(block => ({
+                type: block.type,
+                ...block.props
+            }));
+
+            const tankConfig = {
+                name: name,
+                level: level,
+                guns: guns,
+                hideFromTree: hideFromTree
+            };
+
+            const upgradePaths = upgradesFrom ? upgradesFrom.split(',').map(s => s.trim().toUpperCase()) : [];
+
+            console.log('Saving tank:', tankConfig);
+            console.log('Upgrade paths:', upgradePaths);
+            
+            // TODO: Save to tankTypes.json and tankUpgrades.json
+            alert('Tank saved! (Note: Actual file saving needs server-side implementation)');
+            
+            document.getElementById('saveTankModal').style.display = 'none';
+            document.getElementById('tankEditor').style.display = 'none';
+            
+            editorState = {
+                blocks: [],
+                selectedBlock: null,
+                rotation: 0,
+                dragging: false,
+                lastMousePos: { x: 0, y: 0 }
+            };
+        });
+
+        // Test Area
+        document.getElementById('editorTestBtn').addEventListener('click', () => {
+            if (editorState.blocks.length === 0) {
+                alert('Add at least one block before testing!');
+                return;
+            }
+            
+            document.getElementById('tankEditor').style.display = 'none';
+            document.getElementById('testArea').style.display = 'block';
+            
+            const testCanvas = document.getElementById('testCanvas');
+            const testCtx = testCanvas.getContext('2d');
+            
+            testCanvas.width = window.innerWidth;
+            testCanvas.height = window.innerHeight;
+            
+            let testTank = {
+                x: testCanvas.width / 2,
+                y: testCanvas.height / 2,
+                angle: 0,
+                size: 40
+            };
+            
+            let testKeys = { w: false, a: false, s: false, d: false };
+            let testMouse = { x: testCanvas.width / 2, y: testCanvas.height / 2 };
+            
+            const testKeyDown = (e) => {
+                if (e.key === 'w') testKeys.w = true;
+                if (e.key === 'a') testKeys.a = true;
+                if (e.key === 's') testKeys.s = true;
+                if (e.key === 'd') testKeys.d = true;
+            };
+            
+            const testKeyUp = (e) => {
+                if (e.key === 'w') testKeys.w = false;
+                if (e.key === 'a') testKeys.a = false;
+                if (e.key === 's') testKeys.s = false;
+                if (e.key === 'd') testKeys.d = false;
+            };
+            
+            const testMouseMove = (e) => {
+                const rect = testCanvas.getBoundingClientRect();
+                testMouse.x = e.clientX - rect.left;
+                testMouse.y = e.clientY - rect.top;
+            };
+            
+            window.addEventListener('keydown', testKeyDown);
+            window.addEventListener('keyup', testKeyUp);
+            testCanvas.addEventListener('mousemove', testMouseMove);
+            
+            let testAnimFrame;
+            function testRender() {
+                // Movement
+                const speed = 3;
+                if (testKeys.w) testTank.y -= speed;
+                if (testKeys.s) testTank.y += speed;
+                if (testKeys.a) testTank.x -= speed;
+                if (testKeys.d) testTank.x += speed;
+                
+                // Angle to mouse
+                testTank.angle = Math.atan2(testMouse.y - testTank.y, testMouse.x - testTank.x);
+                
+                // Render
+                testCtx.fillStyle = '#0a0a0a';
+                testCtx.fillRect(0, 0, testCanvas.width, testCanvas.height);
+                
+                testCtx.save();
+                testCtx.translate(testTank.x, testTank.y);
+                testCtx.rotate(testTank.angle);
+                
+                // Draw tank body
+                testCtx.fillStyle = '#00b2e1';
+                testCtx.beginPath();
+                testCtx.arc(0, 0, testTank.size, 0, Math.PI * 2);
+                testCtx.fill();
+                testCtx.strokeStyle = '#333';
+                testCtx.lineWidth = 3;
+                testCtx.stroke();
+                
+                // Draw blocks
+                editorState.blocks.forEach(block => {
+                    testCtx.save();
+                    
+                    if (block.type === 'gun') {
+                        testCtx.rotate(block.props.angle * Math.PI / 180);
+                        testCtx.translate(block.props.offsetX, block.props.offsetY);
+                        testCtx.fillStyle = block.props.color;
+                        testCtx.fillRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
+                        testCtx.strokeStyle = '#333';
+                        testCtx.lineWidth = 2;
+                        testCtx.strokeRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
+                    } else if (block.type === 'autoTurret') {
+                        testCtx.translate(block.props.offsetX, block.props.offsetY);
+                        testCtx.fillStyle = block.props.color;
+                        testCtx.beginPath();
+                        testCtx.arc(0, 0, block.props.size, 0, Math.PI * 2);
+                        testCtx.fill();
+                        testCtx.strokeStyle = '#333';
+                        testCtx.lineWidth = 2;
+                        testCtx.stroke();
+                        testCtx.fillRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
+                        testCtx.strokeRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
+                    } else if (block.type === 'trap') {
+                        testCtx.rotate(block.props.angle * Math.PI / 180);
+                        testCtx.translate(block.props.offsetX, block.props.offsetY);
+                        testCtx.fillStyle = block.props.color;
+                        testCtx.fillRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
+                        testCtx.strokeStyle = '#333';
+                        testCtx.lineWidth = 2;
+                        testCtx.strokeRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
+                    }
+                    
+                    testCtx.restore();
+                });
+                
+                testCtx.restore();
+                
+                testAnimFrame = requestAnimationFrame(testRender);
+            }
+            
+            testRender();
+            
+            document.getElementById('exitTestBtn').onclick = () => {
+                cancelAnimationFrame(testAnimFrame);
+                window.removeEventListener('keydown', testKeyDown);
+                window.removeEventListener('keyup', testKeyUp);
+                testCanvas.removeEventListener('mousemove', testMouseMove);
+                document.getElementById('testArea').style.display = 'none';
+                document.getElementById('tankEditor').style.display = 'block';
+            };
+        });
     </script>
 </body>
 </html>
