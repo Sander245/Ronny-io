@@ -568,9 +568,17 @@
     <div id="tankEditor" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; z-index: 20000;">
         <!-- Left Panel - Block Menu & Base Editor -->
         <div id="editorLeftPanel" style="position: absolute; left: 0; top: 0; width: 250px; height: 100%; background: #2a2a2a; border-right: 2px solid #444; overflow-y: auto; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px;">
-            <!-- Gun Blocks Section -->
+            <!-- Current Blocks Section -->
             <div style="flex-shrink: 0;">
-                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Gun Blocks</h2>
+                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Current Blocks</h2>
+                <div id="currentBlocksList" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
+                    <div style="color: #888; font-size: 12px; font-style: italic;">No blocks added yet</div>
+                </div>
+            </div>
+            
+            <!-- Add Blocks Section -->
+            <div style="flex-shrink: 0; border-top: 2px solid #444; padding-top: 15px;">
+                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Add Blocks</h2>
                 <div id="gunBlocksList" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
             
@@ -685,6 +693,7 @@
         // Game state
         let playerId = null;
         let gameState = null;
+        let tankTypes = null;
         let tankUpgrades = null;
         let camera = { x: 0, y: 0, zoom: 1 };
         let targetCamera = { x: 0, y: 0 };
@@ -2809,6 +2818,50 @@
                 gunBlocksList.appendChild(btn);
             }
         }
+        
+        function updateCurrentBlocksList() {
+            const currentBlocksList = document.getElementById('currentBlocksList');
+            currentBlocksList.innerHTML = '';
+            
+            if (editorState.blocks.length === 0) {
+                currentBlocksList.innerHTML = '<div style="color: #888; font-size: 12px; font-style: italic;">No blocks added yet</div>';
+                return;
+            }
+            
+            editorState.blocks.forEach((block, index) => {
+                const blockItem = document.createElement('div');
+                blockItem.style.cssText = 'padding: 8px; background: ' + (editorState.selectedBlock?.id === block.id ? '#4a9eff' : '#1a1a1a') + '; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+                
+                const blockName = document.createElement('span');
+                blockName.textContent = `${index + 1}. ${blockTypes[block.type].name}`;
+                blockName.style.cssText = 'color: white; font-size: 13px;';
+                blockItem.appendChild(blockName);
+                
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '×';
+                delBtn.style.cssText = 'padding: 2px 6px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; font-weight: bold;';
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    editorState.blocks = editorState.blocks.filter(b => b.id !== block.id);
+                    if (editorState.selectedBlock?.id === block.id) {
+                        editorState.selectedBlock = null;
+                    }
+                    updateCurrentBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+                blockItem.appendChild(delBtn);
+                
+                blockItem.addEventListener('click', () => {
+                    editorState.selectedBlock = block;
+                    updateCurrentBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+                
+                currentBlocksList.appendChild(blockItem);
+            });
+        }
 
         function addBlock(type) {
             const block = {
@@ -2818,6 +2871,7 @@
             };
             editorState.blocks.push(block);
             editorState.selectedBlock = block;
+            updateCurrentBlocksList();
             updatePropertiesPanel();
             renderEditorCanvas();
         }
@@ -2976,6 +3030,7 @@
             document.getElementById('deleteBlockBtn').addEventListener('click', () => {
                 editorState.blocks = editorState.blocks.filter(b => b.id !== block.id);
                 editorState.selectedBlock = null;
+                updateCurrentBlocksList();
                 updatePropertiesPanel();
                 renderEditorCanvas();
             });
@@ -3131,42 +3186,25 @@
         
         editorCanvas.addEventListener('mousedown', (e) => {
             const rect = editorCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const startX = e.clientX;
+            const startY = e.clientY;
             
-            // Check if clicking on a block
-            const centerX = editorCanvas.width / 2;
-            const centerY = editorCanvas.height / 2;
-            
-            let clickedBlock = null;
-            for (let i = editorState.blocks.length - 1; i >= 0; i--) {
-                const block = editorState.blocks[i];
-                // Simple hit detection (can be improved)
-                const blockX = centerX + block.props.offsetX;
-                const blockY = centerY + block.props.offsetY;
-                const dist = Math.sqrt((x - blockX) ** 2 + (y - blockY) ** 2);
-                
-                if (dist < 50) {
-                    clickedBlock = block;
-                    break;
-                }
-            }
-            
-            if (clickedBlock) {
-                editorState.selectedBlock = clickedBlock;
-                updatePropertiesPanel();
-                renderEditorCanvas();
-            } else {
-                editorState.dragging = true;
-                editorState.lastMousePos = { x: e.clientX, y: e.clientY };
-                editorCanvas.style.cursor = 'grabbing';
-            }
+            editorState.mouseDownPos = { x: startX, y: startY };
+            editorState.isDragging = false;
+            editorState.dragging = true;
+            editorState.lastMousePos = { x: startX, y: startY };
         });
 
         editorCanvas.addEventListener('mousemove', (e) => {
             if (editorState.dragging) {
                 const dx = e.clientX - editorState.lastMousePos.x;
                 const dy = e.clientY - editorState.lastMousePos.y;
+                
+                // Check if moved enough to be considered a drag
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                    editorState.isDragging = true;
+                    editorCanvas.style.cursor = 'grabbing';
+                }
                 
                 // Horizontal drag rotates, vertical drag zooms
                 editorState.rotation += dx * 0.01;
@@ -3177,13 +3215,90 @@
             }
         });
 
-        editorCanvas.addEventListener('mouseup', () => {
+        editorCanvas.addEventListener('mouseup', (e) => {
+            if (!editorState.isDragging) {
+                // It's a click, not a drag
+                const rect = editorCanvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const centerX = editorCanvas.width / 2;
+                const centerY = editorCanvas.height / 2;
+                
+                // Transform mouse coordinates to account for zoom and rotation
+                const relX = (mouseX - centerX) / editorState.zoom;
+                const relY = (mouseY - centerY) / editorState.zoom;
+                
+                // Rotate back by negative rotation to get world coordinates
+                const cos = Math.cos(-editorState.rotation);
+                const sin = Math.sin(-editorState.rotation);
+                const worldX = relX * cos - relY * sin;
+                const worldY = relX * sin + relY * cos;
+                
+                let clickedBlock = null;
+                
+                // Check blocks (in reverse order to prioritize top-most)
+                for (let i = editorState.blocks.length - 1; i >= 0; i--) {
+                    const block = editorState.blocks[i];
+                    const blockDist = Math.sqrt(
+                        (worldX - block.props.offsetX) ** 2 + 
+                        (worldY - block.props.offsetY) ** 2
+                    );
+                    
+                    // Approximate hit detection based on block type
+                    let hitRadius = 30;
+                    if (block.type === 'gun' || block.type === 'trap') {
+                        hitRadius = Math.max(block.props.width, block.props.length) / 2 + 10;
+                    } else if (block.type === 'autoTurret') {
+                        hitRadius = block.props.size + 10;
+                    } else if (block.type === 'base') {
+                        hitRadius = block.props.size / 2 + 10;
+                    }
+                    
+                    if (blockDist < hitRadius) {
+                        clickedBlock = block;
+                        break;
+                    }
+                }
+                
+                // Check blades
+                if (!clickedBlock) {
+                    const tankSize = 40;
+                    editorState.blades.forEach((blade, index) => {
+                        for (let i = 0; i < blade.count; i++) {
+                            const angle = (i / blade.count) * Math.PI * 2;
+                            const bladeX = Math.sin(angle) * (tankSize + blade.size / 2);
+                            const bladeY = -Math.cos(angle) * (tankSize + blade.size / 2);
+                            
+                            const bladeDist = Math.sqrt((worldX - bladeX) ** 2 + (worldY - bladeY) ** 2);
+                            if (bladeDist < blade.size + 5) {
+                                clickedBlock = { type: 'blade', blade, index };
+                                return;
+                            }
+                        }
+                    });
+                }
+                
+                if (clickedBlock) {
+                    editorState.selectedBlock = clickedBlock;
+                } else {
+                    // Clicked on empty space - deselect
+                    editorState.selectedBlock = null;
+                }
+                
+                updateCurrentBlocksList();
+                updatePropertiesPanel();
+                renderEditorCanvas();
+            }
+            
             editorState.dragging = false;
+            editorState.isDragging = false;
             editorCanvas.style.cursor = 'grab';
         });
 
         editorCanvas.addEventListener('mouseleave', () => {
             editorState.dragging = false;
+            editorState.isDragging = false;
             editorCanvas.style.cursor = 'grab';
         });
 
@@ -3193,6 +3308,7 @@
             document.getElementById('cheatPanel').style.display = 'none';
             cheatPanelActive = false;
             populateBlockList();
+            updateCurrentBlocksList();
             updateBaseShapeInputs();
             renderEditorCanvas();
         });
@@ -3516,25 +3632,45 @@
             // Add to local tankTypes
             tankTypes[testTankName] = testTankConfig;
             
-            // Hide editor
+            // Hide editor and menus
             document.getElementById('tankEditor').style.display = 'none';
-            document.getElementById('testArea').style.display = 'block';
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('hud').classList.add('visible');
             
             // Store current tank type to restore later
             const originalTankType = playerId ? gameState.players.find(p => p.id === playerId)?.tankType : null;
+            const wasInGame = playerId !== null;
             
-            // Small delay to ensure server has the tank config
-            setTimeout(() => {
-                if (playerId) {
+            // If not in game, join game first, otherwise just upgrade
+            if (!playerId) {
+                // Join game with test mode flag
+                socket.emit('joinGame', 'Test Player');
+                
+                // Wait for playerJoined event, then upgrade
+                const joinHandler = (data) => {
+                    playerId = data.id;
+                    setTimeout(() => {
+                        socket.emit('upgradeTank', testTankName);
+                    }, 100);
+                    socket.off('playerJoined', joinHandler);
+                };
+                socket.on('playerJoined', joinHandler);
+            } else {
+                // Already in game, just upgrade
+                setTimeout(() => {
                     socket.emit('upgradeTank', testTankName);
-                }
-            }, 100);
+                }, 100);
+            }
             
-            // Setup exit button
-            const exitHandler = () => {
-                // Restore original tank
-                if (originalTankType && playerId) {
+            // Setup exit handler - Press ESC to exit test mode
+            const exitHandler = (e) => {
+                if (e && e.key !== 'Escape') return;
+                
+                // Restore original tank or go back to basic
+                if (wasInGame && originalTankType && playerId) {
                     socket.emit('upgradeTank', originalTankType);
+                } else if (playerId) {
+                    socket.emit('upgradeTank', 'basic');
                 }
                 
                 // Clean up test tank from server
@@ -3544,14 +3680,24 @@
                 delete tankTypes[testTankName];
                 
                 // Return to editor
-                document.getElementById('testArea').style.display = 'none';
+                document.getElementById('hud').classList.remove('visible');
+                document.getElementById('startMenu').classList.remove('hidden');
                 document.getElementById('tankEditor').style.display = 'block';
                 
                 // Remove event listener
-                document.getElementById('exitTestBtn').removeEventListener('click', exitHandler);
+                window.removeEventListener('keydown', exitHandler);
+                
+                // Show message
+                alert('Test mode ended. Press ESC to exit test mode anytime.');
             };
             
-            document.getElementById('exitTestBtn').addEventListener('click', exitHandler);
+            // Add ESC key listener
+            window.addEventListener('keydown', exitHandler);
+            
+            // Show instruction
+            setTimeout(() => {
+                alert('Test mode active! Press ESC to exit and return to editor.');
+            }, 500);
         });
     </script>
 </body>
