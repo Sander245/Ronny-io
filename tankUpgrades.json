@@ -200,6 +200,11 @@
     "name": "Penta Shot",
     "level": 45,
     "baseShape": "circle",
+    "baseLayers": [
+      {"size": 1.1, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.85, "sides": 5, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.6, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}}
+    ],
     "guns": [
       {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
       {"type": "normal", "angle": -15, "damage": 1, "speed": 1, "reload": 1},
@@ -214,6 +219,11 @@
     "name": "Octo Tank",
     "level": 45,
     "baseShape": "circle",
+    "baseLayers": [
+      {"size": 1.1, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.85, "sides": 8, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.6, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}}
+    ],
     "guns": [
       {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1, "delay": 0},
       {"type": "normal", "angle": 90, "damage": 1, "speed": 1, "reload": 1, "delay": 0},
@@ -397,6 +407,11 @@
     "name": "Spread Shot",
     "level": 45,
     "baseShape": "circle",
+    "baseLayers": [
+      {"size": 1.1, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.85, "sides": 6, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.6, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}}
+    ],
     "guns": [
       {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
       {"type": "normal", "angle": -10, "damage": 0.9, "speed": 1, "reload": 1},
@@ -413,6 +428,11 @@
     "name": "Triple Twin",
     "level": 45,
     "baseShape": "circle",
+    "baseLayers": [
+      {"size": 1.1, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.85, "sides": 3, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}},
+      {"size": 0.6, "sides": 0, "stretch": {"x": 1, "y": 1}, "position": {"x": 0, "y": 0}}
+    ],
     "guns": [
       {"type": "normal", "angle": 0, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
       {"type": "normal", "angle": 0, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1},
@@ -735,6 +755,7 @@
     "bodyDamageBonus": 5,
     "speedBonus": 1.5,
     "healthBonus": 3,
+    "hideFromTree": true,
     "upgrades": []
   }
 }

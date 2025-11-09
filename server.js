@@ -68,7 +68,12 @@ class Polygon extends GameObject {
         super(x, y);
         this.sides = sides;
         this.size = this.getSizeFromSides(sides);
-        this.health = this.size * 20 * 3; // Tripled health (was size * 20)
+        // Special health calculation for triangles (lower health)
+        if (sides === 3) {
+            this.health = this.size * 10; // Reduced health for triangles
+        } else {
+            this.health = this.size * 20 * 3; // Tripled health for others (was size * 20)
+        }
         this.maxHealth = this.health;
         this.xp = Math.floor(this.size * 5 * sides);
         this.color = this.getColorFromSides(sides);
@@ -89,7 +94,7 @@ class Polygon extends GameObject {
     }
 
     getSizeFromSides(sides) {
-        const sizes = {3: 12, 4: 18, 5: 25, 6: 35, 8: 50, 10: 70, 12: 90};
+        const sizes = {3: 12, 4: 18, 5: 25, 6: 35, 8: 50, 10: 70, 12: 90, 13: 110, 14: 130, 15: 150, 16: 170};
         return sizes[sides] || 20;
     }
 
@@ -101,7 +106,11 @@ class Polygon extends GameObject {
             6: '#C77EF6',  // Hexagon - purple
             8: '#FF6EC7',  // Octagon - pink
             10: '#00E0C6', // Decagon - cyan (boss)
-            12: '#FF9500'  // Dodecagon - orange (mega boss)
+            12: '#FF9500', // Dodecagon - orange (mega boss)
+            13: '#FF1744', // Tridecagon - red
+            14: '#9C27B0', // Tetradecagon - deep purple
+            15: '#424242', // Pentadecagon - dark grey
+            16: '#000000'  // Hexadecagon - black (ultra rare)
         };
         return colors[sides] || '#FFD66B';
     }
@@ -114,7 +123,11 @@ class Polygon extends GameObject {
             6: 'Hexagon',
             8: 'Octagon',
             10: 'Decagon',
-            12: 'Dodecagon'
+            12: 'Dodecagon',
+            13: 'Tridecagon',
+            14: 'Tetradecagon',
+            15: 'Pentadecagon',
+            16: 'Hexadecagon'
         };
         return types[sides] || 'Polygon';
     }
@@ -294,7 +307,15 @@ class Minion extends GameObject {
             this.y += (dy / dist) * this.speed;
         }
 
-        this.rotation = Math.atan2(dy, dx);
+        // Smooth rotation interpolation
+        const targetRotation = Math.atan2(dy, dx);
+        let angleDiff = targetRotation - this.rotation;
+        
+        // Normalize angle difference to [-PI, PI]
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+        
+        this.rotation += angleDiff * 0.15;
     }
 }
 
@@ -561,12 +582,16 @@ function spawnPolygon() {
     const rand = Math.random();
     
     if (distanceRatio < 0.3) {
-        // Center - spawn big polygons
-        if (rand < 0.60) sides = 5;        // 60% pentagons
-        else if (rand < 0.90) sides = 6;   // 30% hexagons
-        else if (rand < 0.97) sides = 8;   // 7% octagons
-        else if (rand < 0.995) sides = 10; // 2.5% decagons
-        else sides = 12;                    // 0.5% dodecagons
+        // Center - spawn big polygons (including rare ultra-large ones)
+        if (rand < 0.60) sides = 5;          // 60% pentagons
+        else if (rand < 0.90) sides = 6;     // 30% hexagons
+        else if (rand < 0.97) sides = 8;     // 7% octagons
+        else if (rand < 0.990) sides = 10;   // 2% decagons
+        else if (rand < 0.997) sides = 12;   // 0.7% dodecagons
+        else if (rand < 0.9985) sides = 13;  // 0.15% tridecagons
+        else if (rand < 0.9995) sides = 14;  // 0.10% tetradecagons
+        else if (rand < 0.9999) sides = 15;  // 0.04% pentadecagons
+        else sides = 16;                      // 0.01% hexadecagons (ultra rare)
         
     } else if (distanceRatio < 0.7) {
         // Mid - spawn medium polygons
