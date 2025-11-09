@@ -3344,8 +3344,11 @@
         // Test Area
         // Test Area - Now uses real game with temporary tank
         document.getElementById('editorTestBtn').addEventListener('click', () => {
+            console.log('[TEST MODE] Test button clicked');
+            
             if (editorState.blocks.length === 0) {
                 alert('Add at least one gun before testing!');
+                console.log('[TEST MODE] No guns added, aborting');
                 return;
             }
             
@@ -3367,42 +3370,57 @@
                 testTankConfig.bladeSize = editorState.bladeSize;
             }
             
-            console.log('Test tank config:', testTankConfig);
+            console.log('[TEST MODE] Created tank config:', testTankConfig);
+            console.log('[TEST MODE] Tank name:', testTankName);
+            console.log('[TEST MODE] Current playerId:', playerId);
             
             // Send test tank to server
+            console.log('[TEST MODE] Sending setTestTank to server...');
             socket.emit('setTestTank', { tankName: testTankName, config: testTankConfig });
             
             // Add to local tankTypes
             tankTypes[testTankName] = testTankConfig;
+            console.log('[TEST MODE] Added to local tankTypes');
             
             // Hide editor and menus
             document.getElementById('tankEditor').style.display = 'none';
             document.getElementById('startMenu').classList.add('hidden');
             document.getElementById('hud').classList.add('visible');
+            console.log('[TEST MODE] UI updated');
             
             // Store current tank type to restore later
             const originalTankType = playerId ? gameState.players.find(p => p.id === playerId)?.tankType : null;
             const wasInGame = playerId !== null;
             
+            console.log('[TEST MODE] Original tank type:', originalTankType);
+            console.log('[TEST MODE] Was in game:', wasInGame);
+            
             // If not in game, join game first, otherwise just upgrade
             if (!playerId) {
+                console.log('[TEST MODE] Not in game, joining...');
                 // Join game with test mode flag
                 socket.emit('joinGame', 'Test Player');
                 
                 // Wait for playerJoined event, then upgrade
                 const joinHandler = (data) => {
+                    console.log('[TEST MODE] Player joined, received data:', data);
                     playerId = data.id;
+                    console.log('[TEST MODE] Set playerId to:', playerId);
+                    console.log('[TEST MODE] Waiting 500ms before upgrading...');
                     setTimeout(() => {
+                        console.log('[TEST MODE] Sending upgradeTank request for:', testTankName);
                         socket.emit('upgradeTank', testTankName);
-                    }, 100);
+                    }, 500);
                     socket.off('playerJoined', joinHandler);
                 };
                 socket.on('playerJoined', joinHandler);
             } else {
+                console.log('[TEST MODE] Already in game, upgrading tank...');
                 // Already in game, just upgrade
                 setTimeout(() => {
+                    console.log('[TEST MODE] Sending upgradeTank request for:', testTankName);
                     socket.emit('upgradeTank', testTankName);
-                }, 100);
+                }, 500);
             }
             
             // Setup exit handler - Press ESC to exit test mode

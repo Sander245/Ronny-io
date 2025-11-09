@@ -598,14 +598,43 @@ class Player extends GameObject {
     }
 
     upgradeTank(newType) {
-        // Get upgrades from JSON file
+        console.log(`[PLAYER] upgradeTank called for player ${this.id}`);
+        console.log(`[PLAYER] Current tank: ${this.tankType}, Requested: ${newType}`);
+        console.log(`[PLAYER] Current level: ${this.level}`);
+        
+        // Check if it's a test tank (starts with __)
+        const isTestTank = newType.startsWith('__TEST_TANK__');
+        console.log(`[PLAYER] Is test tank: ${isTestTank}`);
+        
+        if (isTestTank) {
+            // For test tanks, bypass upgrade restrictions
+            const newTank = TANK_TYPES[newType];
+            if (newTank) {
+                console.log(`[PLAYER] Test tank found in TANK_TYPES, upgrading directly`);
+                this.tankType = newType;
+                console.log(`[PLAYER] Tank upgraded to: ${this.tankType}`);
+                return true;
+            } else {
+                console.log(`[PLAYER] ERROR: Test tank ${newType} not found in TANK_TYPES!`);
+                return false;
+            }
+        }
+        
+        // Normal upgrade logic for regular tanks
         const availableUpgrades = TANK_UPGRADES[this.tankType] || [];
+        console.log(`[PLAYER] Available upgrades:`, availableUpgrades);
+        
         if (availableUpgrades.includes(newType)) {
             const newTank = TANK_TYPES[newType];
             if (this.level >= newTank.level) {
+                console.log(`[PLAYER] Upgrade allowed, changing tank`);
                 this.tankType = newType;
                 return true;
+            } else {
+                console.log(`[PLAYER] Level too low: ${this.level} < ${newTank.level}`);
             }
+        } else {
+            console.log(`[PLAYER] Tank ${newType} not in available upgrades`);
         }
         return false;
     }
@@ -1462,23 +1491,36 @@ io.on('connection', (socket) => {
     });
 
     socket.on('upgradeTank', (tankType) => {
+        console.log(`[SERVER] upgradeTank called for socket ${socket.id}, tankType: ${tankType}`);
         const player = players.get(socket.id);
         if (player) {
+            console.log(`[SERVER] Player found, current tankType: ${player.tankType}, upgrading to: ${tankType}`);
+            console.log(`[SERVER] Tank config exists in TANK_TYPES: ${!!TANK_TYPES[tankType]}`);
+            if (TANK_TYPES[tankType]) {
+                console.log(`[SERVER] Tank config:`, TANK_TYPES[tankType]);
+            }
             player.upgradeTank(tankType);
+            console.log(`[SERVER] upgradeTank called, new tankType: ${player.tankType}`);
+        } else {
+            console.log(`[SERVER] Player not found for socket ${socket.id}`);
         }
     });
 
     // Handle test tank registration
     socket.on('setTestTank', ({ tankName, config }) => {
+        console.log(`[SERVER] setTestTank received for ${tankName}`);
+        console.log(`[SERVER] Tank config:`, JSON.stringify(config, null, 2));
         // Temporarily add test tank to server's TANK_TYPES
         TANK_TYPES[tankName] = config;
-        console.log(`Test tank ${tankName} registered for testing`);
+        console.log(`[SERVER] Test tank ${tankName} registered successfully`);
+        console.log(`[SERVER] Total tanks in TANK_TYPES: ${Object.keys(TANK_TYPES).length}`);
     });
 
     socket.on('clearTestTank', (tankName) => {
+        console.log(`[SERVER] clearTestTank received for ${tankName}`);
         // Remove test tank from server
         delete TANK_TYPES[tankName];
-        console.log(`Test tank ${tankName} removed`);
+        console.log(`[SERVER] Test tank ${tankName} removed`);
     });
 
     socket.on('respawn', () => {
