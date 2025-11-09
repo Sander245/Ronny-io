@@ -3782,6 +3782,45 @@
                 guns: guns,
                 hideFromTree: hideFromTree
             };
+            
+            // Add baseShape if using simple mode
+            if (editorState.baseMode === 'simple') {
+                tankConfig.baseShape = editorState.baseSides;
+            } else if (editorState.baseMode === 'advanced') {
+                tankConfig.baseShape = 'advanced';
+            }
+            
+            // Add advanced base blocks if in advanced mode
+            if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
+                tankConfig.baseBlocks = editorState.baseBlocks.map(block => ({
+                    shape: block.shape,
+                    size: block.size,
+                    x: block.x,
+                    y: block.y,
+                    width: block.width,
+                    height: block.height,
+                    rotation: block.rotation,
+                    layer: block.layer
+                }));
+            }
+            
+            // Add blades if any
+            if (editorState.blades.length > 0) {
+                tankConfig.blades = editorState.blades.map(blade => ({
+                    shape: blade.shape,
+                    size: blade.size,
+                    x: blade.x,
+                    y: blade.y,
+                    rotation: blade.rotation,
+                    layer: blade.layer,
+                    color: blade.color
+                }));
+            }
+            
+            // Add FOV if set
+            if (editorState.fov) {
+                tankConfig.fov = editorState.fov;
+            }
 
             const upgradePaths = upgradesFrom ? upgradesFrom.split(',').map(s => s.trim().toUpperCase()) : [];
 
@@ -3844,12 +3883,29 @@
             
             // Add advanced base blocks if in advanced mode
             if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
-                testTankConfig.baseBlocks = editorState.baseBlocks;
+                testTankConfig.baseBlocks = editorState.baseBlocks.map(block => ({
+                    shape: block.shape,
+                    size: block.size,
+                    x: block.x,
+                    y: block.y,
+                    width: block.width,
+                    height: block.height,
+                    rotation: block.rotation,
+                    layer: block.layer
+                }));
             }
             
             // Add blades if any
             if (editorState.blades.length > 0) {
-                testTankConfig.blades = editorState.blades;
+                testTankConfig.blades = editorState.blades.map(blade => ({
+                    shape: blade.shape,
+                    size: blade.size,
+                    x: blade.x,
+                    y: blade.y,
+                    rotation: blade.rotation,
+                    layer: blade.layer,
+                    color: blade.color
+                }));
             }
             
             console.log('[TEST MODE] Created tank config:', testTankConfig);
