@@ -727,12 +727,14 @@
     "bladeCount": 3,
     "bladeSize": 2,
     "baseLayers": 2,
-    "guns": [{"type": "normal", "angle": 0, "damage": 10, "speed": 2, "reload": 5, "delay": 0.01}],
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 10, "speed": 2, "reload": 5, "length": 1.3},
+      {"type": "normal", "angle": 0, "damage": 10, "speed": 2, "reload": 5, "length": 1.1, "offsetX": -8}
+    ],
     "fov": 2,
     "bodyDamageBonus": 5,
     "speedBonus": 1.5,
     "healthBonus": 3,
-    "hideGuns": false,
     "upgrades": []
   }
 }

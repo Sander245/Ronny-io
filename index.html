@@ -443,6 +443,9 @@
         <div class="xp-bar">
             <div class="xp-fill" id="xpFill"></div>
         </div>
+        
+        <!-- Minimap -->
+        <canvas id="minimap" width="150" height="150" style="position: absolute; left: 10px; top: 120px; border: 3px solid #404040; border-radius: 5px; background: rgba(0, 0, 0, 0.5);"></canvas>
     </div>
 
     <div id="upgradeMenu">
@@ -487,19 +490,18 @@
     <div id="cheatPanel" style="display: none; position: absolute; bottom: 10px; left: 10px; background: rgba(255, 0, 0, 0.8); color: white; padding: 15px; border-radius: 10px; font-size: 14px; z-index: 1000;">
         <div style="font-weight: bold; margin-bottom: 10px;">🔧 ADMIN PANEL ACTIVE</div>
         <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
-            <strong>G</strong> - Give XP: 
+            <strong>Shift+G</strong> - Give XP: 
             <button id="decreaseXP" style="padding: 2px 8px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">-</button>
             <span id="xpAmount" style="min-width: 60px; text-align: center; font-weight: bold;">100</span>
             <button id="increaseXP" style="padding: 2px 8px; background: #44ff44; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">+</button>
         </div>
-        <div><strong>B</strong> - Max Stats (Level 1000)</div>
-        <div><strong>I</strong> - Toggle Invincibility</div>
-        <div><strong>T</strong> - Teleport All Players to Cursor</div>
-        <div><strong>C</strong> - Clear All Polygons</div>
-        <div><strong>A</strong> - Morph to ADMIN Tank</div>
-        <div><strong>1-7</strong> - Spawn Polygon at Cursor</div>
-        <div><strong>8</strong> - Spawn All Polygons</div>
-        <div><strong>R</strong> - Reset Tank & Upgrades</div>
+        <div><strong>Shift+B</strong> - Max Stats (Level 1000)</div>
+        <div><strong>Shift+I</strong> - Toggle Invincibility</div>
+        <div><strong>Shift+T</strong> - Teleport All Players to Cursor</div>
+        <div><strong>Shift+C</strong> - Clear All Polygons</div>
+        <div><strong>Shift+A</strong> - Morph to ADMIN Tank</div>
+        <div><strong>Shift+1-8</strong> - Spawn Polygon at Cursor</div>
+        <div><strong>Shift+R</strong> - Reset Tank & Upgrades</div>
         <div><strong>ESC</strong> - Close Panel</div>
         <button id="viewUpgradeTreeCheat" style="margin-top: 10px; padding: 5px 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">View Upgrade Tree (Click to Morph)</button>
     </div>
@@ -631,8 +633,8 @@
                 }
             }
             
-            // Handle cheat panel commands
-            if (cheatPanelActive) {
+            // Handle cheat panel commands (require Shift key)
+            if (cheatPanelActive && e.shiftKey) {
                 if (e.key === 'g' || e.key === 'G') {
                     socket.emit('cheatGiveXP', xpAmount);
                     return;
@@ -668,12 +670,14 @@
                     socket.emit('cheatSpawnPolygon', { type: polygonType, x: mouseWorldX, y: mouseWorldY });
                     return;
                 }
-                if (e.key === 'Escape') {
-                    cheatPanelActive = false;
-                    document.getElementById('cheatPanel').style.display = 'none';
-                    console.log('Cheat panel deactivated');
-                    return;
-                }
+            }
+            
+            // Close admin panel with Escape (no shift required)
+            if (cheatPanelActive && e.key === 'Escape') {
+                cheatPanelActive = false;
+                document.getElementById('cheatPanel').style.display = 'none';
+                console.log('Cheat panel deactivated');
+                return;
             }
             
             // Toggle health bars with 'n' key
@@ -2058,6 +2062,88 @@
                    screen.y > -margin && screen.y < canvas.height + margin;
         }
 
+        // Draw minimap
+        function drawMinimap() {
+            const minimapCanvas = document.getElementById('minimap');
+            if (!minimapCanvas || !gameState || !playerId) return;
+            
+            const minimapCtx = minimapCanvas.getContext('2d');
+            const minimapSize = 150;
+            const center = minimapSize / 2;
+            const mapRadius = 3000; // Game map radius
+            const minimapScale = center / mapRadius; // Scale from game units to minimap pixels
+            
+            // Clear minimap
+            minimapCtx.clearRect(0, 0, minimapSize, minimapSize);
+            
+            // Draw map circle background
+            minimapCtx.fillStyle = 'rgba(200, 200, 200, 0.3)';
+            minimapCtx.beginPath();
+            minimapCtx.arc(center, center, center - 2, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Draw map border
+            minimapCtx.strokeStyle = '#404040';
+            minimapCtx.lineWidth = 2;
+            minimapCtx.beginPath();
+            minimapCtx.arc(center, center, center - 2, 0, Math.PI * 2);
+            minimapCtx.stroke();
+            
+            // Find player
+            const player = gameState.players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            // Draw big polygons (pentagon=30, hexagon=40, octagon=50, decagon=60, dodecagon=70)
+            if (gameState.polygons) {
+                gameState.polygons.forEach(polygon => {
+                    if (polygon.size >= 30) { // Only show pentagons and bigger
+                        const x = center + polygon.x * minimapScale;
+                        const y = center + polygon.y * minimapScale;
+                        
+                        // Different colors for different sizes
+                        if (polygon.size >= 70) {
+                            minimapCtx.fillStyle = '#FF6666'; // Dodecagon - red
+                        } else if (polygon.size >= 60) {
+                            minimapCtx.fillStyle = '#66CCFF'; // Decagon - cyan
+                        } else if (polygon.size >= 50) {
+                            minimapCtx.fillStyle = '#8B66FF'; // Octagon - purple
+                        } else if (polygon.size >= 40) {
+                            minimapCtx.fillStyle = '#FF6EC7'; // Hexagon - pink
+                        } else {
+                            minimapCtx.fillStyle = '#768CFF'; // Pentagon - blue
+                        }
+                        
+                        minimapCtx.beginPath();
+                        minimapCtx.arc(x, y, 3, 0, Math.PI * 2);
+                        minimapCtx.fill();
+                    }
+                });
+            }
+            
+            // Draw player arrow pointing at cursor
+            const playerX = center + player.x * minimapScale;
+            const playerY = center + player.y * minimapScale;
+            
+            minimapCtx.save();
+            minimapCtx.translate(playerX, playerY);
+            minimapCtx.rotate(player.rotation);
+            
+            // Draw arrow
+            minimapCtx.fillStyle = '#00ff00'; // Green arrow
+            minimapCtx.strokeStyle = '#004400';
+            minimapCtx.lineWidth = 1;
+            minimapCtx.beginPath();
+            minimapCtx.moveTo(8, 0); // Point
+            minimapCtx.lineTo(-4, -4); // Top back
+            minimapCtx.lineTo(-2, 0); // Middle back
+            minimapCtx.lineTo(-4, 4); // Bottom back
+            minimapCtx.closePath();
+            minimapCtx.fill();
+            minimapCtx.stroke();
+            
+            minimapCtx.restore();
+        }
+
         // Main render loop
         function render() {
             // Update mouse world position based on current camera (fixes stuck aim when camera moves)
@@ -2136,6 +2222,9 @@
 
             // Draw tanks (only visible ones)
             gameState.players.filter(p => isInViewport(p, p.size)).forEach(drawTank);
+
+            // Draw minimap
+            drawMinimap();
 
             ctx.restore();
             requestAnimationFrame(render);
