@@ -596,7 +596,7 @@
 
     <!-- Save Tank Modal -->
     <div id="saveTankModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 30000; justify-content: center; align-items: center;">
-        <div style="background: #2a2a2a; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; color: white;">
+        <div style="background: #2a2a2a; padding: 30px; border-radius: 10px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; color: white;">
             <h2 style="margin-top: 0;">Save Tank</h2>
             
             <label style="display: block; margin-bottom: 5px; color: #aaa;">Tank Name:</label>
@@ -605,8 +605,12 @@
             <label style="display: block; margin-bottom: 5px; color: #aaa;">Required Level:</label>
             <input id="saveTankLevel" type="number" value="1" min="1" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box;">
             
-            <label style="display: block; margin-bottom: 5px; color: #aaa;">Upgrade From (comma-separated tank names):</label>
-            <input id="saveTankUpgrades" type="text" placeholder="e.g. TANK, TWIN, SNIPER" style="width: 100%; padding: 10px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box;">
+            <label style="display: block; margin-bottom: 5px; color: #aaa;">Upgrade From (click tanks to add):</label>
+            <input id="saveTankUpgrades" type="text" placeholder="Selected tanks will appear here" readonly style="width: 100%; padding: 10px; margin-bottom: 10px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; cursor: default;">
+            
+            <div id="tankSelectorGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; margin-bottom: 15px; padding: 10px; background: #1a1a1a; border-radius: 4px;">
+                <!-- Tank selector buttons will be populated here -->
+            </div>
             
             <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
                 <input id="saveTankHideFromTree" type="checkbox" style="margin-right: 10px;">
@@ -620,12 +624,14 @@
         </div>
     </div>
 
-    <!-- Test Area -->
-    <div id="testArea" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0a; z-index: 25000;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 1;">
+    <!-- Test Area (overlays the game for testing) -->
+    <div id="testArea" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 25000; pointer-events: none;">
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 1; pointer-events: all;">
             <button id="exitTestBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">Exit Test</button>
         </div>
-        <canvas id="testCanvas" style="display: block; background: #0a0a0a;"></canvas>
+        <div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 149, 0, 0.9); color: white; padding: 10px 20px; border-radius: 4px; font-weight: bold; pointer-events: none;">
+            🎨 TESTING TANK - Click "Exit Test" when done
+        </div>
     </div>
 
     <!-- Load Socket.IO from CDN for GitHub Pages compatibility -->
@@ -1359,6 +1365,10 @@
         let treeViewZoom = 1; // For zooming
         let treeDragging = false;
         let treeDragStart = { x: 0, y: 0 };
+        let hoveredTank = null; // Track which tank is being hovered
+        let highlightedPaths = []; // Paths to highlight
+        let currentPathIndex = 0; // For alternating between multiple paths
+        let pathAlternateInterval = null; // Interval for path alternation
         
         function showUpgradeTree(allowMorphing = false) {
             const modal = document.getElementById('upgradeTreeModal');
@@ -1398,10 +1408,56 @@
             };
             
             canvas.onmousemove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left - treeViewOffset.x) / treeViewZoom;
+                const mouseY = (e.clientY - rect.top - treeViewOffset.y) / treeViewZoom;
+                
                 if (treeDragging) {
                     treeViewOffset.x = e.clientX - treeDragStart.x;
                     treeViewOffset.y = e.clientY - treeDragStart.y;
                     drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+                } else {
+                    // Check for hover
+                    const { nodePositions } = buildTreeLayout(treeData);
+                    let newHoveredTank = null;
+                    
+                    for (const tankKey in nodePositions) {
+                        const pos = nodePositions[tankKey];
+                        const dist = Math.sqrt((mouseX - pos.x) ** 2 + (mouseY - pos.y) ** 2);
+                        
+                        if (dist < 30) {
+                            newHoveredTank = tankKey;
+                            break;
+                        }
+                    }
+                    
+                    // If hover changed, update paths
+                    if (newHoveredTank !== hoveredTank) {
+                        hoveredTank = newHoveredTank;
+                        
+                        if (hoveredTank) {
+                            // Find all paths to this tank
+                            highlightedPaths = findAllPaths('BASIC', hoveredTank, treeData.upgrades);
+                            currentPathIndex = 0;
+                            
+                            // Start alternating if multiple paths
+                            if (pathAlternateInterval) clearInterval(pathAlternateInterval);
+                            if (highlightedPaths.length > 1) {
+                                pathAlternateInterval = setInterval(() => {
+                                    currentPathIndex = (currentPathIndex + 1) % highlightedPaths.length;
+                                    drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+                                }, 1000);
+                            }
+                        } else {
+                            highlightedPaths = [];
+                            if (pathAlternateInterval) {
+                                clearInterval(pathAlternateInterval);
+                                pathAlternateInterval = null;
+                            }
+                        }
+                        
+                        drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+                    }
                 }
             };
             
@@ -1468,6 +1524,34 @@
             }, { passive: false });
         }
         
+        // Find all upgrade paths from start to end tank
+        function findAllPaths(start, end, upgrades) {
+            if (start === end) return [[start]];
+            
+            const allPaths = [];
+            
+            function dfs(current, target, path, visited) {
+                if (current === target) {
+                    allPaths.push([...path]);
+                    return;
+                }
+                
+                const nextTanks = upgrades[current] || [];
+                for (const next of nextTanks) {
+                    if (!visited.has(next)) {
+                        visited.add(next);
+                        path.push(next);
+                        dfs(next, target, path, visited);
+                        path.pop();
+                        visited.delete(next);
+                    }
+                }
+            }
+            
+            dfs(start, end, [start], new Set([start]));
+            return allPaths;
+        }
+        
         function buildTreeStructure(showHiddenTanks = false) {
             if (!tankUpgrades || !tankTypes) return null;
             
@@ -1528,6 +1612,14 @@
             
             // Draw connections first
             treeCtx.lineWidth = 3 / treeViewZoom; // Adjust line width for zoom
+            
+            // Get current path to highlight
+            const currentPath = highlightedPaths.length > 0 ? highlightedPaths[currentPathIndex] : [];
+            const pathSet = new Set();
+            for (let i = 0; i < currentPath.length - 1; i++) {
+                pathSet.add(`${currentPath[i]}->${currentPath[i + 1]}`);
+            }
+            
             for (const fromTank in upgrades) {
                 const toTanks = upgrades[fromTank];
                 if (!nodePositions[fromTank]) continue;
@@ -1535,15 +1627,26 @@
                 toTanks.forEach(toTank => {
                     if (!nodePositions[toTank]) return;
                     
+                    const isInPath = pathSet.has(`${fromTank}->${toTank}`);
+                    
                     // Check if both ends have been used
                     const fromUsed = usedTanks.has(fromTank);
                     const toUsed = usedTanks.has(toTank);
                     
-                    // Brighten line if both ends used
-                    if (fromUsed && toUsed) {
+                    if (isInPath) {
+                        // Glowing effect for highlighted path
+                        treeCtx.strokeStyle = '#ffff00';
+                        treeCtx.lineWidth = 6 / treeViewZoom;
+                        treeCtx.shadowBlur = 15;
+                        treeCtx.shadowColor = '#ffff00';
+                    } else if (fromUsed && toUsed) {
                         treeCtx.strokeStyle = '#aaa'; // Brighter
+                        treeCtx.lineWidth = 3 / treeViewZoom;
+                        treeCtx.shadowBlur = 0;
                     } else {
                         treeCtx.strokeStyle = '#555'; // Normal
+                        treeCtx.lineWidth = 3 / treeViewZoom;
+                        treeCtx.shadowBlur = 0;
                     }
                     
                     treeCtx.beginPath();
@@ -1552,6 +1655,9 @@
                     treeCtx.stroke();
                 });
             }
+            
+            // Reset shadow
+            treeCtx.shadowBlur = 0;
             
             // Draw nodes
             for (const tankKey in nodePositions) {
@@ -2554,6 +2660,7 @@
             blocks: [],
             selectedBlock: null,
             rotation: 0,
+            zoom: 1,
             dragging: false,
             lastMousePos: { x: 0, y: 0 }
         };
@@ -2681,7 +2788,8 @@
                     input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
                 }
 
-                input.addEventListener('change', (e) => {
+                // Use 'input' event for real-time updates instead of 'change'
+                input.addEventListener('input', (e) => {
                     if (input.type === 'checkbox') {
                         block.props[key] = e.target.checked;
                     } else if (input.type === 'color') {
@@ -2719,6 +2827,7 @@
 
             ctx.save();
             ctx.translate(centerX, centerY);
+            ctx.scale(editorState.zoom, editorState.zoom); // Apply zoom
             ctx.rotate(editorState.rotation);
 
             // Draw tank body
@@ -2818,7 +2927,12 @@
         editorCanvas.addEventListener('mousemove', (e) => {
             if (editorState.dragging) {
                 const dx = e.clientX - editorState.lastMousePos.x;
+                const dy = e.clientY - editorState.lastMousePos.y;
+                
+                // Horizontal drag rotates, vertical drag zooms
                 editorState.rotation += dx * 0.01;
+                editorState.zoom = Math.max(0.5, Math.min(3, editorState.zoom + dy * 0.005));
+                
                 editorState.lastMousePos = { x: e.clientX, y: e.clientY };
                 renderEditorCanvas();
             }
@@ -2849,6 +2963,7 @@
                     blocks: [],
                     selectedBlock: null,
                     rotation: 0,
+                    zoom: 1,
                     dragging: false,
                     lastMousePos: { x: 0, y: 0 }
                 };
@@ -2861,6 +2976,78 @@
                 alert('Add at least one block before saving!');
                 return;
             }
+            
+            // Populate tank selector
+            const tankSelectorGrid = document.getElementById('tankSelectorGrid');
+            tankSelectorGrid.innerHTML = '';
+            
+            const selectedTanks = new Set();
+            
+            // Sort tanks by level
+            const sortedTanks = Object.entries(tankTypes).sort((a, b) => a[1].level - b[1].level);
+            
+            sortedTanks.forEach(([tankKey, tank]) => {
+                if (tankKey.startsWith('__')) return; // Skip temporary tanks
+                
+                const tankBtn = document.createElement('div');
+                tankBtn.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 8px; background: #2a2a2a; border: 2px solid #444; border-radius: 4px; cursor: pointer; transition: all 0.2s;';
+                tankBtn.dataset.tankKey = tankKey;
+                
+                // Mini preview canvas
+                const miniCanvas = document.createElement('canvas');
+                miniCanvas.width = 40;
+                miniCanvas.height = 40;
+                const miniCtx = miniCanvas.getContext('2d');
+                
+                // Draw tank preview
+                miniCtx.save();
+                miniCtx.translate(20, 20);
+                miniCtx.fillStyle = '#00b2e1';
+                miniCtx.beginPath();
+                miniCtx.arc(0, 0, 12, 0, Math.PI * 2);
+                miniCtx.fill();
+                
+                // Draw simplified guns
+                if (tank.guns) {
+                    tank.guns.forEach(gun => {
+                        miniCtx.save();
+                        miniCtx.rotate((gun.angle || 0) * Math.PI / 180);
+                        miniCtx.fillStyle = gun.color || '#999';
+                        miniCtx.fillRect(-gun.width/4 || -2, 12, gun.width/2 || 4, gun.length/2 || 10);
+                        miniCtx.restore();
+                    });
+                }
+                miniCtx.restore();
+                
+                tankBtn.appendChild(miniCanvas);
+                
+                // Tank info
+                const infoDiv = document.createElement('div');
+                infoDiv.style.cssText = 'flex: 1;';
+                infoDiv.innerHTML = `
+                    <div style="font-weight: bold; font-size: 12px;">${tank.name}</div>
+                    <div style="color: #aaa; font-size: 11px;">Level ${tank.level}</div>
+                `;
+                tankBtn.appendChild(infoDiv);
+                
+                tankBtn.addEventListener('click', () => {
+                    if (selectedTanks.has(tankKey)) {
+                        selectedTanks.delete(tankKey);
+                        tankBtn.style.borderColor = '#444';
+                        tankBtn.style.background = '#2a2a2a';
+                    } else {
+                        selectedTanks.add(tankKey);
+                        tankBtn.style.borderColor = '#44ff44';
+                        tankBtn.style.background = '#1a3a1a';
+                    }
+                    
+                    // Update input field
+                    document.getElementById('saveTankUpgrades').value = Array.from(selectedTanks).join(', ');
+                });
+                
+                tankSelectorGrid.appendChild(tankBtn);
+            });
+            
             document.getElementById('saveTankModal').style.display = 'flex';
         });
 
@@ -2897,8 +3084,22 @@
             console.log('Saving tank:', tankConfig);
             console.log('Upgrade paths:', upgradePaths);
             
-            // TODO: Save to tankTypes.json and tankUpgrades.json
-            alert('Tank saved! (Note: Actual file saving needs server-side implementation)');
+            // Send to server for saving
+            fetch('https://ronny-io.onrender.com/saveTank', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tankConfig, upgradePaths })
+            }).then(res => res.json())
+              .then(data => {
+                  if (data.success) {
+                      alert('Tank saved successfully!');
+                  } else {
+                      alert('Error saving tank: ' + (data.error || 'Unknown error'));
+                  }
+              })
+              .catch(err => {
+                  alert('Error saving tank: ' + err.message);
+              });
             
             document.getElementById('saveTankModal').style.display = 'none';
             document.getElementById('tankEditor').style.display = 'none';
@@ -2907,141 +3108,66 @@
                 blocks: [],
                 selectedBlock: null,
                 rotation: 0,
+                zoom: 1,
                 dragging: false,
                 lastMousePos: { x: 0, y: 0 }
             };
         });
 
         // Test Area
+        // Test Area - Now uses real game with temporary tank
         document.getElementById('editorTestBtn').addEventListener('click', () => {
             if (editorState.blocks.length === 0) {
                 alert('Add at least one block before testing!');
                 return;
             }
             
+            // Create temporary tank config
+            const testTankName = '__TEST_TANK__';
+            const testTankConfig = {
+                name: 'Test Tank',
+                level: 1,
+                guns: editorState.blocks.map(block => ({
+                    type: block.type,
+                    ...block.props
+                })),
+                hideFromTree: true
+            };
+            
+            // Add to tankTypes temporarily
+            tankTypes[testTankName] = testTankConfig;
+            
+            // Hide editor
             document.getElementById('tankEditor').style.display = 'none';
             document.getElementById('testArea').style.display = 'block';
             
-            const testCanvas = document.getElementById('testCanvas');
-            const testCtx = testCanvas.getContext('2d');
+            // Store current tank type to restore later
+            const originalTankType = playerId ? gameState.players.find(p => p.id === playerId)?.tankType : null;
             
-            testCanvas.width = window.innerWidth;
-            testCanvas.height = window.innerHeight;
-            
-            let testTank = {
-                x: testCanvas.width / 2,
-                y: testCanvas.height / 2,
-                angle: 0,
-                size: 40
-            };
-            
-            let testKeys = { w: false, a: false, s: false, d: false };
-            let testMouse = { x: testCanvas.width / 2, y: testCanvas.height / 2 };
-            
-            const testKeyDown = (e) => {
-                if (e.key === 'w') testKeys.w = true;
-                if (e.key === 'a') testKeys.a = true;
-                if (e.key === 's') testKeys.s = true;
-                if (e.key === 'd') testKeys.d = true;
-            };
-            
-            const testKeyUp = (e) => {
-                if (e.key === 'w') testKeys.w = false;
-                if (e.key === 'a') testKeys.a = false;
-                if (e.key === 's') testKeys.s = false;
-                if (e.key === 'd') testKeys.d = false;
-            };
-            
-            const testMouseMove = (e) => {
-                const rect = testCanvas.getBoundingClientRect();
-                testMouse.x = e.clientX - rect.left;
-                testMouse.y = e.clientY - rect.top;
-            };
-            
-            window.addEventListener('keydown', testKeyDown);
-            window.addEventListener('keyup', testKeyUp);
-            testCanvas.addEventListener('mousemove', testMouseMove);
-            
-            let testAnimFrame;
-            function testRender() {
-                // Movement
-                const speed = 3;
-                if (testKeys.w) testTank.y -= speed;
-                if (testKeys.s) testTank.y += speed;
-                if (testKeys.a) testTank.x -= speed;
-                if (testKeys.d) testTank.x += speed;
-                
-                // Angle to mouse
-                testTank.angle = Math.atan2(testMouse.y - testTank.y, testMouse.x - testTank.x);
-                
-                // Render
-                testCtx.fillStyle = '#0a0a0a';
-                testCtx.fillRect(0, 0, testCanvas.width, testCanvas.height);
-                
-                testCtx.save();
-                testCtx.translate(testTank.x, testTank.y);
-                testCtx.rotate(testTank.angle);
-                
-                // Draw tank body
-                testCtx.fillStyle = '#00b2e1';
-                testCtx.beginPath();
-                testCtx.arc(0, 0, testTank.size, 0, Math.PI * 2);
-                testCtx.fill();
-                testCtx.strokeStyle = '#333';
-                testCtx.lineWidth = 3;
-                testCtx.stroke();
-                
-                // Draw blocks
-                editorState.blocks.forEach(block => {
-                    testCtx.save();
-                    
-                    if (block.type === 'gun') {
-                        testCtx.rotate(block.props.angle * Math.PI / 180);
-                        testCtx.translate(block.props.offsetX, block.props.offsetY);
-                        testCtx.fillStyle = block.props.color;
-                        testCtx.fillRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
-                        testCtx.strokeStyle = '#333';
-                        testCtx.lineWidth = 2;
-                        testCtx.strokeRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
-                    } else if (block.type === 'autoTurret') {
-                        testCtx.translate(block.props.offsetX, block.props.offsetY);
-                        testCtx.fillStyle = block.props.color;
-                        testCtx.beginPath();
-                        testCtx.arc(0, 0, block.props.size, 0, Math.PI * 2);
-                        testCtx.fill();
-                        testCtx.strokeStyle = '#333';
-                        testCtx.lineWidth = 2;
-                        testCtx.stroke();
-                        testCtx.fillRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
-                        testCtx.strokeRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
-                    } else if (block.type === 'trap') {
-                        testCtx.rotate(block.props.angle * Math.PI / 180);
-                        testCtx.translate(block.props.offsetX, block.props.offsetY);
-                        testCtx.fillStyle = block.props.color;
-                        testCtx.fillRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
-                        testCtx.strokeStyle = '#333';
-                        testCtx.lineWidth = 2;
-                        testCtx.strokeRect(-block.props.width / 2, testTank.size, block.props.width, block.props.length);
-                    }
-                    
-                    testCtx.restore();
-                });
-                
-                testCtx.restore();
-                
-                testAnimFrame = requestAnimationFrame(testRender);
+            // Morph to test tank
+            if (playerId) {
+                socket.emit('upgradeTank', testTankName);
             }
             
-            testRender();
-            
-            document.getElementById('exitTestBtn').onclick = () => {
-                cancelAnimationFrame(testAnimFrame);
-                window.removeEventListener('keydown', testKeyDown);
-                window.removeEventListener('keyup', testKeyUp);
-                testCanvas.removeEventListener('mousemove', testMouseMove);
+            // Setup exit button
+            const exitHandler = () => {
+                // Restore original tank
+                if (originalTankType && playerId) {
+                    socket.emit('upgradeTank', originalTankType);
+                }
+                
+                // Clean up test tank
+                delete tankTypes[testTankName];
+                
+                // Return to editor
                 document.getElementById('testArea').style.display = 'none';
                 document.getElementById('tankEditor').style.display = 'block';
+                
+                // Remove event listener
+                document.getElementById('exitTestBtn').removeEventListener('click', exitHandler);
             };
+            
+            document.getElementById('exitTestBtn').addEventListener('click', exitHandler);
         });
     </script>
 </body>

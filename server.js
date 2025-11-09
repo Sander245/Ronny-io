@@ -20,10 +20,66 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static('.'));
+app.use(express.json()); // Parse JSON bodies
 
 // Health check endpoint for tunnel validation
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+
+// Save tank endpoint
+app.post('/saveTank', (req, res) => {
+    try {
+        const { tankConfig, upgradePaths } = req.body;
+        
+        if (!tankConfig || !tankConfig.name) {
+            return res.status(400).json({ success: false, error: 'Invalid tank configuration' });
+        }
+
+        const tankName = tankConfig.name.toUpperCase();
+        
+        // Read current tankUpgrades.json
+        const upgradesData = fs.readFileSync('./tankUpgrades.json', 'utf8');
+        const allTanks = JSON.parse(upgradesData);
+        
+        // Add new tank to TANK_TYPES
+        allTanks[tankName] = {
+            name: tankConfig.name,
+            level: tankConfig.level || 1,
+            guns: tankConfig.guns || [],
+            hideFromTree: tankConfig.hideFromTree || false,
+            upgrades: [] // Will be populated later
+        };
+        
+        // Update upgrade paths for parent tanks
+        upgradePaths.forEach(parentName => {
+            const parent = parentName.toUpperCase();
+            if (allTanks[parent]) {
+                if (!allTanks[parent].upgrades) {
+                    allTanks[parent].upgrades = [];
+                }
+                if (!allTanks[parent].upgrades.includes(tankName)) {
+                    allTanks[parent].upgrades.push(tankName);
+                }
+            }
+        });
+        
+        // Write back to file
+        fs.writeFileSync('./tankUpgrades.json', JSON.stringify(allTanks, null, 2));
+        
+        // Update runtime data
+        TANK_TYPES = allTanks;
+        Object.keys(TANK_TYPES).forEach(key => {
+            TANK_UPGRADES[key] = TANK_TYPES[key].upgrades || [];
+        });
+        
+        console.log(`Tank ${tankName} saved successfully`);
+        res.json({ success: true });
+        
+    } catch (err) {
+        console.error('Error saving tank:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // Root endpoint
@@ -279,7 +335,7 @@ class Minion extends GameObject {
         super(x, y);
         this.owner = owner;
         this.damage = damage;
-        this.speed = speed * 5;
+        this.speed = speed * 1.5; // Reduced from 5 to 1.5 for more reasonable speed
         this.size = size;
         this.health = health;
         this.maxHealth = health;
