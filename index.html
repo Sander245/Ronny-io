@@ -515,8 +515,12 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const socket = io();
-
+        
+        // Connect to server - UPDATE THIS URL after deploying to Render
+        // For local testing: io()
+        // For production: io('https://your-server-name.onrender.com')
+        const socket = io(); // Change this to your Render URL when deployed
+        
         // Set canvas size
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
