@@ -485,7 +485,7 @@
     </div>
 
     <div id="cheatPanel" style="display: none; position: absolute; bottom: 10px; left: 10px; background: rgba(255, 0, 0, 0.8); color: white; padding: 15px; border-radius: 10px; font-size: 14px; z-index: 1000;">
-        <div style="font-weight: bold; margin-bottom: 10px;">🔧 CHEAT PANEL ACTIVE</div>
+        <div style="font-weight: bold; margin-bottom: 10px;">🔧 ADMIN PANEL ACTIVE</div>
         <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
             <strong>G</strong> - Give XP: 
             <button id="decreaseXP" style="padding: 2px 8px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">-</button>
@@ -495,6 +495,8 @@
         <div><strong>B</strong> - Max Stats (Level 1000)</div>
         <div><strong>I</strong> - Toggle Invincibility</div>
         <div><strong>T</strong> - Teleport All Players to Cursor</div>
+        <div><strong>C</strong> - Clear All Polygons</div>
+        <div><strong>A</strong> - Morph to ADMIN Tank</div>
         <div><strong>1-7</strong> - Spawn Polygon at Cursor</div>
         <div><strong>8</strong> - Spawn All Polygons</div>
         <div><strong>R</strong> - Reset Tank & Upgrades</div>
@@ -622,11 +624,10 @@
                 if (cheatCodeBuffer.length > 20) {
                     cheatCodeBuffer = cheatCodeBuffer.slice(-20);
                 }
-                if (cheatCodeBuffer.includes('ronnyissigma')) {
-                    cheatPanelActive = true;
+                if (cheatCodeBuffer.includes('ronnyisskibidi')) {
+                    // Send verification to server
+                    socket.emit('verifyAdminCode', 'ronnyisskibidi');
                     cheatCodeBuffer = '';
-                    document.getElementById('cheatPanel').style.display = 'block';
-                    console.log('Cheat panel activated!');
                 }
             }
             
@@ -646,6 +647,16 @@
                 }
                 if (e.key === 't' || e.key === 'T') {
                     socket.emit('cheatTeleportAllPlayers', { x: mouseWorldX, y: mouseWorldY });
+                    return;
+                }
+                if (e.key === 'c' || e.key === 'C') {
+                    socket.emit('cheatClearPolygons');
+                    console.log('Clearing all polygons...');
+                    return;
+                }
+                if (e.key === 'a' || e.key === 'A') {
+                    socket.emit('cheatMorphAdmin');
+                    console.log('Morphing to ADMIN tank...');
                     return;
                 }
                 if (e.key === 'r' || e.key === 'R') {
@@ -863,6 +874,17 @@
                         document.getElementById('controlsHelp').classList.add('hidden');
                     }
                 }, 6000);
+            }
+        });
+
+        // Handle admin verification response
+        socket.on('adminVerified', (verified) => {
+            if (verified) {
+                cheatPanelActive = true;
+                document.getElementById('cheatPanel').style.display = 'block';
+                console.log('Admin access granted!');
+            } else {
+                console.log('Admin access denied - incorrect code');
             }
         });
 
@@ -1596,7 +1618,7 @@
             const tankConfig = tankTypes[player.tankType];
 
             // LAYER 0: Draw guns first (so they appear under the base)
-            if (tankConfig && tankConfig.guns) {
+            if (tankConfig && tankConfig.guns && !tankConfig.hideGuns) {
                 tankConfig.guns.forEach((gun, gunIndex) => {
                     // Get recoil offset for this gun
                     const recoilOffset = (player.gunRecoils && player.gunRecoils[`gun_${gunIndex}`]) || 0;
@@ -1713,18 +1735,28 @@
                 }
 
                 // Draw multiple circles (stacked appearance) - these cover the polygon center
+                const baseLayers = tankConfig.baseLayers || 1;
                 const circleColors = player.id === playerId ? 
                     ['#00B2E1', '#0099C9', '#0080B0'] : 
                     ['#F14E54', '#D9444A', '#C03A40'];
                 
-                const circleSizes = [size * 1.1, size * 0.85, size * 0.6]; // Adjusted sizes
+                // Adjust circle sizes based on baseLayers
+                let circleSizes;
+                if (baseLayers === 2) {
+                    circleSizes = [size * 1.1, size * 0.75];
+                } else if (baseLayers >= 3) {
+                    circleSizes = [size * 1.1, size * 0.85, size * 0.6];
+                } else {
+                    circleSizes = [size * 1.1, size * 0.85, size * 0.6];
+                }
                 
-                circleColors.forEach((color, i) => {
+                circleSizes.slice(0, Math.max(baseLayers, 1)).forEach((circleSize, i) => {
+                    const color = circleColors[i % circleColors.length];
                     ctx.fillStyle = color;
                     ctx.strokeStyle = darkenColor(color, 0.3);
                     ctx.lineWidth = 3 * camera.zoom;
                     ctx.beginPath();
-                    ctx.arc(0, 0, circleSizes[i], 0, Math.PI * 2);
+                    ctx.arc(0, 0, circleSize, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.stroke();
                 });

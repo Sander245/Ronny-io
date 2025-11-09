@@ -1360,8 +1360,23 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Cheat code handlers
+    // Admin panel verification
+    const ADMIN_CODE = 'ronnyisskibidi';
+    const adminPlayers = new Set(); // Track verified admin players
+
+    socket.on('verifyAdminCode', (code) => {
+        if (code === ADMIN_CODE) {
+            adminPlayers.add(socket.id);
+            console.log(`Admin access granted to: ${socket.id}`);
+            socket.emit('adminVerified', true);
+        } else {
+            socket.emit('adminVerified', false);
+        }
+    });
+
+    // Cheat code handlers (now require admin verification)
     socket.on('cheatGiveXP', (amount) => {
+        if (!adminPlayers.has(socket.id)) return;
         const player = players.get(socket.id);
         if (player) {
             player.addXP(amount);
@@ -1369,6 +1384,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cheatMaxStats', () => {
+        if (!adminPlayers.has(socket.id)) return;
         const player = players.get(socket.id);
         if (player) {
             player.level = 1000;
@@ -1386,6 +1402,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cheatResetTank', () => {
+        if (!adminPlayers.has(socket.id)) return;
         const player = players.get(socket.id);
         if (player) {
             player.tankType = 'BASIC';
@@ -1408,6 +1425,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cheatMorphTank', (tankType) => {
+        if (!adminPlayers.has(socket.id)) return;
         const player = players.get(socket.id);
         if (player && TANK_TYPES[tankType]) {
             player.tankType = tankType;
@@ -1416,6 +1434,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cheatSpawnPolygon', (data) => {
+        if (!adminPlayers.has(socket.id)) return;
         const { type, x, y } = data;
         const polygonTypes = [
             { sides: 3, size: 15, health: 300, xp: 10, color: '#FFE666', type: 'Triangle' },
@@ -1445,6 +1464,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cheatToggleInvincibility', () => {
+        if (!adminPlayers.has(socket.id)) return;
         const player = players.get(socket.id);
         if (player) {
             player.invincible = !player.invincible;
@@ -1453,6 +1473,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('cheatTeleportAllPlayers', (data) => {
+        if (!adminPlayers.has(socket.id)) return;
         const { x, y } = data;
         players.forEach(player => {
             player.x = x;
@@ -1461,6 +1482,34 @@ io.on('connection', (socket) => {
             player.vy = 0;
         });
         console.log(`Teleported all players to (${x}, ${y})`);
+    });
+
+    socket.on('cheatClearPolygons', () => {
+        if (!adminPlayers.has(socket.id)) return;
+        const count = polygons.size;
+        polygons.clear();
+        console.log(`Admin ${socket.id} cleared ${count} polygons from map`);
+    });
+
+    socket.on('cheatMorphAdmin', () => {
+        if (!adminPlayers.has(socket.id)) return;
+        const player = players.get(socket.id);
+        if (player) {
+            player.tankType = 'ADMIN';
+            player.level = 100;
+            player.stats = {
+                healthRegen: 7,
+                maxHealth: 7,
+                bodyDamage: 7,
+                bulletSpeed: 7,
+                bulletPenetration: 7,
+                bulletDamage: 7,
+                reload: 7,
+                movementSpeed: 7
+            };
+            player.updateSize();
+            console.log(`Player ${player.name} morphed to ADMIN tank`);
+        }
     });
 
     socket.on('playerLeaveGame', () => {
@@ -1482,6 +1531,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('Player disconnected:', socket.id);
         players.delete(socket.id);
+        adminPlayers.delete(socket.id); // Remove from admin list
         
         // Remove player's bullets, traps, and minions
         bullets.forEach((bullet, id) => {
@@ -1511,5 +1561,8 @@ for (let i = 0; i < 50; i++) {
 
 const PORT = process.env.PORT || 13126;
 http.listen(PORT, () => {
+    console.log('=================================');
+    console.log('   RONNY IO - Version 2.0');
+    console.log('=================================');
     console.log(`Server running on port ${PORT}`);
 });

@@ -119,6 +119,7 @@
     "baseShape": "circle",
     "guns": [{"type": "normal", "angle": 0, "damage": 4.5, "speed": 0.8, "reload": 0.4, "size": 2, "delay": 0.15}],
     "fov": 1,
+    "healthBonus": 1.3,
     "upgrades": ["ANNIHILATOR", "HYBRID", "SKIMMER"]
   },
   "GUNNER": {
@@ -192,6 +193,7 @@
       {"type": "minion", "angle": 180, "count": 8, "damage": 1.5, "speed": 1.2},
       {"type": "minion", "angle": 270, "count": 8, "damage": 1.5, "speed": 1.2}
     ],
+    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -346,6 +348,7 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 16, "damage": 1, "speed": 1}
     ],
+    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -356,6 +359,7 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 6, "damage": 1.8, "speed": 1.3}
     ],
+    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -365,6 +369,7 @@
     "baseShape": "circle",
     "guns": [{"type": "normal", "angle": 0, "damage": 6, "speed": 0.7, "reload": 0.3, "size": 2.5, "delay": 0.2}],
     "fov": 1,
+    "healthBonus": 1.5,
     "upgrades": []
   },
   "HYBRID": {
@@ -618,6 +623,7 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 6, "damage": 2, "speed": 1.1}
     ],
+    "hideGuns": true,
     "fov": 1.25,
     "upgrades": []
   },
@@ -628,6 +634,7 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 10, "damage": 1.3, "speed": 1.3}
     ],
+    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -715,6 +722,22 @@
     "fov": 1,
     "bodyDamageBonus": 2.5,
     "speedBonus": 1.35,
+    "upgrades": []
+  },
+  "ADMIN": {
+    "name": "Admin",
+    "level": 0,
+    "baseShape": "blade",
+    "bladeShape": "square",
+    "bladeCount": 3,
+    "bladeSize": 2,
+    "baseLayers": 2,
+    "guns": [{"type": "normal", "angle": 0, "damage": 10, "speed": 2, "reload": 5, "delay": 0.01}],
+    "fov": 2,
+    "bodyDamageBonus": 5,
+    "speedBonus": 1.5,
+    "healthBonus": 3,
+    "hideGuns": false,
     "upgrades": []
   }
 }
