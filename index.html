@@ -566,44 +566,49 @@
 
     <!-- Tank Editor -->
     <div id="tankEditor" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; z-index: 20000;">
-        <!-- Left Panel - Block Menu & Base Editor -->
+        <!-- Left Panel - Block Menu & Settings -->
         <div id="editorLeftPanel" style="position: absolute; left: 0; top: 0; width: 250px; height: 100%; background: #2a2a2a; border-right: 2px solid #444; overflow-y: auto; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px;">
-            <!-- Current Blocks Section -->
+            <!-- Current Guns Section -->
             <div style="flex-shrink: 0;">
-                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Current Blocks</h2>
+                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Current Guns</h2>
                 <div id="currentBlocksList" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
-                    <div style="color: #888; font-size: 12px; font-style: italic;">No blocks added yet</div>
+                    <div style="color: #888; font-size: 12px; font-style: italic;">No guns added yet</div>
                 </div>
             </div>
             
-            <!-- Add Blocks Section -->
+            <!-- Add Guns Section -->
             <div style="flex-shrink: 0; border-top: 2px solid #444; padding-top: 15px;">
-                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Add Blocks</h2>
+                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Add Gun</h2>
                 <div id="gunBlocksList" style="display: flex; flex-direction: column; gap: 8px;"></div>
             </div>
             
-            <!-- Base Editor Section -->
+            <!-- Tank Settings Section -->
             <div style="flex-shrink: 0; border-top: 2px solid #444; padding-top: 15px;">
-                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Base Editor</h2>
+                <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Tank Settings</h2>
                 
-                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Base Shape Mode:</label>
-                <select id="baseShapeMode" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 15px;">
-                    <option value="none">None (Circle)</option>
-                    <option value="number">Number of Sides</option>
-                    <option value="array">Array (Multiple Blocks)</option>
+                <!-- Base Shape -->
+                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Base Shape:</label>
+                <select id="baseShapeSelect" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 15px;">
+                    <option value="circle">Circle</option>
+                    <option value="blade">Blade</option>
                 </select>
                 
-                <div id="baseShapeInputs" style="margin-bottom: 15px;">
-                    <!-- Dynamic inputs will be added here -->
-                </div>
-            </div>
-            
-            <!-- Blade Editor Section -->
-            <div style="flex-shrink: 0; border-top: 2px solid #444; padding-top: 15px;">
-                <h2 style="color: #fff; margin-top: 0; margin-bottom: 10px;">Blades</h2>
-                <button id="addBladeBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">+ Add Blade</button>
-                <div id="bladesList" style="display: flex; flex-direction: column; gap: 8px;">
-                    <!-- Blade items will be added here -->
+                <!-- Blade Settings (shown only when blade is selected) -->
+                <div id="bladeSettings" style="display: none;">
+                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Blade Shape:</label>
+                    <select id="bladeShapeSelect" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
+                        <option value="triangle">Triangle</option>
+                        <option value="square">Square</option>
+                        <option value="pentagon">Pentagon</option>
+                        <option value="hexagon">Hexagon</option>
+                        <option value="octagon">Octagon</option>
+                    </select>
+                    
+                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Blade Count:</label>
+                    <input type="number" id="bladeCountInput" min="1" max="16" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
+                    
+                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Blade Size:</label>
+                    <input type="number" id="bladeSizeInput" min="0.5" max="3" step="0.1" value="1.5" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
                 </div>
             </div>
         </div>
@@ -2735,69 +2740,51 @@
             zoom: 1,
             dragging: false,
             lastMousePos: { x: 0, y: 0 },
-            baseShapeMode: 'none',
-            baseSides: 0,
-            blades: []
+            baseShape: 'circle',
+            bladeShape: 'square',
+            bladeCount: 1,
+            bladeSize: 1.5
         };
 
         const blockTypes = {
-            gun: {
-                name: 'Gun',
+            normal: {
+                name: 'Normal Gun',
                 defaultProps: {
-                    width: 15,
-                    length: 50,
-                    delay: 0,
-                    offsetX: 0,
-                    offsetY: 0,
+                    type: 'normal',
                     angle: 0,
-                    color: '#999999',
-                    reload: 1,
-                    recoil: 1,
-                    damage: 1,
-                    penetration: 1,
-                    speed: 1,
-                    health: 1
-                }
-            },
-            autoTurret: {
-                name: 'Auto Turret',
-                defaultProps: {
-                    size: 20,
                     offsetX: 0,
                     offsetY: 0,
-                    gunWidth: 10,
-                    gunLength: 30,
-                    delay: 0,
-                    color: '#999999',
-                    reload: 1,
                     damage: 1,
-                    penetration: 1,
                     speed: 1,
-                    health: 1
+                    reload: 1,
+                    length: 1,
+                    size: 1,
+                    spread: 0
                 }
             },
             trap: {
                 name: 'Trap Launcher',
                 defaultProps: {
-                    width: 20,
-                    length: 40,
-                    delay: 0,
+                    type: 'trap',
+                    angle: 0,
                     offsetX: 0,
                     offsetY: 0,
-                    angle: 0,
-                    color: '#999999',
-                    reload: 1.5,
-                    trapSize: 15
+                    damage: 1,
+                    speed: 0.8,
+                    reload: 1.2,
+                    maxTraps: 15,
+                    trapSize: 1
                 }
             },
-            base: {
-                name: 'Base Block',
+            minion: {
+                name: 'Drone Spawner',
                 defaultProps: {
-                    size: 15,
-                    offsetX: 0,
-                    offsetY: 0,
+                    type: 'minion',
                     angle: 0,
-                    color: '#00b2e1'
+                    count: 4,
+                    damage: 1.5,
+                    speed: 1.2,
+                    minionSize: 1
                 }
             }
         };
@@ -2808,9 +2795,6 @@
             gunBlocksList.innerHTML = '';
             
             for (const [type, config] of Object.entries(blockTypes)) {
-                // Skip base block unless in array mode
-                if (type === 'base' && editorState.baseShapeMode !== 'array') continue;
-                
                 const btn = document.createElement('button');
                 btn.textContent = '+ ' + config.name;
                 btn.style.cssText = 'padding: 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;';
@@ -2880,99 +2864,11 @@
             const panel = document.getElementById('editorPropertiesContent');
             
             if (!editorState.selectedBlock) {
-                panel.innerHTML = '<div style="color: #aaa; font-size: 14px;">Select a block to edit its properties</div>';
+                panel.innerHTML = '<div style="color: #aaa; font-size: 14px;">Select a gun to edit its properties</div>';
                 return;
             }
 
             const block = editorState.selectedBlock;
-            
-            // Handle blade editing
-            if (block.type === 'blade') {
-                panel.innerHTML = `
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #4a9eff;">Blade Editor</strong>
-                        <button id="deleteBladeBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
-                    </div>
-                `;
-                
-                const blade = block.blade;
-                
-                // Shape dropdown
-                const shapeDiv = document.createElement('div');
-                shapeDiv.style.marginBottom = '12px';
-                const shapeLabel = document.createElement('label');
-                shapeLabel.textContent = 'Shape:';
-                shapeLabel.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
-                shapeDiv.appendChild(shapeLabel);
-                const shapeSelect = document.createElement('select');
-                shapeSelect.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
-                ['triangle', 'square', 'pentagon', 'hexagon'].forEach(shape => {
-                    const option = document.createElement('option');
-                    option.value = shape;
-                    option.textContent = shape.charAt(0).toUpperCase() + shape.slice(1);
-                    option.selected = blade.shape === shape;
-                    shapeSelect.appendChild(option);
-                });
-                shapeSelect.addEventListener('change', (e) => {
-                    blade.shape = e.target.value;
-                    updateBladesList();
-                    renderEditorCanvas();
-                });
-                shapeDiv.appendChild(shapeSelect);
-                panel.appendChild(shapeDiv);
-                
-                // Size input
-                const sizeDiv = document.createElement('div');
-                sizeDiv.style.marginBottom = '12px';
-                const sizeLabel = document.createElement('label');
-                sizeLabel.textContent = 'Size:';
-                sizeLabel.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
-                sizeDiv.appendChild(sizeLabel);
-                const sizeInput = document.createElement('input');
-                sizeInput.type = 'number';
-                sizeInput.value = blade.size;
-                sizeInput.step = '1';
-                sizeInput.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
-                sizeInput.addEventListener('input', (e) => {
-                    blade.size = parseFloat(e.target.value) || 10;
-                    updateBladesList();
-                    renderEditorCanvas();
-                });
-                sizeDiv.appendChild(sizeInput);
-                panel.appendChild(sizeDiv);
-                
-                // Count input
-                const countDiv = document.createElement('div');
-                countDiv.style.marginBottom = '12px';
-                const countLabel = document.createElement('label');
-                countLabel.textContent = 'Count:';
-                countLabel.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
-                countDiv.appendChild(countLabel);
-                const countInput = document.createElement('input');
-                countInput.type = 'number';
-                countInput.value = blade.count;
-                countInput.step = '1';
-                countInput.min = '1';
-                countInput.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
-                countInput.addEventListener('input', (e) => {
-                    blade.count = Math.max(1, parseInt(e.target.value) || 1);
-                    updateBladesList();
-                    renderEditorCanvas();
-                });
-                countDiv.appendChild(countInput);
-                panel.appendChild(countDiv);
-                
-                // Delete button handler
-                document.getElementById('deleteBladeBtn').addEventListener('click', () => {
-                    editorState.blades.splice(block.index, 1);
-                    editorState.selectedBlock = null;
-                    updatePropertiesPanel();
-                    updateBladesList();
-                    renderEditorCanvas();
-                });
-                
-                return;
-            }
             
             // Handle regular blocks
             panel.innerHTML = `
@@ -3051,63 +2947,49 @@
 
             ctx.save();
             ctx.translate(centerX, centerY);
-            ctx.scale(editorState.zoom, editorState.zoom); // Apply zoom
+            ctx.scale(editorState.zoom, editorState.zoom);
             ctx.rotate(editorState.rotation);
 
-            // Draw tank body based on base shape mode
+            // Draw tank body based on base shape
             ctx.fillStyle = '#00b2e1';
             
-            if (editorState.baseShapeMode === 'none') {
-                // Default circle
+            if (editorState.baseShape === 'circle') {
+                // Circle base
                 ctx.beginPath();
                 ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 3;
                 ctx.stroke();
-            } else if (editorState.baseShapeMode === 'number') {
-                // Polygon with baseSides
-                const sides = editorState.baseSides;
-                ctx.beginPath();
-                for (let i = 0; i < sides; i++) {
-                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * tankSize;
-                    const y = Math.sin(angle) * tankSize;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            } else if (editorState.baseShapeMode === 'array') {
-                // Custom base blocks (will be rendered in the blocks loop)
-                // Draw default circle for now as placeholder
+            } else if (editorState.baseShape === 'blade') {
+                // Blade base - draw circle plus blades
                 ctx.beginPath();
                 ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 3;
                 ctx.stroke();
-            }
-            
-            // Draw blades
-            editorState.blades.forEach(blade => {
-                const sides = blade.shape === 'triangle' ? 3 : blade.shape === 'square' ? 4 : blade.shape === 'pentagon' ? 5 : 6;
                 
-                for (let i = 0; i < blade.count; i++) {
+                // Draw blades
+                const sides = editorState.bladeShape === 'triangle' ? 3 : 
+                             editorState.bladeShape === 'square' ? 4 : 
+                             editorState.bladeShape === 'pentagon' ? 5 : 
+                             editorState.bladeShape === 'hexagon' ? 6 : 8;
+                
+                for (let i = 0; i < editorState.bladeCount; i++) {
                     ctx.save();
-                    const angle = (i / blade.count) * Math.PI * 2;
+                    const angle = (i / editorState.bladeCount) * Math.PI * 2;
                     ctx.rotate(angle);
-                    ctx.translate(0, -tankSize - blade.size / 2);
+                    
+                    const bladeSize = tankSize * editorState.bladeSize;
+                    ctx.translate(0, -tankSize - bladeSize / 2);
                     
                     ctx.fillStyle = '#00b2e1';
                     ctx.beginPath();
                     for (let j = 0; j < sides; j++) {
                         const bladeAngle = (j / sides) * Math.PI * 2 - Math.PI / 2;
-                        const x = Math.cos(bladeAngle) * blade.size;
-                        const y = Math.sin(bladeAngle) * blade.size;
+                        const x = Math.cos(bladeAngle) * bladeSize;
+                        const y = Math.sin(bladeAngle) * bladeSize;
                         if (j === 0) ctx.moveTo(x, y);
                         else ctx.lineTo(x, y);
                     }
@@ -3120,59 +3002,45 @@
                     
                     ctx.restore();
                 }
-            });
+            }
 
-            // Draw blocks
+            // Draw guns
             editorState.blocks.forEach(block => {
                 ctx.save();
                 
-                if (block.type === 'base') {
-                    ctx.rotate(block.props.angle * Math.PI / 180);
-                    ctx.translate(block.props.offsetX, block.props.offsetY);
+                const angle = (block.props.angle || 0) * Math.PI / 180;
+                ctx.rotate(angle);
+                ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
+                
+                if (block.type === 'normal' || block.type === 'trap') {
+                    // Normal gun or trap launcher - both render the same way in editor
+                    const gunLength = (block.props.length || 1) * 40;
+                    const gunWidth = (block.props.size || 1) * 15;
                     
-                    ctx.fillStyle = block.props.color;
-                    ctx.fillRect(-block.props.size / 2, -block.props.size / 2, block.props.size, block.props.size);
-                    
-                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
-                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                    ctx.strokeRect(-block.props.size / 2, -block.props.size / 2, block.props.size, block.props.size);
-                    
-                } else if (block.type === 'gun') {
-                    ctx.rotate(block.props.angle * Math.PI / 180);
-                    ctx.translate(block.props.offsetX, block.props.offsetY);
-                    
-                    ctx.fillStyle = block.props.color;
-                    ctx.fillRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                    ctx.fillStyle = '#999999';
+                    ctx.fillRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
                     
                     ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
                     ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                    ctx.strokeRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                    ctx.strokeRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
                     
-                } else if (block.type === 'autoTurret') {
-                    ctx.translate(block.props.offsetX, block.props.offsetY);
-                    
-                    ctx.fillStyle = block.props.color;
+                } else if (block.type === 'minion') {
+                    // Minion spawner - show as special marker
+                    ctx.fillStyle = '#ff9500';
                     ctx.beginPath();
-                    ctx.arc(0, 0, block.props.size, 0, Math.PI * 2);
+                    ctx.arc(0, tankSize + 20, 12, 0, Math.PI * 2);
                     ctx.fill();
                     
                     ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
                     ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
                     ctx.stroke();
                     
-                    ctx.fillRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
-                    ctx.strokeRect(-block.props.gunWidth / 2, block.props.size, block.props.gunWidth, block.props.gunLength);
-                    
-                } else if (block.type === 'trap') {
-                    ctx.rotate(block.props.angle * Math.PI / 180);
-                    ctx.translate(block.props.offsetX, block.props.offsetY);
-                    
-                    ctx.fillStyle = block.props.color;
-                    ctx.fillRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
-                    
-                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
-                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                    ctx.strokeRect(-block.props.width / 2, tankSize, block.props.width, block.props.length);
+                    // Draw count indicator
+                    ctx.fillStyle = 'white';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(block.props.count || 4, 0, tankSize + 20);
                 }
                 
                 ctx.restore();
@@ -3237,46 +3105,19 @@
                 
                 let clickedBlock = null;
                 
-                // Check blocks (in reverse order to prioritize top-most)
+                // Check guns (in reverse order to prioritize top-most)
                 for (let i = editorState.blocks.length - 1; i >= 0; i--) {
                     const block = editorState.blocks[i];
                     const blockDist = Math.sqrt(
-                        (worldX - block.props.offsetX) ** 2 + 
-                        (worldY - block.props.offsetY) ** 2
+                        (worldX - (block.props.offsetX || 0)) ** 2 + 
+                        (worldY - (block.props.offsetY || 0)) ** 2
                     );
                     
-                    // Approximate hit detection based on block type
-                    let hitRadius = 30;
-                    if (block.type === 'gun' || block.type === 'trap') {
-                        hitRadius = Math.max(block.props.width, block.props.length) / 2 + 10;
-                    } else if (block.type === 'autoTurret') {
-                        hitRadius = block.props.size + 10;
-                    } else if (block.type === 'base') {
-                        hitRadius = block.props.size / 2 + 10;
-                    }
-                    
-                    if (blockDist < hitRadius) {
+                    // Simple hit detection - 40 pixel radius
+                    if (blockDist < 40) {
                         clickedBlock = block;
                         break;
                     }
-                }
-                
-                // Check blades
-                if (!clickedBlock) {
-                    const tankSize = 40;
-                    editorState.blades.forEach((blade, index) => {
-                        for (let i = 0; i < blade.count; i++) {
-                            const angle = (i / blade.count) * Math.PI * 2;
-                            const bladeX = Math.sin(angle) * (tankSize + blade.size / 2);
-                            const bladeY = -Math.cos(angle) * (tankSize + blade.size / 2);
-                            
-                            const bladeDist = Math.sqrt((worldX - bladeX) ** 2 + (worldY - bladeY) ** 2);
-                            if (bladeDist < blade.size + 5) {
-                                clickedBlock = { type: 'blade', blade, index };
-                                return;
-                            }
-                        }
-                    });
                 }
                 
                 if (clickedBlock) {
@@ -3309,138 +3150,32 @@
             cheatPanelActive = false;
             populateBlockList();
             updateCurrentBlocksList();
-            updateBaseShapeInputs();
             renderEditorCanvas();
         });
 
-        // Base Shape Mode Handler
-        document.getElementById('baseShapeMode').addEventListener('change', (e) => {
-            const newMode = e.target.value;
-            
-            // Check if switching from array mode with blocks placed
-            if (editorState.baseShapeMode === 'array' && newMode !== 'array') {
-                const hasBaseBlocks = editorState.blocks.some(b => b.type === 'base');
-                if (hasBaseBlocks) {
-                    if (!confirm('Switching from array mode will delete all base blocks. Continue?')) {
-                        e.target.value = editorState.baseShapeMode;
-                        return;
-                    }
-                    // Remove all base blocks
-                    editorState.blocks = editorState.blocks.filter(b => b.type !== 'base');
-                }
-            }
-            
-            editorState.baseShapeMode = newMode;
-            updateBaseShapeInputs();
-            populateBlockList(); // Refresh block list to show/hide base blocks
+        // Base Shape Handler
+        document.getElementById('baseShapeSelect').addEventListener('change', (e) => {
+            editorState.baseShape = e.target.value;
+            const bladeSettings = document.getElementById('bladeSettings');
+            bladeSettings.style.display = e.target.value === 'blade' ? 'block' : 'none';
             renderEditorCanvas();
         });
 
-        function updateBaseShapeInputs() {
-            const inputsDiv = document.getElementById('baseShapeInputs');
-            inputsDiv.innerHTML = '';
-            
-            if (editorState.baseShapeMode === 'number') {
-                const label = document.createElement('label');
-                label.textContent = 'Number of Sides:';
-                label.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
-                inputsDiv.appendChild(label);
-                
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.value = editorState.baseSides || 6;
-                input.min = 3;
-                input.max = 16;
-                input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
-                input.addEventListener('input', (e) => {
-                    editorState.baseSides = parseInt(e.target.value) || 6;
-                    renderEditorCanvas();
-                });
-                inputsDiv.appendChild(input);
-            } else if (editorState.baseShapeMode === 'array') {
-                const info = document.createElement('div');
-                info.textContent = 'Add Base Blocks from the block list above to create an array shape.';
-                info.style.cssText = 'color: #aaa; font-size: 12px; font-style: italic;';
-                inputsDiv.appendChild(info);
-            }
-        }
-
-        // Blade Management
-        document.getElementById('addBladeBtn').addEventListener('click', () => {
-            const blade = {
-                id: Date.now(),
-                shape: 'square',
-                size: 1.35,
-                count: 1
-            };
-            editorState.blades.push(blade);
-            updateBladesList();
+        // Blade Settings Handlers
+        document.getElementById('bladeShapeSelect').addEventListener('change', (e) => {
+            editorState.bladeShape = e.target.value;
             renderEditorCanvas();
         });
 
-        function updateBladesList() {
-            const bladesList = document.getElementById('bladesList');
-            bladesList.innerHTML = '';
-            
-            editorState.blades.forEach((blade, index) => {
-                const bladeDiv = document.createElement('div');
-                bladeDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 8px; background: #1a1a1a; border-radius: 4px;';
-                
-                // Mini preview
-                const preview = document.createElement('canvas');
-                preview.width = 30;
-                preview.height = 30;
-                const ctx = preview.getContext('2d');
-                ctx.fillStyle = '#00b2e1';
-                
-                // Draw blade shape
-                const sides = blade.shape === 'triangle' ? 3 : blade.shape === 'square' ? 4 : blade.shape === 'pentagon' ? 5 : 6;
-                ctx.save();
-                ctx.translate(15, 15);
-                ctx.beginPath();
-                for (let i = 0; i < sides; i++) {
-                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * 10;
-                    const y = Math.sin(angle) * 10;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-                
-                bladeDiv.appendChild(preview);
-                
-                // Blade info
-                const info = document.createElement('div');
-                info.style.cssText = 'flex: 1; color: #fff; font-size: 12px;';
-                info.textContent = `${blade.shape} (x${blade.count})`;
-                bladeDiv.appendChild(info);
-                
-                // Edit button
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edit';
-                editBtn.style.cssText = 'padding: 4px 8px; background: #4a9eff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;';
-                editBtn.addEventListener('click', () => {
-                    editorState.selectedBlock = { type: 'blade', blade, index };
-                    updatePropertiesPanel();
-                });
-                bladeDiv.appendChild(editBtn);
-                
-                // Delete button
-                const delBtn = document.createElement('button');
-                delBtn.textContent = '×';
-                delBtn.style.cssText = 'padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; font-weight: bold;';
-                delBtn.addEventListener('click', () => {
-                    editorState.blades.splice(index, 1);
-                    updateBladesList();
-                    renderEditorCanvas();
-                });
-                bladeDiv.appendChild(delBtn);
-                
-                bladesList.appendChild(bladeDiv);
-            });
-        }
+        document.getElementById('bladeCountInput').addEventListener('input', (e) => {
+            editorState.bladeCount = Math.max(1, Math.min(16, parseInt(e.target.value) || 1));
+            renderEditorCanvas();
+        });
+
+        document.getElementById('bladeSizeInput').addEventListener('input', (e) => {
+            editorState.bladeSize = Math.max(0.5, Math.min(3, parseFloat(e.target.value) || 1.5));
+            renderEditorCanvas();
+        });
 
         document.getElementById('editorCancelBtn').addEventListener('click', () => {
             if (confirm('Are you sure? This will delete your current tank design.')) {
@@ -3451,12 +3186,12 @@
                     zoom: 1,
                     dragging: false,
                     lastMousePos: { x: 0, y: 0 },
-                    baseShapeMode: 'none',
-                    baseSides: 0,
-                    blades: []
+                    baseShape: 'circle',
+                    bladeShape: 'square',
+                    bladeCount: 1,
+                    bladeSize: 1.5
                 };
-                updateBaseShapeInputs();
-                updateBladesList();
+                updateCurrentBlocksList();
                 updatePropertiesPanel();
                 renderEditorCanvas();
                 document.getElementById('tankEditor').style.display = 'none';
@@ -3610,23 +3345,31 @@
         // Test Area - Now uses real game with temporary tank
         document.getElementById('editorTestBtn').addEventListener('click', () => {
             if (editorState.blocks.length === 0) {
-                alert('Add at least one block before testing!');
+                alert('Add at least one gun before testing!');
                 return;
             }
             
-            // Create temporary tank config
-            const testTankName = '__TEST_TANK__' + Date.now(); // Unique name
+            // Create temporary tank config matching tankUpgrades.json format
+            const testTankName = '__TEST_TANK__' + Date.now();
             const testTankConfig = {
                 name: 'Test Tank',
                 level: 1,
-                guns: editorState.blocks.map(block => ({
-                    type: block.type,
-                    ...block.props
-                })),
+                baseShape: editorState.baseShape,
+                guns: editorState.blocks.map(block => block.props),
+                fov: 1,
                 hideFromTree: true
             };
             
-            // Send test tank to server temporarily
+            // Add blade properties if blade baseShape
+            if (editorState.baseShape === 'blade') {
+                testTankConfig.bladeShape = editorState.bladeShape;
+                testTankConfig.bladeCount = editorState.bladeCount;
+                testTankConfig.bladeSize = editorState.bladeSize;
+            }
+            
+            console.log('Test tank config:', testTankConfig);
+            
+            // Send test tank to server
             socket.emit('setTestTank', { tankName: testTankName, config: testTankConfig });
             
             // Add to local tankTypes
