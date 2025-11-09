@@ -586,29 +586,44 @@
             <div style="flex-shrink: 0; border-top: 2px solid #444; padding-top: 15px;">
                 <h2 style="color: #fff; margin-top: 0; margin-bottom: 15px;">Tank Settings</h2>
                 
-                <!-- Base Shape -->
-                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Base Shape:</label>
-                <select id="baseShapeSelect" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 15px;">
-                    <option value="circle">Circle</option>
-                    <option value="blade">Blade</option>
+                <!-- Tank Level -->
+                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Level Required:</label>
+                <input type="number" id="tankLevelInput" min="1" max="45" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
+                
+                <!-- FOV -->
+                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Field of View (FOV):</label>
+                <input type="number" id="tankFovInput" min="0.5" max="2" step="0.1" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 15px;">
+                
+                <!-- Base Shape Mode -->
+                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Base Mode:</label>
+                <select id="baseModeSelect" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
+                    <option value="none">None (Circle)</option>
+                    <option value="simple">Simple (Polygon)</option>
+                    <option value="advanced">Advanced (Custom)</option>
                 </select>
                 
-                <!-- Blade Settings (shown only when blade is selected) -->
-                <div id="bladeSettings" style="display: none;">
-                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Blade Shape:</label>
-                    <select id="bladeShapeSelect" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
-                        <option value="triangle">Triangle</option>
-                        <option value="square">Square</option>
-                        <option value="pentagon">Pentagon</option>
-                        <option value="hexagon">Hexagon</option>
-                        <option value="octagon">Octagon</option>
-                    </select>
-                    
-                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Blade Count:</label>
-                    <input type="number" id="bladeCountInput" min="1" max="16" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
-                    
-                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Blade Size:</label>
-                    <input type="number" id="bladeSizeInput" min="0.5" max="3" step="0.1" value="1.5" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
+                <!-- Simple Base Settings (shown only for simple mode) -->
+                <div id="simpleBaseSettings" style="display: none;">
+                    <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Number of Sides:</label>
+                    <input type="number" id="baseSidesInput" min="3" max="16" value="4" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
+                </div>
+                
+                <!-- Advanced Base Settings (shown only for advanced mode) -->
+                <div id="advancedBaseSettings" style="display: none;">
+                    <h3 style="color: #fff; margin: 10px 0 5px 0; font-size: 14px;">Base Blocks:</h3>
+                    <div id="baseBlocksList" style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; margin-bottom: 10px;">
+                        <div style="color: #888; font-size: 12px; font-style: italic;">No base blocks added</div>
+                    </div>
+                    <button id="addBaseBlockBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">+ Add Base Block</button>
+                </div>
+                
+                <!-- Blade Settings -->
+                <div style="border-top: 2px solid #444; margin-top: 15px; padding-top: 15px;">
+                    <h3 style="color: #fff; margin-top: 0; margin-bottom: 10px; font-size: 14px;">Blades:</h3>
+                    <div id="bladesList" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
+                        <div style="color: #888; font-size: 12px; font-style: italic;">No blades added</div>
+                    </div>
+                    <button id="addBladeBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">+ Add Blade</button>
                 </div>
             </div>
         </div>
@@ -2740,10 +2755,12 @@
             zoom: 1,
             dragging: false,
             lastMousePos: { x: 0, y: 0 },
-            baseShape: 'circle',
-            bladeShape: 'square',
-            bladeCount: 1,
-            bladeSize: 1.5
+            level: 1,
+            fov: 1,
+            baseMode: 'none', // none, simple, advanced
+            baseSides: 4, // for simple mode
+            baseBlocks: [], // for advanced mode: {shape, size, x, y, width, height, rotation}
+            blades: [] // list of blades: {shape (sides), size, x, y, rotation}
         };
 
         const blockTypes = {
@@ -2860,6 +2877,150 @@
             renderEditorCanvas();
         }
 
+        function updateBladesList() {
+            const bladesList = document.getElementById('bladesList');
+            bladesList.innerHTML = '';
+            
+            if (editorState.blades.length === 0) {
+                bladesList.innerHTML = '<div style="color: #888; font-size: 12px; font-style: italic;">No blades added</div>';
+                return;
+            }
+            
+            editorState.blades.forEach((blade, index) => {
+                const bladeItem = document.createElement('div');
+                bladeItem.style.cssText = 'padding: 6px; background: #1a1a1a; border-radius: 4px; display: flex; gap: 8px; align-items: center;';
+                
+                // Preview canvas
+                const preview = document.createElement('canvas');
+                preview.width = 30;
+                preview.height = 30;
+                preview.style.cssText = 'flex-shrink: 0;';
+                const ctx = preview.getContext('2d');
+                ctx.fillStyle = '#00B2E1';
+                ctx.beginPath();
+                const sides = blade.shape;
+                for (let i = 0; i <= sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = 15 + Math.cos(angle) * 12;
+                    const y = 15 + Math.sin(angle) * 12;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                bladeItem.appendChild(preview);
+                
+                // Info
+                const info = document.createElement('div');
+                info.style.cssText = 'flex: 1; color: white; font-size: 12px;';
+                info.textContent = `Blade ${index + 1} (${sides} sides)`;
+                bladeItem.appendChild(info);
+                
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edit';
+                editBtn.style.cssText = 'padding: 4px 8px; background: #4a9eff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;';
+                editBtn.addEventListener('click', () => {
+                    showBladeEditor(index);
+                });
+                bladeItem.appendChild(editBtn);
+                
+                // Delete button
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '×';
+                delBtn.style.cssText = 'padding: 2px 6px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; font-weight: bold;';
+                delBtn.addEventListener('click', () => {
+                    editorState.blades.splice(index, 1);
+                    updateBladesList();
+                    renderEditorCanvas();
+                });
+                bladeItem.appendChild(delBtn);
+                
+                bladesList.appendChild(bladeItem);
+            });
+        }
+
+        function updateBaseBlocksList() {
+            const baseBlocksList = document.getElementById('baseBlocksList');
+            baseBlocksList.innerHTML = '';
+            
+            if (editorState.baseBlocks.length === 0) {
+                baseBlocksList.innerHTML = '<div style="color: #888; font-size: 12px; font-style: italic;">No base blocks added</div>';
+                return;
+            }
+            
+            editorState.baseBlocks.forEach((baseBlock, index) => {
+                const blockItem = document.createElement('div');
+                blockItem.style.cssText = 'padding: 6px; background: #1a1a1a; border-radius: 4px; display: flex; gap: 8px; align-items: center;';
+                
+                // Info
+                const info = document.createElement('div');
+                info.style.cssText = 'flex: 1; color: white; font-size: 12px;';
+                info.textContent = `Block ${index + 1} (${baseBlock.shape === 0 ? 'Circle' : baseBlock.shape + ' sides'})`;
+                blockItem.appendChild(info);
+                
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edit';
+                editBtn.style.cssText = 'padding: 4px 8px; background: #4a9eff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;';
+                editBtn.addEventListener('click', () => {
+                    showBaseBlockEditor(index);
+                });
+                blockItem.appendChild(editBtn);
+                
+                // Delete button
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '×';
+                delBtn.style.cssText = 'padding: 2px 6px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; font-weight: bold;';
+                delBtn.addEventListener('click', () => {
+                    editorState.baseBlocks.splice(index, 1);
+                    updateBaseBlocksList();
+                    renderEditorCanvas();
+                });
+                blockItem.appendChild(delBtn);
+                
+                baseBlocksList.appendChild(blockItem);
+            });
+        }
+
+        function showBladeEditor(index) {
+            // For now, use prompt - could be replaced with proper modal
+            const blade = editorState.blades[index];
+            const sides = prompt('Blade shape (number of sides, 3-16):', blade.shape);
+            if (sides !== null) blade.shape = Math.max(3, Math.min(16, parseInt(sides) || 4));
+            const size = prompt('Blade size (0.5-3):', blade.size);
+            if (size !== null) blade.size = Math.max(0.5, Math.min(3, parseFloat(size) || 1.5));
+            const x = prompt('X position (-50 to 50):', blade.x);
+            if (x !== null) blade.x = Math.max(-50, Math.min(50, parseFloat(x) || 0));
+            const y = prompt('Y position (-50 to 50):', blade.y);
+            if (y !== null) blade.y = Math.max(-50, Math.min(50, parseFloat(y) || 0));
+            const rot = prompt('Rotation (degrees 0-360):', blade.rotation);
+            if (rot !== null) blade.rotation = parseFloat(rot) || 0;
+            updateBladesList();
+            renderEditorCanvas();
+        }
+
+        function showBaseBlockEditor(index) {
+            // For now, use prompt - could be replaced with proper modal
+            const block = editorState.baseBlocks[index];
+            const shape = prompt('Shape (0 for circle, 3-16 for polygon):', block.shape);
+            if (shape !== null) block.shape = Math.max(0, Math.min(16, parseInt(shape) || 0));
+            const size = prompt('Size (10-50):', block.size);
+            if (size !== null) block.size = Math.max(10, Math.min(50, parseFloat(size) || 20));
+            const x = prompt('X position (-50 to 50):', block.x);
+            if (x !== null) block.x = Math.max(-50, Math.min(50, parseFloat(x) || 0));
+            const y = prompt('Y position (-50 to 50):', block.y);
+            if (y !== null) block.y = Math.max(-50, Math.min(50, parseFloat(y) || 0));
+            const width = prompt('Width (10-50):', block.width);
+            if (width !== null) block.width = Math.max(10, Math.min(50, parseFloat(width) || 20));
+            const height = prompt('Height (10-50):', block.height);
+            if (height !== null) block.height = Math.max(10, Math.min(50, parseFloat(height) || 20));
+            const rot = prompt('Rotation (degrees 0-360):', block.rotation);
+            if (rot !== null) block.rotation = parseFloat(rot) || 0;
+            updateBaseBlocksList();
+            renderEditorCanvas();
+        }
+
         function updatePropertiesPanel() {
             const panel = document.getElementById('editorPropertiesContent');
             
@@ -2950,10 +3111,10 @@
             ctx.scale(editorState.zoom, editorState.zoom);
             ctx.rotate(editorState.rotation);
 
-            // Draw tank body based on base shape
+            // Draw tank body based on base mode
             ctx.fillStyle = '#00b2e1';
             
-            if (editorState.baseShape === 'circle') {
+            if (editorState.baseMode === 'none') {
                 // Circle base
                 ctx.beginPath();
                 ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
@@ -2961,48 +3122,96 @@
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 3;
                 ctx.stroke();
-            } else if (editorState.baseShape === 'blade') {
-                // Blade base - draw circle plus blades
+            } else if (editorState.baseMode === 'simple') {
+                // Polygon base
+                const sides = editorState.baseSides;
                 ctx.beginPath();
-                ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
+                for (let i = 0; i <= sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * tankSize;
+                    const y = Math.sin(angle) * tankSize;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
                 ctx.fill();
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 3;
                 ctx.stroke();
-                
-                // Draw blades
-                const sides = editorState.bladeShape === 'triangle' ? 3 : 
-                             editorState.bladeShape === 'square' ? 4 : 
-                             editorState.bladeShape === 'pentagon' ? 5 : 
-                             editorState.bladeShape === 'hexagon' ? 6 : 8;
-                
-                for (let i = 0; i < editorState.bladeCount; i++) {
-                    ctx.save();
-                    const angle = (i / editorState.bladeCount) * Math.PI * 2;
-                    ctx.rotate(angle);
-                    
-                    const bladeSize = tankSize * editorState.bladeSize;
-                    ctx.translate(0, -tankSize - bladeSize / 2);
-                    
-                    ctx.fillStyle = '#00b2e1';
+            } else if (editorState.baseMode === 'advanced') {
+                // Custom base blocks
+                if (editorState.baseBlocks.length === 0) {
+                    // Default circle if no blocks
                     ctx.beginPath();
-                    for (let j = 0; j < sides; j++) {
-                        const bladeAngle = (j / sides) * Math.PI * 2 - Math.PI / 2;
-                        const x = Math.cos(bladeAngle) * bladeSize;
-                        const y = Math.sin(bladeAngle) * bladeSize;
-                        if (j === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    }
-                    ctx.closePath();
+                    ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
                     ctx.fill();
-                    
                     ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 3;
                     ctx.stroke();
-                    
-                    ctx.restore();
+                } else {
+                    editorState.baseBlocks.forEach(baseBlock => {
+                        ctx.save();
+                        ctx.translate(baseBlock.x, baseBlock.y);
+                        ctx.rotate(baseBlock.rotation * Math.PI / 180);
+                        
+                        if (baseBlock.shape === 0) {
+                            // Circle
+                            ctx.beginPath();
+                            ctx.arc(0, 0, baseBlock.size, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = '#333';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        } else {
+                            // Polygon
+                            ctx.beginPath();
+                            const sides = baseBlock.shape;
+                            for (let i = 0; i <= sides; i++) {
+                                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                                const x = Math.cos(angle) * baseBlock.size;
+                                const y = Math.sin(angle) * baseBlock.size;
+                                if (i === 0) ctx.moveTo(x, y);
+                                else ctx.lineTo(x, y);
+                            }
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.strokeStyle = '#333';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                        
+                        ctx.restore();
+                    });
                 }
             }
+            
+            // Draw blades
+            editorState.blades.forEach(blade => {
+                ctx.save();
+                ctx.translate(blade.x, blade.y);
+                ctx.rotate(blade.rotation * Math.PI / 180);
+                
+                const sides = blade.shape;
+                const bladeSize = blade.size * 20;
+                
+                ctx.fillStyle = '#00b2e1';
+                ctx.beginPath();
+                for (let j = 0; j <= sides; j++) {
+                    const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * bladeSize;
+                    const y = Math.sin(angle) * bladeSize;
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.restore();
+            });
 
             // Draw guns
             editorState.blocks.forEach(block => {
@@ -3153,27 +3362,56 @@
             renderEditorCanvas();
         });
 
-        // Base Shape Handler
-        document.getElementById('baseShapeSelect').addEventListener('change', (e) => {
-            editorState.baseShape = e.target.value;
-            const bladeSettings = document.getElementById('bladeSettings');
-            bladeSettings.style.display = e.target.value === 'blade' ? 'block' : 'none';
+        // Base Mode Handler
+        document.getElementById('baseModeSelect').addEventListener('change', (e) => {
+            editorState.baseMode = e.target.value;
+            const simpleSettings = document.getElementById('simpleBaseSettings');
+            const advancedSettings = document.getElementById('advancedBaseSettings');
+            simpleSettings.style.display = e.target.value === 'simple' ? 'block' : 'none';
+            advancedSettings.style.display = e.target.value === 'advanced' ? 'block' : 'none';
             renderEditorCanvas();
         });
 
-        // Blade Settings Handlers
-        document.getElementById('bladeShapeSelect').addEventListener('change', (e) => {
-            editorState.bladeShape = e.target.value;
+        // Base Sides Handler (for simple mode)
+        document.getElementById('baseSidesInput').addEventListener('input', (e) => {
+            editorState.baseSides = Math.max(3, Math.min(16, parseInt(e.target.value) || 4));
             renderEditorCanvas();
         });
 
-        document.getElementById('bladeCountInput').addEventListener('input', (e) => {
-            editorState.bladeCount = Math.max(1, Math.min(16, parseInt(e.target.value) || 1));
+        // Tank Stats Handlers
+        document.getElementById('tankLevelInput').addEventListener('input', (e) => {
+            editorState.level = Math.max(1, Math.min(45, parseInt(e.target.value) || 1));
+        });
+
+        document.getElementById('tankFovInput').addEventListener('input', (e) => {
+            editorState.fov = Math.max(0.5, Math.min(2, parseFloat(e.target.value) || 1));
+        });
+
+        // Add Blade Button
+        document.getElementById('addBladeBtn').addEventListener('click', () => {
+            editorState.blades.push({
+                shape: 4, // square
+                size: 1.5,
+                x: 0,
+                y: 0,
+                rotation: 0
+            });
+            updateBladesList();
             renderEditorCanvas();
         });
 
-        document.getElementById('bladeSizeInput').addEventListener('input', (e) => {
-            editorState.bladeSize = Math.max(0.5, Math.min(3, parseFloat(e.target.value) || 1.5));
+        // Add Base Block Button (for advanced mode)
+        document.getElementById('addBaseBlockBtn').addEventListener('click', () => {
+            editorState.baseBlocks.push({
+                shape: 0, // 0 = circle
+                size: 20,
+                x: 0,
+                y: 0,
+                width: 20,
+                height: 20,
+                rotation: 0
+            });
+            updateBaseBlocksList();
             renderEditorCanvas();
         });
 
@@ -3186,12 +3424,16 @@
                     zoom: 1,
                     dragging: false,
                     lastMousePos: { x: 0, y: 0 },
-                    baseShape: 'circle',
-                    bladeShape: 'square',
-                    bladeCount: 1,
-                    bladeSize: 1.5
+                    level: 1,
+                    fov: 1,
+                    baseMode: 'none',
+                    baseSides: 4,
+                    baseBlocks: [],
+                    blades: []
                 };
                 updateCurrentBlocksList();
+                updateBladesList();
+                updateBaseBlocksList();
                 updatePropertiesPanel();
                 renderEditorCanvas();
                 document.getElementById('tankEditor').style.display = 'none';
@@ -3354,20 +3596,32 @@
             
             // Create temporary tank config matching tankUpgrades.json format
             const testTankName = '__TEST_TANK__' + Date.now();
+            
+            // Determine baseShape from baseMode
+            let baseShape = 'circle';
+            if (editorState.baseMode === 'simple') {
+                baseShape = editorState.baseSides; // Use number directly
+            } else if (editorState.baseMode === 'advanced') {
+                baseShape = 'advanced'; // Special marker for custom base
+            }
+            
             const testTankConfig = {
                 name: 'Test Tank',
-                level: 1,
-                baseShape: editorState.baseShape,
+                level: editorState.level || 1,
+                baseShape: baseShape,
                 guns: editorState.blocks.map(block => block.props),
-                fov: 1,
+                fov: editorState.fov || 1,
                 hideFromTree: true
             };
             
-            // Add blade properties if blade baseShape
-            if (editorState.baseShape === 'blade') {
-                testTankConfig.bladeShape = editorState.bladeShape;
-                testTankConfig.bladeCount = editorState.bladeCount;
-                testTankConfig.bladeSize = editorState.bladeSize;
+            // Add advanced base blocks if in advanced mode
+            if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
+                testTankConfig.baseBlocks = editorState.baseBlocks;
+            }
+            
+            // Add blades if any
+            if (editorState.blades.length > 0) {
+                testTankConfig.blades = editorState.blades;
             }
             
             console.log('[TEST MODE] Created tank config:', testTankConfig);

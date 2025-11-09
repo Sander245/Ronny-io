@@ -1653,30 +1653,26 @@ io.on('connection', (socket) => {
     socket.on('cheatSpawnPolygon', (data) => {
         if (!adminPlayers.has(socket.id)) return;
         const { type, x, y } = data;
-        const polygonTypes = [
-            { sides: 3, size: 15, health: 300, xp: 10, color: '#FFE666', type: 'Triangle' },
-            { sides: 4, size: 20, health: 400, xp: 20, color: '#FFC866', type: 'Square' },
-            { sides: 5, size: 30, health: 600, xp: 100, color: '#768CFF', type: 'Pentagon' },
-            { sides: 6, size: 40, health: 800, xp: 200, color: '#FF6B9D', type: 'Hexagon' },
-            { sides: 8, size: 50, health: 1000, xp: 400, color: '#8B66FF', type: 'Octagon' },
-            { sides: 10, size: 60, health: 1200, xp: 800, color: '#66CCFF', type: 'Decagon' },
-            { sides: 12, size: 70, health: 1400, xp: 1600, color: '#FF6666', type: 'Dodecagon' }
-        ];
         
-        if (type >= 1 && type <= 7) {
-            const config = polygonTypes[type - 1];
-            const polygon = new Polygon(x, y, config.sides, config.size, config.health, config.xp, config.color, config.type);
+        // Map of sides to polygon config
+        const polygonConfigs = {
+            3: { size: 15, health: 300, xp: 10, color: '#FFE666', name: 'Triangle' },
+            4: { size: 20, health: 400, xp: 20, color: '#FFC866', name: 'Square' },
+            5: { size: 30, health: 600, xp: 100, color: '#768CFF', name: 'Pentagon' },
+            6: { size: 40, health: 800, xp: 200, color: '#FF6B9D', name: 'Hexagon' },
+            8: { size: 50, health: 1000, xp: 400, color: '#8B66FF', name: 'Octagon' },
+            10: { size: 60, health: 1200, xp: 800, color: '#66CCFF', name: 'Decagon' },
+            12: { size: 70, health: 1400, xp: 1600, color: '#FF6666', name: 'Dodecagon' },
+            13: { size: 75, health: 1600, xp: 2000, color: '#FF9966', name: '13-gon' },
+            14: { size: 80, health: 1800, xp: 2500, color: '#66FF99', name: '14-gon' },
+            15: { size: 85, health: 2000, xp: 3000, color: '#9966FF', name: '15-gon' },
+            16: { size: 90, health: 2200, xp: 3500, color: '#FF66CC', name: '16-gon' }
+        };
+        
+        if (polygonConfigs[type]) {
+            const config = polygonConfigs[type];
+            const polygon = new Polygon(x, y, type, config.size, config.health, config.xp, config.color, config.name);
             polygons.set(polygon.id, polygon);
-        } else if (type === 8) {
-            // Special: spawn all types in a circle
-            const radius = 100;
-            polygonTypes.forEach((config, i) => {
-                const angle = (i / polygonTypes.length) * Math.PI * 2;
-                const px = x + Math.cos(angle) * radius;
-                const py = y + Math.sin(angle) * radius;
-                const polygon = new Polygon(px, py, config.sides, config.size, config.health, config.xp, config.color, config.type);
-                polygons.set(polygon.id, polygon);
-            });
         }
     });
 
