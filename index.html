@@ -3756,7 +3756,7 @@
             console.log('[TEST MODE] Tank name:', testTankName);
             console.log('[TEST MODE] Current playerId:', playerId);
             
-            // Send test tank to server
+            // Send test tank to server and wait for confirmation
             console.log('[TEST MODE] Sending setTestTank to server...');
             socket.emit('setTestTank', { tankName: testTankName, config: testTankConfig });
             
@@ -3770,23 +3770,32 @@
             document.getElementById('hud').classList.add('visible');
             console.log('[TEST MODE] UI updated');
             
-            // Join game with test tank
-            console.log('[TEST MODE] Joining game with test tank...');
-            socket.emit('joinGame', 'Test Player');
-            
-            // Wait for playerJoined event, then upgrade to test tank
-            const joinHandler = (data) => {
-                console.log('[TEST MODE] Player joined, received data:', data);
-                playerId = data.id;
-                console.log('[TEST MODE] Set playerId to:', playerId);
-                console.log('[TEST MODE] Waiting 500ms before upgrading...');
-                setTimeout(() => {
-                    console.log('[TEST MODE] Sending upgradeTank request for:', testTankName);
-                    socket.emit('upgradeTank', testTankName);
-                }, 500);
-                socket.off('playerJoined', joinHandler);
+            // Wait for server to confirm tank registration before joining
+            const testTankRegisteredHandler = () => {
+                console.log('[TEST MODE] Server confirmed tank registration, joining game...');
+                
+                // Join game with test tank
+                socket.emit('joinGame', 'Test Player');
+                
+                // Wait for playerJoined event, then upgrade to test tank
+                const joinHandler = (data) => {
+                    console.log('[TEST MODE] Player joined, received data:', data);
+                    playerId = data.id;
+                    console.log('[TEST MODE] Set playerId to:', playerId);
+                    console.log('[TEST MODE] Waiting 500ms before upgrading...');
+                    setTimeout(() => {
+                        console.log('[TEST MODE] Sending upgradeTank request for:', testTankName);
+                        socket.emit('upgradeTank', testTankName);
+                    }, 500);
+                    socket.off('playerJoined', joinHandler);
+                };
+                socket.on('playerJoined', joinHandler);
+                
+                // Remove this one-time listener
+                socket.off('testTankRegistered', testTankRegisteredHandler);
             };
-            socket.on('playerJoined', joinHandler);
+            
+            socket.on('testTankRegistered', testTankRegisteredHandler);
             
             // Setup exit handler - Press ESC to exit test mode
             const exitHandler = (e) => {

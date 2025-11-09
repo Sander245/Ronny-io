@@ -1514,6 +1514,10 @@ io.on('connection', (socket) => {
         TANK_TYPES[tankName] = config;
         console.log(`[SERVER] Test tank ${tankName} registered successfully`);
         console.log(`[SERVER] Total tanks in TANK_TYPES: ${Object.keys(TANK_TYPES).length}`);
+        
+        // Confirm registration to client
+        socket.emit('testTankRegistered', { tankName });
+        console.log(`[SERVER] Sent testTankRegistered confirmation to client`);
     });
 
     socket.on('clearTestTank', (tankName) => {
