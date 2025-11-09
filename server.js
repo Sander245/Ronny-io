@@ -275,14 +275,15 @@ class Trap extends GameObject {
 }
 
 class Minion extends GameObject {
-    constructor(x, y, owner, damage, speed, size = 12) {
+    constructor(x, y, owner, damage, speed, size = 12, health = 30, penetration = 1) {
         super(x, y);
         this.owner = owner;
         this.damage = damage;
         this.speed = speed * 5;
         this.size = size;
-        this.health = 30;
-        this.maxHealth = 30;
+        this.health = health;
+        this.maxHealth = health;
+        this.penetration = penetration; // For future use if needed
         this.targetX = x;
         this.targetY = y;
         this.rotation = 0;
@@ -800,9 +801,13 @@ function gameLoop() {
                         const minionSize = (gun.minionSize || 1) * 12; // Base size 12, multiplied by minionSize
                         
                         if (playerMinions.length < count) {
+                            const minionDamage = player.getBulletDamage() * (gun.damage || 1);
+                            const minionSpeed = player.getBulletSpeed() * (gun.speed || 1);
+                            const minionHealth = player.getBulletHealth();
+                            
                             const minion = new Minion(startX, startY, player.id, 
-                                                     player.getBulletDamage() * (gun.damage || 1),
-                                                     gun.speed || 1, minionSize);
+                                                     minionDamage, minionSpeed, minionSize, 
+                                                     minionHealth, player.stats.bulletPenetration);
                             minions.set(minion.id, minion);
                             player.gunRecoils[gunKey] = 10; // Set recoil animation
                         }
