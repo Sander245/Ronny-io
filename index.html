@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RONNY IO - Multiplayer Tank Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: #e0e0e0;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #d8d8d8;
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+        }
+
+        #startMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #startMenu.hidden {
+            display: none;
+        }
+
+        .menu-content {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-title {
+            font-size: 72px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+        }
+
+        #nameInput {
+            font-size: 24px;
+            padding: 15px 30px;
+            border: none;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 300px;
+            text-align: center;
+            outline: none;
+        }
+
+        #playButton {
+            font-size: 28px;
+            padding: 15px 60px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #playButton:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            display: none; /* Hidden by default */
+        }
+
+        #hud.visible {
+            display: block;
+        }
+
+        .hud-item {
+            margin-bottom: 5px;
+        }
+
+        .health-bar {
+            width: 200px;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FF4444, #FF8888);
+            transition: width 0.3s;
+            border-radius: 50px;
+        }
+
+        .xp-bar {
+            width: 300px;
+            height: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            transition: width 0.3s;
+            border-radius: 50px;
+        }
+
+        #upgradeMenu {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            max-width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+            z-index: 200;
+        }
+
+        #upgradeMenu::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #upgradeMenu::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        #upgradeMenu::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+        }
+
+        #upgradeMenu::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        #upgradeMenu.visible {
+            display: block;
+        }
+
+        .upgrade-section {
+            margin-bottom: 20px;
+        }
+
+        .upgrade-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 2px solid white;
+            padding-bottom: 5px;
+        }
+
+        .stat-upgrade {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .stat-upgrade:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .stat-upgrade.maxed {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stat-bars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .stat-bar {
+            width: 15px;
+            height: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid white;
+        }
+
+        .stat-bar.filled {
+            background: #FFD700;
+        }
+
+        .tank-upgrade {
+            background: rgba(100, 150, 255, 0.3);
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tank-upgrade:hover:not(.locked) {
+            background: rgba(100, 150, 255, 0.5);
+            border-color: white;
+            transform: scale(1.02);
+        }
+
+        .tank-upgrade.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #tankUpgrades {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #tankUpgrades::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #tankUpgrades::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        #tankUpgrades::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 3px;
+        }
+
+        .tank-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .tank-level {
+            font-size: 12px;
+            color: #FFD700;
+        }
+
+        #leaderboard {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            min-width: 200px;
+            z-index: 100;
+        }
+
+        #leaderboard.hidden {
+            display: none;
+        }
+
+        .leaderboard-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 2px solid white;
+            padding-bottom: 5px;
+        }
+
+        .leaderboard-entry {
+            padding: 5px;
+            margin: 3px 0;
+            font-size: 14px;
+        }
+
+        .leaderboard-entry:nth-child(2) {
+            color: #FFD700;
+        }
+
+        .leaderboard-entry:nth-child(3) {
+            color: #C0C0C0;
+        }
+
+        .leaderboard-entry:nth-child(4) {
+            color: #CD7F32;
+        }
+
+        #minimap {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 200px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid white;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .controls-help {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        .controls-help.hidden {
+            display: none;
+        }
+
+        .control-item {
+            margin: 5px 0;
+        }
+
+        .control-item.active {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        #deathScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+        }
+
+        #deathScreen.visible {
+            display: flex;
+        }
+
+        .death-content {
+            text-align: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            border-radius: 20px;
+        }
+
+        .death-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF4444;
+            margin-bottom: 20px;
+        }
+
+        .killed-by {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+
+        .killer-name {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .respawn-timer {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #888;
+        }
+
+        .upgrade-points {
+            font-size: 14px;
+            color: #FFD700;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="startMenu">
+        <div class="menu-content">
+            <div class="menu-title">RONNY IO</div>
+            <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
+            <br>
+            <button id="playButton">PLAY</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="hud">
+        <div class="hud-item">Score: <span id="score">0</span></div>
+        <div class="hud-item">Level: <span id="level">1</span></div>
+        <div class="health-bar">
+            <div class="health-fill" id="healthFill"></div>
+        </div>
+        <div class="xp-bar">
+            <div class="xp-fill" id="xpFill"></div>
+        </div>
+    </div>
+
+    <div id="upgradeMenu">
+        <div class="upgrade-section">
+            <div class="upgrade-title">Stats</div>
+            <div id="upgradePointsDisplay" style="color: #ffd700; font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center;">Upgrade Points: 0</div>
+            <div id="statUpgrades"></div>
+        </div>
+        <div class="upgrade-section" id="tankUpgradeSection" style="display: none;">
+            <div class="upgrade-title">Tank Upgrades</div>
+            <div id="tankUpgrades"></div>
+            <button id="viewUpgradeTreeBtn" style="margin-top: 10px; padding: 8px 16px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">View Full Upgrade Tree</button>
+        </div>
+    </div>
+
+    <div id="upgradeTreeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; overflow: auto;">
+        <div style="position: relative; width: 100%; min-height: 100%; padding: 40px;">
+            <button id="closeUpgradeTreeBtn" style="position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; z-index: 10001;">Close</button>
+            <div style="position: fixed; top: 20px; left: 20px; z-index: 10001; display: flex; gap: 10px;">
+                <button id="zoomInTreeBtn" style="padding: 10px 15px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; font-weight: bold;">+</button>
+                <button id="zoomOutTreeBtn" style="padding: 10px 15px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; font-weight: bold;">-</button>
+                <button id="resetTreeBtn" style="padding: 10px 15px; background: #44ff44; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Reset</button>
+            </div>
+            <canvas id="upgradeTreeCanvas" style="background: #2a2a2a; border-radius: 8px; display: block; margin: 0 auto;"></canvas>
+        </div>
+    </div>
+
+    <div id="leaderboard">
+        <div class="leaderboard-title">Leaderboard</div>
+        <div id="leaderboardList"></div>
+    </div>
+
+    <div class="controls-help hidden" id="controlsHelp">
+        <div class="control-item" id="controlWASD"><strong>WASD</strong> - Move</div>
+        <div class="control-item" id="controlMouse"><strong>Mouse</strong> - Aim</div>
+        <div class="control-item" id="controlClick"><strong>Click</strong> - Shoot</div>
+        <div class="control-item" id="controlE"><strong>E</strong> - Auto Fire</div>
+        <div class="control-item" id="controlI"><strong>I</strong> - Toggle Upgrades</div>
+        <div class="control-item" id="controlH"><strong>H</strong> - Hold for Help</div>
+    </div>
+
+    <div id="cheatPanel" style="display: none; position: absolute; bottom: 10px; left: 10px; background: rgba(255, 0, 0, 0.8); color: white; padding: 15px; border-radius: 10px; font-size: 14px; z-index: 1000;">
+        <div style="font-weight: bold; margin-bottom: 10px;">🔧 CHEAT PANEL ACTIVE</div>
+        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
+            <strong>G</strong> - Give XP: 
+            <button id="decreaseXP" style="padding: 2px 8px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">-</button>
+            <span id="xpAmount" style="min-width: 60px; text-align: center; font-weight: bold;">100</span>
+            <button id="increaseXP" style="padding: 2px 8px; background: #44ff44; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">+</button>
+        </div>
+        <div><strong>B</strong> - Max Stats (Level 1000)</div>
+        <div><strong>I</strong> - Toggle Invincibility</div>
+        <div><strong>T</strong> - Teleport All Players to Cursor</div>
+        <div><strong>1-7</strong> - Spawn Polygon at Cursor</div>
+        <div><strong>8</strong> - Spawn All Polygons</div>
+        <div><strong>R</strong> - Reset Tank & Upgrades</div>
+        <div><strong>ESC</strong> - Close Panel</div>
+        <button id="viewUpgradeTreeCheat" style="margin-top: 10px; padding: 5px 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">View Upgrade Tree (Click to Morph)</button>
+    </div>
+
+
+    <div id="deathScreen">
+        <div class="death-content">
+            <div class="death-title">YOU DIED</div>
+            <div id="killedByList"></div>
+            <div class="respawn-timer">Respawning...</div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const socket = io();
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Game state
+        let playerId = null;
+        let gameState = null;
+        let tankUpgrades = null;
+        let camera = { x: 0, y: 0, zoom: 1 };
+        let targetCamera = { x: 0, y: 0 };
+        let mouseWorldX = 0;
+        let mouseWorldY = 0;
+        let lastMouseScreenX = 0; // Track last screen mouse position
+        let lastMouseScreenY = 0;
+        let autoFire = false;
+        let mouseDown = false;
+        let upgradeMenuVisible = false;
+        let showingHelp = false;
+        let helpTimeout = null;
+        let hasMovedOrShot = false;
+        let keysPressed = {}; // Track which keys are currently pressed
+        let lastKnownLevel = 0; // Track level to detect level ups
+        let showAllHealthBars = false; // Toggle for showing all health bars (N key)
+        
+        // Cheat code tracking
+        let cheatCodeBuffer = '';
+        let cheatPanelActive = false;
+        let xpAmount = 100; // Variable XP amount for give XP cheat
+
+        // Input state
+        const input = {
+            moving: { up: false, down: false, left: false, right: false },
+            shooting: false,
+            mouseX: 0,
+            mouseY: 0
+        };
+
+        // Constants
+        const MAP_RADIUS = 3000;
+        const GRID_SIZE = 25; // More compact grid
+
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Disable browser zoom with Ctrl+/- and Ctrl+scroll
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Camera helper
+        function setCameraSize(fov) {
+            camera.zoom = 1 / fov;
+        }
+
+        function screenToWorld(screenX, screenY) {
+            const worldX = (screenX - canvas.width / 2) / camera.zoom + camera.x;
+            const worldY = (screenY - canvas.height / 2) / camera.zoom + camera.y;
+            return { x: worldX, y: worldY };
+        }
+
+        function worldToScreen(worldX, worldY) {
+            const screenX = (worldX - camera.x) * camera.zoom + canvas.width / 2;
+            const screenY = (worldY - camera.y) * camera.zoom + canvas.height / 2;
+            return { x: screenX, y: screenY };
+        }
+
+        // Event listeners
+        document.getElementById('playButton').addEventListener('click', () => {
+            const name = document.getElementById('nameInput').value || 'Tank';
+            socket.emit('joinGame', name);
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('hud').classList.add('visible');
+        });
+
+        document.getElementById('nameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('playButton').click();
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            // Cheat code detection (only when in game)
+            if (playerId && e.key.length === 1 && !cheatPanelActive) {
+                cheatCodeBuffer += e.key.toLowerCase();
+                if (cheatCodeBuffer.length > 20) {
+                    cheatCodeBuffer = cheatCodeBuffer.slice(-20);
+                }
+                if (cheatCodeBuffer.includes('ronnyissigma')) {
+                    cheatPanelActive = true;
+                    cheatCodeBuffer = '';
+                    document.getElementById('cheatPanel').style.display = 'block';
+                    console.log('Cheat panel activated!');
+                }
+            }
+            
+            // Handle cheat panel commands
+            if (cheatPanelActive) {
+                if (e.key === 'g' || e.key === 'G') {
+                    socket.emit('cheatGiveXP', xpAmount);
+                    return;
+                }
+                if (e.key === 'b' || e.key === 'B') {
+                    socket.emit('cheatMaxStats');
+                    return;
+                }
+                if (e.key === 'i' || e.key === 'I') {
+                    socket.emit('cheatToggleInvincibility');
+                    return;
+                }
+                if (e.key === 't' || e.key === 'T') {
+                    socket.emit('cheatTeleportAllPlayers', { x: mouseWorldX, y: mouseWorldY });
+                    return;
+                }
+                if (e.key === 'r' || e.key === 'R') {
+                    socket.emit('cheatResetTank');
+                    return;
+                }
+                if (e.key >= '1' && e.key <= '8') {
+                    const polygonType = parseInt(e.key);
+                    socket.emit('cheatSpawnPolygon', { type: polygonType, x: mouseWorldX, y: mouseWorldY });
+                    return;
+                }
+                if (e.key === 'Escape') {
+                    cheatPanelActive = false;
+                    document.getElementById('cheatPanel').style.display = 'none';
+                    console.log('Cheat panel deactivated');
+                    return;
+                }
+            }
+            
+            // Toggle health bars with 'n' key
+            if (e.key === 'n' || e.key === 'N') {
+                showAllHealthBars = !showAllHealthBars;
+                console.log('Health bars:', showAllHealthBars ? 'ON' : 'OFF');
+            }
+            
+            if (e.key === 'w' || e.key === 'W') {
+                input.moving.up = true;
+                hasMovedOrShot = true;
+                hideHelpIfTimeout();
+            }
+            if (e.key === 's' || e.key === 'S') {
+                input.moving.down = true;
+                hasMovedOrShot = true;
+                hideHelpIfTimeout();
+            }
+            if (e.key === 'a' || e.key === 'A') {
+                input.moving.left = true;
+                hasMovedOrShot = true;
+                hideHelpIfTimeout();
+            }
+            if (e.key === 'd' || e.key === 'D') {
+                input.moving.right = true;
+                hasMovedOrShot = true;
+                hideHelpIfTimeout();
+            }
+            if (e.key === 'e' || e.key === 'E') {
+                if (!keysPressed['e']) {
+                    keysPressed['e'] = true;
+                    autoFire = !autoFire;
+                    // When turning autofire off, also stop shooting unless mouse is held
+                    if (!autoFire && !mouseDown) {
+                        input.shooting = false;
+                    }
+                    updateControlHighlights();
+                }
+            }
+            if (e.key === 'i' || e.key === 'I') {
+                if (!keysPressed['i']) {
+                    keysPressed['i'] = true;
+                    upgradeMenuVisible = !upgradeMenuVisible;
+                    updateUIVisibility();
+                }
+            }
+            if (e.key === 'h' || e.key === 'H') {
+                showingHelp = true;
+                document.getElementById('controlsHelp').classList.remove('hidden');
+                updateControlHighlights();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'w' || e.key === 'W') input.moving.up = false;
+            if (e.key === 's' || e.key === 'S') input.moving.down = false;
+            if (e.key === 'a' || e.key === 'A') input.moving.left = false;
+            if (e.key === 'd' || e.key === 'D') input.moving.right = false;
+            if (e.key === 'e' || e.key === 'E') keysPressed['e'] = false;
+            if (e.key === 'i' || e.key === 'I') keysPressed['i'] = false;
+            if (e.key === 'h' || e.key === 'H') {
+                showingHelp = false;
+                if (hasMovedOrShot) {
+                    document.getElementById('controlsHelp').classList.add('hidden');
+                }
+                updateControlHighlights();
+            }
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            mouseDown = true;
+            input.shooting = true;
+            hasMovedOrShot = true;
+            hideHelpIfTimeout();
+            updateControlHighlights();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+            input.shooting = false;
+            updateControlHighlights();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            lastMouseScreenX = e.clientX;
+            lastMouseScreenY = e.clientY;
+            const world = screenToWorld(e.clientX, e.clientY);
+            mouseWorldX = world.x;
+            mouseWorldY = world.y;
+        });
+
+        // Helper functions for UI management
+        function hideHelpIfTimeout() {
+            if (helpTimeout) {
+                clearTimeout(helpTimeout);
+                helpTimeout = null;
+            }
+            if (hasMovedOrShot && !showingHelp) {
+                document.getElementById('controlsHelp').classList.add('hidden');
+            }
+        }
+
+        function updateUIVisibility() {
+            const upgradeMenu = document.getElementById('upgradeMenu');
+            const leaderboard = document.getElementById('leaderboard');
+            
+            if (upgradeMenuVisible) {
+                upgradeMenu.classList.add('visible');
+                leaderboard.classList.add('hidden');
+            } else {
+                upgradeMenu.classList.remove('visible');
+                leaderboard.classList.remove('hidden');
+            }
+        }
+
+        function updateControlHighlights() {
+            // WASD highlighting
+            const wasdControl = document.getElementById('controlWASD');
+            if (input.moving.up || input.moving.down || input.moving.left || input.moving.right) {
+                wasdControl.classList.add('active');
+            } else {
+                wasdControl.classList.remove('active');
+            }
+
+            // Mouse aim highlighting
+            const mouseControl = document.getElementById('controlMouse');
+            mouseControl.classList.remove('active'); // Always off since it's passive
+
+            // Click to shoot highlighting
+            const clickControl = document.getElementById('controlClick');
+            if (input.shooting) {
+                clickControl.classList.add('active');
+            } else {
+                clickControl.classList.remove('active');
+            }
+
+            // E for auto-fire highlighting
+            const eControl = document.getElementById('controlE');
+            if (autoFire) {
+                eControl.classList.add('active');
+            } else {
+                eControl.classList.remove('active');
+            }
+
+            // I for upgrades highlighting
+            const iControl = document.getElementById('controlI');
+            if (upgradeMenuVisible) {
+                iControl.classList.add('active');
+            } else {
+                iControl.classList.remove('active');
+            }
+
+            // H for help highlighting
+            const hControl = document.getElementById('controlH');
+            if (showingHelp) {
+                hControl.classList.add('active');
+            } else {
+                hControl.classList.remove('active');
+            }
+        }
+
+        // Socket events
+        socket.on('playerJoined', (data) => {
+            playerId = data.id;
+            tankTypes = data.tankTypes;
+            tankUpgrades = data.tankUpgrades;
+            setupUpgradeMenu();
+            console.log('Player joined with ID:', playerId);
+            console.log('Tank types loaded:', Object.keys(tankTypes).length);
+            console.log('Tank upgrades loaded:', Object.keys(tankUpgrades).length);
+        });
+
+        socket.on('gameState', (state) => {
+            gameState = state;
+            
+            // Auto-show upgrade menu on level up if player has upgrade points
+            if (playerId) {
+                const player = state.players.find(p => p.id === playerId);
+                if (player) {
+                    // Track which tanks the player has used
+                    usedTanks.add(player.tankType);
+                    
+                    if (player.level > lastKnownLevel && player.upgradePoints > 0) {
+                        upgradeMenuVisible = true;
+                        updateUIVisibility();
+                    }
+                    lastKnownLevel = player.level;
+                }
+            }
+            
+            updateHUD();
+            updateLeaderboard();
+            
+            // Start auto-hide timer for controls help on first game state
+            if (!hasMovedOrShot && !helpTimeout) {
+                helpTimeout = setTimeout(() => {
+                    if (!hasMovedOrShot && !showingHelp) {
+                        document.getElementById('controlsHelp').classList.add('hidden');
+                    }
+                }, 6000);
+            }
+        });
+
+        // Handle player death
+        socket.on('playerDied', (data) => {
+            // Return to main menu on death
+            playerId = null;
+            gameState = null;
+            
+            // Tell server to remove this player
+            socket.emit('playerLeaveGame');
+            
+            const deathScreen = document.getElementById('deathScreen');
+            const killedByList = document.getElementById('killedByList');
+            
+            killedByList.innerHTML = '<div class="killed-by">Killed by:</div>';
+            
+            if (data.killedBy.length === 0) {
+                killedByList.innerHTML += '<div class="killer-name">Unknown</div>';
+            } else {
+                data.killedBy.forEach(killer => {
+                    if (killer.type === 'player') {
+                        const tankConfig = (tankTypes && tankTypes[killer.tankType]) || {name: 'Basic'};
+                        killedByList.innerHTML += `<div class="killer-name">${killer.name} (${tankConfig.name})</div>`;
+                    } else if (killer.type === 'polygon') {
+                        killedByList.innerHTML += `<div class="killer-name">${killer.name}</div>`;
+                    }
+                });
+            }
+            
+            deathScreen.classList.add('visible');
+            
+            // Auto-hide and show menu after 3 seconds
+            setTimeout(() => {
+                deathScreen.classList.remove('visible');
+                const startMenu = document.getElementById('startMenu');
+                if (startMenu) {
+                    startMenu.classList.remove('hidden');
+                }
+            }, 3000);
+        });
+
+        // Send input to server
+        setInterval(() => {
+            if (playerId) {
+                input.mouseX = mouseWorldX;
+                input.mouseY = mouseWorldY;
+                input.shooting = input.shooting || autoFire;
+                socket.emit('playerInput', input);
+            }
+        }, 1000 / 60);
+
+        // Setup button event listeners
+        document.getElementById('viewUpgradeTreeBtn').addEventListener('click', () => {
+            showUpgradeTree(false);
+        });
+        
+        document.getElementById('viewUpgradeTreeCheat').addEventListener('click', () => {
+            showUpgradeTree(true);
+        });
+        
+        document.getElementById('closeUpgradeTreeBtn').addEventListener('click', () => {
+            document.getElementById('upgradeTreeModal').style.display = 'none';
+        });
+
+        // XP amount control buttons
+        document.getElementById('decreaseXP').addEventListener('click', () => {
+            xpAmount = Math.max(1, Math.floor(xpAmount / 2));
+            document.getElementById('xpAmount').textContent = xpAmount;
+        });
+
+        document.getElementById('increaseXP').addEventListener('click', () => {
+            xpAmount = Math.min(1000000, xpAmount * 2);
+            document.getElementById('xpAmount').textContent = xpAmount;
+        });
+
+        // Setup upgrade menu
+        function setupUpgradeMenu() {
+            const statUpgrades = document.getElementById('statUpgrades');
+            
+            // Clear existing stat upgrades to prevent duplicates
+            statUpgrades.innerHTML = '';
+            
+            const stats = [
+                'healthRegen', 'maxHealth', 'bodyDamage', 'bulletSpeed',
+                'bulletPenetration', 'bulletDamage', 'reload', 'movementSpeed'
+            ];
+            
+            const statNames = {
+                healthRegen: 'Health Regen',
+                maxHealth: 'Max Health',
+                bodyDamage: 'Body Damage',
+                bulletSpeed: 'Bullet Speed',
+                bulletPenetration: 'Bullet Health',
+                bulletDamage: 'Bullet Damage',
+                reload: 'Reload',
+                movementSpeed: 'Movement Speed'
+            };
+
+            stats.forEach(stat => {
+                const div = document.createElement('div');
+                div.className = 'stat-upgrade';
+                div.dataset.stat = stat;
+                div.innerHTML = `
+                    <span>${statNames[stat]}</span>
+                    <div class="stat-bars">
+                        ${Array(7).fill('<div class="stat-bar"></div>').join('')}
+                    </div>
+                `;
+                div.addEventListener('click', () => {
+                    socket.emit('upgradeStat', stat);
+                });
+                statUpgrades.appendChild(div);
+            });
+        }
+
+        function updateUpgradeMenu(player) {
+            if (!player) return;
+
+            // Update upgrade points display
+            const upgradePointsDisplay = document.getElementById('upgradePointsDisplay');
+            if (upgradePointsDisplay && player.upgradePoints !== undefined) {
+                upgradePointsDisplay.textContent = `Upgrade Points: ${player.upgradePoints}`;
+            }
+
+            // Update stat bars
+            const stats = [
+                'healthRegen', 'maxHealth', 'bodyDamage', 'bulletSpeed',
+                'bulletPenetration', 'bulletDamage', 'reload', 'movementSpeed'
+            ];
+
+            stats.forEach(stat => {
+                const div = document.querySelector(`[data-stat="${stat}"]`);
+                if (div) {
+                    const bars = div.querySelectorAll('.stat-bar');
+                    const level = player.stats ? player.stats[stat] || 0 : 0;
+                    
+                    // Show up to current level (max 7)
+                    bars.forEach((bar, i) => {
+                        bar.classList.toggle('filled', i < level);
+                    });
+                    
+                    // Disable if no points available or already at max level
+                    div.classList.toggle('maxed', player.upgradePoints <= 0 || level >= 7);
+                }
+            });
+
+            // Update tank upgrades - only rebuild if tank type changed
+            const tankUpgradeSection = document.getElementById('tankUpgradeSection');
+            const tankUpgradesDiv = document.getElementById('tankUpgrades');
+            
+            if (tankTypes && player && player.tankType) {
+                const currentTank = tankTypes[player.tankType];
+                
+                // Get available upgrades from tankUpgrades JSON
+                const availableUpgrades = tankUpgrades && tankUpgrades[player.tankType] ? tankUpgrades[player.tankType] : [];
+                
+                if (availableUpgrades && availableUpgrades.length > 0) {
+                    tankUpgradeSection.style.display = 'block';
+                    
+                    // Only rebuild if tank type changed
+                    if (tankUpgradesDiv.dataset.currentTank !== player.tankType) {
+                        tankUpgradesDiv.innerHTML = '';
+                        tankUpgradesDiv.dataset.currentTank = player.tankType;
+                        
+                        availableUpgrades.forEach(tankType => {
+                            const tankConfig = tankTypes[tankType];
+                            
+                            const div = document.createElement('div');
+                            div.className = 'tank-upgrade';
+                            div.dataset.tankType = tankType;
+                            div.dataset.requiredLevel = tankConfig.level;
+                            div.innerHTML = `
+                                <div class="tank-name">${tankConfig.name}</div>
+                                <div class="tank-level">Level ${tankConfig.level}</div>
+                            `;
+                            
+                            div.addEventListener('click', () => {
+                                // Get current player state at click time
+                                if (!gameState || !playerId) return;
+                                const currentPlayer = gameState.players.find(p => p.id === playerId);
+                                if (!currentPlayer) return;
+                                
+                                const canUpgrade = currentPlayer.level >= tankConfig.level;
+                                if (canUpgrade) {
+                                    console.log('Upgrading to:', tankType);
+                                    socket.emit('upgradeTank', tankType);
+                                }
+                            });
+                            
+                            tankUpgradesDiv.appendChild(div);
+                        });
+                    }
+                    
+                    // Update locked/unlocked state based on current level
+                    tankUpgradesDiv.querySelectorAll('.tank-upgrade').forEach(div => {
+                        const requiredLevel = parseInt(div.dataset.requiredLevel);
+                        const canUpgrade = player.level >= requiredLevel;
+                        div.classList.toggle('locked', !canUpgrade);
+                    });
+                } else {
+                    tankUpgradeSection.style.display = 'none';
+                }
+            }
+        }
+
+        // Update HUD
+        function updateHUD() {
+            if (!gameState || !playerId) return;
+
+            const player = gameState.players.find(p => p.id === playerId);
+            if (!player) return;
+
+            document.getElementById('score').textContent = Math.floor(player.score);
+            document.getElementById('level').textContent = player.level;
+
+            const healthPercent = (player.health / player.maxHealth) * 100;
+            document.getElementById('healthFill').style.width = healthPercent + '%';
+
+            const requiredXP = player.level * 100;
+            const xpPercent = (player.xp / requiredXP) * 100;
+            document.getElementById('xpFill').style.width = xpPercent + '%';
+
+            // Only update upgrade menu if it's currently visible
+            if (upgradeMenuVisible) {
+                updateUpgradeMenu(player);
+            }
+
+            // Update camera FOV based on tank and size
+            if (tankTypes && player && player.tankType) {
+                const tankConfig = tankTypes[player.tankType];
+                const baseFov = tankConfig.fov || 1;
+                // Base zoom is higher (more zoomed in) - 1.3x default zoom
+                // Player size affects FOV: larger = extra wider view (more than linear)
+                const sizeFactor = 1 + (player.size - 20) / 60; // Grows faster with size (was /100)
+                setCameraSize((baseFov * sizeFactor) / 1.3); // Divide by 1.3 for more zoom
+            }
+        }
+
+        // Update leaderboard
+        function updateLeaderboard() {
+            if (!gameState) return;
+
+            const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+            const list = document.getElementById('leaderboardList');
+            
+            list.innerHTML = sorted.slice(0, 10).map((player, i) => {
+                return `<div class="leaderboard-entry">${i + 1}. ${player.name} - ${Math.floor(player.score)}</div>`;
+            }).join('');
+        }
+
+        // Upgrade tree visualization
+        let usedTanks = new Set(['BASIC']); // Track which tanks the player has used
+        let treeViewOffset = { x: 0, y: 0 }; // For panning
+        let treeViewZoom = 1; // For zooming
+        let treeDragging = false;
+        let treeDragStart = { x: 0, y: 0 };
+        
+        function showUpgradeTree(allowMorphing = false) {
+            const modal = document.getElementById('upgradeTreeModal');
+            const canvas = document.getElementById('upgradeTreeCanvas');
+            modal.style.display = 'block';
+            
+            // Build tree structure
+            const treeData = buildTreeStructure();
+            
+            // Calculate canvas size based on viewport
+            const width = window.innerWidth - 100;
+            const height = window.innerHeight - 100;
+            canvas.width = width;
+            canvas.height = height;
+            
+            treeViewOffset = { x: width / 2, y: 50 }; // Center horizontally, near top
+            treeViewZoom = 1; // Reset zoom
+            
+            const treeCtx = canvas.getContext('2d');
+            
+            // Draw the tree
+            drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+            
+            // Add drag functionality
+            setupTreeDrag(canvas, treeCtx, treeData, allowMorphing);
+            
+            // Add zoom button handlers
+            setupTreeZoom(canvas, treeCtx, treeData, allowMorphing);
+        }
+        
+        function setupTreeDrag(canvas, treeCtx, treeData, allowMorphing) {
+            canvas.onmousedown = (e) => {
+                if (e.button === 0) { // Left click for dragging
+                    treeDragging = true;
+                    treeDragStart = { x: e.clientX - treeViewOffset.x, y: e.clientY - treeViewOffset.y };
+                }
+            };
+            
+            canvas.onmousemove = (e) => {
+                if (treeDragging) {
+                    treeViewOffset.x = e.clientX - treeDragStart.x;
+                    treeViewOffset.y = e.clientY - treeDragStart.y;
+                    drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+                }
+            };
+            
+            canvas.onmouseup = () => {
+                treeDragging = false;
+            };
+            
+            canvas.onmouseleave = () => {
+                treeDragging = false;
+            };
+            
+            // Right-click for morphing
+            if (allowMorphing) {
+                canvas.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    const rect = canvas.getBoundingClientRect();
+                    const clickX = (e.clientX - rect.left - treeViewOffset.x) / treeViewZoom;
+                    const clickY = (e.clientY - rect.top - treeViewOffset.y) / treeViewZoom;
+                    
+                    const { nodePositions } = buildTreeLayout(treeData);
+                    
+                    for (const tankKey in nodePositions) {
+                        const pos = nodePositions[tankKey];
+                        const dist = Math.sqrt((clickX - pos.x) ** 2 + (clickY - pos.y) ** 2);
+                        
+                        if (dist < 30) {
+                            // In cheat mode, use cheatMorphTank instead of upgradeTank
+                            socket.emit('cheatMorphTank', tankKey);
+                            usedTanks.add(tankKey);
+                            drawUpgradeTree(treeCtx, treeData, true, canvas);
+                            break;
+                        }
+                    }
+                };
+            }
+        }
+        
+        function setupTreeZoom(canvas, treeCtx, treeData, allowMorphing) {
+            // Zoom in button
+            document.getElementById('zoomInTreeBtn').onclick = () => {
+                treeViewZoom *= 1.2;
+                drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+            };
+            
+            // Zoom out button
+            document.getElementById('zoomOutTreeBtn').onclick = () => {
+                treeViewZoom /= 1.2;
+                drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+            };
+            
+            // Reset button
+            document.getElementById('resetTreeBtn').onclick = () => {
+                treeViewOffset = { x: canvas.width / 2, y: 50 };
+                treeViewZoom = 1;
+                drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+            };
+            
+            // Mouse wheel zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                treeViewZoom *= zoomFactor;
+                drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas);
+            }, { passive: false });
+        }
+        
+        function buildTreeStructure() {
+            if (!tankUpgrades || !tankTypes) return null;
+            
+            const levels = {};
+            
+            // Group tanks by level
+            for (const tankKey in tankTypes) {
+                const tank = tankTypes[tankKey];
+                const level = tank.level;
+                if (!levels[level]) levels[level] = [];
+                levels[level].push(tankKey);
+            }
+            
+            return { levels, upgrades: tankUpgrades };
+        }
+        
+        function buildTreeLayout(treeData) {
+            const { levels } = treeData;
+            const levelKeys = Object.keys(levels).map(Number).sort((a, b) => a - b);
+            
+            const nodeSpacing = 150;
+            const levelSpacing = 200;
+            const startX = 0;
+            const startY = 0;
+            
+            const nodePositions = {};
+            
+            // Calculate positions for each tank
+            levelKeys.forEach((level, levelIndex) => {
+                const tanksAtLevel = levels[level];
+                const totalWidth = tanksAtLevel.length * nodeSpacing;
+                const levelY = startY + levelIndex * levelSpacing;
+                
+                tanksAtLevel.forEach((tankKey, tankIndex) => {
+                    const x = startX + tankIndex * nodeSpacing - totalWidth / 2;
+                    const y = levelY;
+                    nodePositions[tankKey] = { x, y };
+                });
+            });
+            
+            return { nodePositions };
+        }
+        
+        function drawUpgradeTree(treeCtx, treeData, allowMorphing, canvas) {
+            if (!treeData || !tankTypes) return;
+            
+            const { upgrades } = treeData;
+            const { nodePositions } = buildTreeLayout(treeData);
+            
+            // Clear canvas
+            treeCtx.fillStyle = '#2a2a2a';
+            treeCtx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            treeCtx.save();
+            treeCtx.translate(treeViewOffset.x, treeViewOffset.y);
+            treeCtx.scale(treeViewZoom, treeViewZoom); // Apply zoom
+            
+            // Draw connections first
+            treeCtx.lineWidth = 3 / treeViewZoom; // Adjust line width for zoom
+            for (const fromTank in upgrades) {
+                const toTanks = upgrades[fromTank];
+                if (!nodePositions[fromTank]) continue;
+                
+                toTanks.forEach(toTank => {
+                    if (!nodePositions[toTank]) return;
+                    
+                    // Check if both ends have been used
+                    const fromUsed = usedTanks.has(fromTank);
+                    const toUsed = usedTanks.has(toTank);
+                    
+                    // Brighten line if both ends used
+                    if (fromUsed && toUsed) {
+                        treeCtx.strokeStyle = '#aaa'; // Brighter
+                    } else {
+                        treeCtx.strokeStyle = '#555'; // Normal
+                    }
+                    
+                    treeCtx.beginPath();
+                    treeCtx.moveTo(nodePositions[fromTank].x, nodePositions[fromTank].y + 30);
+                    treeCtx.lineTo(nodePositions[toTank].x, nodePositions[toTank].y - 30);
+                    treeCtx.stroke();
+                });
+            }
+            
+            // Draw nodes
+            for (const tankKey in nodePositions) {
+                const pos = nodePositions[tankKey];
+                const tank = tankTypes[tankKey];
+                const isUsed = usedTanks.has(tankKey);
+                
+                drawTankPreview(treeCtx, tank, pos.x, pos.y, isUsed);
+                
+                // Draw name below tank
+                treeCtx.fillStyle = isUsed ? '#fff' : '#888';
+                treeCtx.font = 'bold 14px Arial';
+                treeCtx.textAlign = 'center';
+                treeCtx.fillText(tank.name, pos.x, pos.y + 55);
+            }
+            
+            treeCtx.restore();
+        }
+        
+        function drawTankPreview(ctx, tankConfig, x, y, isUsed) {
+            ctx.save();
+            ctx.translate(x, y);
+            
+            const scale = 0.8;
+            const baseSize = 30 * scale;
+            
+            // Draw guns first (layer 0)
+            if (tankConfig.guns) {
+                tankConfig.guns.forEach(gun => {
+                    const gunAngle = (gun.angle || 0) * Math.PI / 180;
+                    const offsetY = (gun.offsetY || 0) * scale;
+                    const offsetX = (gun.offsetX || 0) * scale;
+                    
+                    ctx.save();
+                    ctx.rotate(gunAngle);
+                    ctx.translate(offsetX, offsetY);
+                    
+                    if (gun.type === 'normal') {
+                        const gunLength = (gun.length || 1) * 20 * scale;
+                        const gunWidth = (gun.size || 1) * 20 * scale;
+                        
+                        ctx.fillStyle = '#999';
+                        ctx.fillRect(baseSize - 5 * scale, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.strokeStyle = '#404040';
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeRect(baseSize - 5 * scale, -gunWidth / 2, gunLength, gunWidth);
+                    } else if (gun.type === 'trap') {
+                        const trapSize = 15 * scale;
+                        ctx.fillStyle = '#999';
+                        ctx.fillRect(baseSize - 3 * scale, -trapSize / 2, trapSize, trapSize);
+                        ctx.strokeStyle = '#404040';
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeRect(baseSize - 3 * scale, -trapSize / 2, trapSize, trapSize);
+                    }
+                    
+                    ctx.restore();
+                });
+            }
+            
+            // Draw base shape
+            if (tankConfig.baseShape === 'blade' || tankConfig.baseShape === 'blade_twin') {
+                // Draw blade/smasher shape with grey polygon base
+                const bladeShape = tankConfig.bladeShape || 'square';
+                const bladeCount = tankConfig.bladeCount || 1;
+                const bladeSize = tankConfig.bladeSize || 1.35;
+                
+                let baseSides = 4; // Default square
+                if (bladeShape === 'triangle') baseSides = 3;
+                else if (bladeShape === 'square') baseSides = 4;
+                else if (bladeShape === 'pentagon') baseSides = 5;
+                else if (bladeShape === 'hexagon') baseSides = 6;
+                else if (bladeShape === 'octagon') baseSides = 8;
+                
+                // Draw multiple blade layers
+                for (let layer = 0; layer < bladeCount; layer++) {
+                    const layerRotation = (layer / bladeCount) * (Math.PI / baseSides);
+                    const layerSize = baseSize * bladeSize * (1 - layer * 0.15);
+                    
+                    ctx.save();
+                    ctx.rotate(layerRotation);
+                    
+                    ctx.fillStyle = '#999';
+                    ctx.beginPath();
+                    for (let i = 0; i < baseSides; i++) {
+                        const angle = (i / baseSides) * Math.PI * 2 - Math.PI / 2;
+                        const x = Math.cos(angle) * layerSize;
+                        const y = Math.sin(angle) * layerSize;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#404040';
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+                
+                // Draw outer colored circles
+                const circleColors = isUsed ? ['#00B2E1', '#0099C9'] : ['#444', '#333'];
+                const circleSizes = [baseSize * 1.1, baseSize * 0.7]; // Adjusted sizes
+                
+                circleColors.forEach((color, i) => {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, circleSizes[i], 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else {
+                // Draw circle base
+                ctx.fillStyle = isUsed ? '#00a2ff' : '#444';
+                ctx.beginPath();
+                ctx.arc(0, 0, baseSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = isUsed ? '#fff' : '#666';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        // Drawing functions
+        function drawGrid() {
+            try {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)'; // Lighter grid lines
+                ctx.lineWidth = 1;
+
+                const startX = Math.floor((camera.x - canvas.width / 2 / camera.zoom) / GRID_SIZE) * GRID_SIZE;
+                const startY = Math.floor((camera.y - canvas.height / 2 / camera.zoom) / GRID_SIZE) * GRID_SIZE;
+                const endX = camera.x + canvas.width / 2 / camera.zoom;
+                const endY = camera.y + canvas.height / 2 / camera.zoom;
+
+                for (let x = startX; x <= endX; x += GRID_SIZE) {
+                    const screen = worldToScreen(x, 0);
+                    ctx.beginPath();
+                    ctx.moveTo(screen.x, 0);
+                    ctx.lineTo(screen.x, canvas.height);
+                    ctx.stroke();
+                }
+
+                for (let y = startY; y <= endY; y += GRID_SIZE) {
+                    const screen = worldToScreen(0, y);
+                    ctx.beginPath();
+                    ctx.moveTo(0, screen.y);
+                    ctx.lineTo(canvas.width, screen.y);
+                    ctx.stroke();
+                }
+            } catch (e) {
+                console.error('Error drawing grid:', e);
+            }
+        }
+
+        function drawMapBorder() {
+            const center = worldToScreen(0, 0);
+            const radius = MAP_RADIUS * camera.zoom;
+
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Fill outside the circle
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawPolygon(poly) {
+            const screen = worldToScreen(poly.x, poly.y);
+            
+            // Apply death animation: grow 20% and fade out
+            let size = poly.size * camera.zoom;
+            let alpha = 1;
+            
+            if (poly.dying) {
+                const progress = poly.deathProgress || 0;
+                // Grow from baseSize to baseSize * 1.2
+                const growthFactor = 1 + (progress * 0.2);
+                size = poly.baseSize * camera.zoom * growthFactor;
+                // Fade from 1 to 0
+                alpha = 1 - progress;
+            }
+
+            ctx.save();
+            ctx.translate(screen.x, screen.y);
+            ctx.rotate(poly.rotation);
+            ctx.globalAlpha = alpha;
+
+            // Create darker outline color (darker shade of fill color)
+            const fillColor = poly.color;
+            const outlineColor = darkenColor(fillColor, 0.3);
+
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = outlineColor;
+            ctx.lineWidth = 4 * camera.zoom;
+
+            ctx.beginPath();
+            for (let i = 0; i < poly.sides; i++) {
+                const angle = (i / poly.sides) * Math.PI * 2;
+                const x = Math.cos(angle) * size;
+                const y = Math.sin(angle) * size;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+            
+            // Draw health bar if toggle is on or if damaged
+            if (showAllHealthBars && !poly.dying && poly.health !== undefined && poly.maxHealth !== undefined) {
+                const healthPercent = poly.health / poly.maxHealth;
+                const barWidth = size * 2;
+                const barHeight = 4 * camera.zoom;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth * healthPercent, barHeight);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+            } else if (!poly.dying && poly.health < poly.maxHealth) {
+                // Show health bar when damaged even if toggle is off
+                const barWidth = size * 2;
+                const barHeight = 5 * camera.zoom;
+                const healthPercent = poly.health / poly.maxHealth;
+                
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 15 * camera.zoom, barWidth, barHeight);
+
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 15 * camera.zoom, barWidth * healthPercent, barHeight);
+                ctx.restore();
+            }
+        }
+        
+        // Helper function to darken colors
+        function darkenColor(color, factor) {
+            // Convert hex to RGB
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            
+            // Darken
+            const newR = Math.floor(r * (1 - factor));
+            const newG = Math.floor(g * (1 - factor));
+            const newB = Math.floor(b * (1 - factor));
+            
+            // Convert back to hex
+            return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+        }
+
+        function drawTank(player) {
+            const screen = worldToScreen(player.x, player.y);
+            const size = player.size * camera.zoom;
+            
+            // Calculate size multiplier based on level (player.size grows with level)
+            const baseTankSize = 20; // Base size at level 0
+            const sizeMultiplier = player.size / baseTankSize;
+
+            ctx.save();
+            ctx.translate(screen.x, screen.y);
+
+            // Get tank config
+            const tankConfig = tankTypes ? tankTypes[player.tankType] : null;
+
+            // LAYER 0: Draw guns first (so they appear under the base)
+            if (tankConfig && tankConfig.guns) {
+                tankConfig.guns.forEach((gun, gunIndex) => {
+                    // Get recoil offset for this gun
+                    const recoilOffset = (player.gunRecoils && player.gunRecoils[`gun_${gunIndex}`]) || 0;
+                    
+                    if (gun.type === 'normal') {
+                        const gunAngle = gun.angle * Math.PI / 180;
+                        const gunLength = (gun.length || 1) * 20 * camera.zoom * sizeMultiplier;
+                        const gunWidth = (gun.size || 1) * 20 * camera.zoom * sizeMultiplier;
+                        const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
+                        const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
+
+                        ctx.save();
+                        ctx.rotate(player.rotation + gunAngle);
+                        ctx.translate(offsetX, offsetY);
+
+                        const gunColor = '#999';
+                        ctx.fillStyle = gunColor;
+                        ctx.strokeStyle = '#404040'; // Dark grey outline
+                        ctx.lineWidth = 2 * camera.zoom;
+                        
+                        // Apply recoil offset (pushes gun back)
+                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
+                        ctx.fillRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.strokeRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+
+                        ctx.restore();
+                    } else if (gun.type === 'trap') {
+                        const gunAngle = gun.angle * Math.PI / 180;
+                        const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
+                        const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
+
+                        ctx.save();
+                        ctx.rotate(player.rotation + gunAngle);
+                        ctx.translate(offsetX, offsetY);
+
+                        const gunColor = '#999';
+                        ctx.fillStyle = gunColor;
+                        ctx.strokeStyle = '#404040'; // Dark grey outline
+                        ctx.lineWidth = 2 * camera.zoom;
+                        
+                        // Draw flattened T shape for trap launcher
+                        const baseLength = 20 * camera.zoom * sizeMultiplier;
+                        const baseHeight = 20 * camera.zoom * sizeMultiplier;
+                        const flatRectWidth = 30 * camera.zoom * sizeMultiplier;
+                        const flatRectHeight = 8 * camera.zoom * sizeMultiplier;
+                        
+                        // Apply recoil offset (pushes gun back)
+                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
+                        
+                        // Base rectangle (vertical part of T)
+                        ctx.fillRect(size - 5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
+                        ctx.strokeRect(size - 5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
+                        
+                        // Front flat rectangle (horizontal part of T)
+                        ctx.fillRect(size - 5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+                        ctx.strokeRect(size - 5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+
+                        ctx.restore();
+                    }
+                });
+            } else if (!tankConfig) {
+                // Fallback: draw a simple gun if tank config not loaded yet
+                ctx.save();
+                ctx.rotate(player.rotation);
+                const gunColor = '#999';
+                ctx.fillStyle = gunColor;
+                ctx.strokeStyle = '#404040'; // Dark grey outline
+                ctx.lineWidth = 2 * camera.zoom;
+                ctx.fillRect(size - 5 * camera.zoom * sizeMultiplier, -10 * camera.zoom * sizeMultiplier, 20 * camera.zoom * sizeMultiplier, 20 * camera.zoom * sizeMultiplier);
+                ctx.strokeRect(size - 5 * camera.zoom * sizeMultiplier, -10 * camera.zoom * sizeMultiplier, 20 * camera.zoom * sizeMultiplier, 20 * camera.zoom * sizeMultiplier);
+                ctx.restore();
+            }
+
+            // LAYER 1: Draw base (body) on top of guns
+            if (tankConfig && (tankConfig.baseShape === 'blade' || tankConfig.baseShape === 'blade_twin')) {
+                // Blade tank (like Smasher)
+                ctx.rotate(player.rotation);
+                
+                const bladeShape = tankConfig.bladeShape || 'square';
+                const bladeCount = tankConfig.bladeCount || 1;
+                const bladeSize = tankConfig.bladeSize || 1.35;
+                
+                let baseSides = 4; // Default square
+                if (bladeShape === 'triangle') baseSides = 3;
+                else if (bladeShape === 'square') baseSides = 4;
+                else if (bladeShape === 'pentagon') baseSides = 5;
+                else if (bladeShape === 'hexagon') baseSides = 6;
+                else if (bladeShape === 'octagon') baseSides = 8;
+                
+                // Draw multiple blade layers
+                for (let layer = 0; layer < bladeCount; layer++) {
+                    const layerRotation = (layer / bladeCount) * (Math.PI / baseSides);
+                    const layerSize = size * bladeSize * (1 - layer * 0.15); // Each layer slightly smaller
+                    
+                    ctx.save();
+                    ctx.rotate(layerRotation);
+                    
+                    ctx.fillStyle = '#999';
+                    ctx.strokeStyle = '#404040';
+                    ctx.lineWidth = 3 * camera.zoom;
+                    ctx.beginPath();
+                    for (let i = 0; i < baseSides; i++) {
+                        const angle = (i / baseSides) * Math.PI * 2 - Math.PI / 2;
+                        const x = Math.cos(angle) * layerSize;
+                        const y = Math.sin(angle) * layerSize;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+
+                // Draw multiple circles (stacked appearance) - these cover the polygon center
+                const circleColors = player.id === playerId ? 
+                    ['#00B2E1', '#0099C9', '#0080B0'] : 
+                    ['#F14E54', '#D9444A', '#C03A40'];
+                
+                const circleSizes = [size * 1.1, size * 0.85, size * 0.6]; // Adjusted sizes
+                
+                circleColors.forEach((color, i) => {
+                    ctx.fillStyle = color;
+                    ctx.strokeStyle = darkenColor(color, 0.3);
+                    ctx.lineWidth = 3 * camera.zoom;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, circleSizes[i], 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            } else if (tankConfig && tankConfig.baseShape === 'blade_twin_OLD') {
+                // Twin blade - two circles side by side (DISABLED - using single shape now)
+                ctx.rotate(player.rotation);
+                
+                // Draw spikes for both circles
+                const spikeCount = 10;
+                const spikeColor = '#999';
+                ctx.fillStyle = spikeColor;
+                ctx.strokeStyle = darkenColor(spikeColor, 0.4);
+                ctx.lineWidth = 2 * camera.zoom;
+                
+                [-size * 0.6, size * 0.6].forEach(offsetY => {
+                    for (let i = 0; i < spikeCount; i++) {
+                        const angle = (i / spikeCount) * Math.PI * 2;
+                        ctx.save();
+                        ctx.translate(0, offsetY);
+                        ctx.rotate(angle);
+                        ctx.beginPath();
+                        ctx.moveTo(0, -size * 0.7);
+                        ctx.lineTo(-size * 0.25, -size * 1);
+                        ctx.lineTo(0, -size * 1.3);
+                        ctx.lineTo(size * 0.25, -size * 1);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                });
+
+                // Draw twin circles
+                const circleColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                const innerColor = player.id === playerId ? '#0080B0' : '#C03A40';
+                
+                [-size * 0.6, size * 0.6].forEach(offsetY => {
+                    ctx.fillStyle = circleColor;
+                    ctx.strokeStyle = darkenColor(circleColor, 0.3);
+                    ctx.lineWidth = 3 * camera.zoom;
+                    ctx.beginPath();
+                    ctx.arc(0, offsetY, size * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = innerColor;
+                    ctx.strokeStyle = darkenColor(innerColor, 0.3);
+                    ctx.beginPath();
+                    ctx.arc(0, offsetY, size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            } else {
+                // Normal circular base
+                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                ctx.fillStyle = baseColor;
+                ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Name and health bar
+            ctx.font = `${14 * camera.zoom}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.strokeText(player.name, screen.x, screen.y - size - 20 * camera.zoom);
+            ctx.fillText(player.name, screen.x, screen.y - size - 20 * camera.zoom);
+
+            // Health bar
+            const barWidth = size * 2.5;
+            const barHeight = 8 * camera.zoom;
+            const healthPercent = player.health / player.maxHealth;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth * healthPercent, barHeight);
+
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+        }
+
+        function drawBullet(bullet) {
+            const screen = worldToScreen(bullet.x, bullet.y);
+            
+            // Apply death animation: shrink and fade out with particle effect
+            let size = bullet.size * camera.zoom;
+            let alpha = 1;
+            
+            if (bullet.dying) {
+                const progress = bullet.deathProgress || 0;
+                // Shrink from size to 0
+                size = bullet.size * camera.zoom * (1 - progress);
+                // Fade from 1 to 0
+                alpha = 1 - progress;
+                
+                // Draw explosion particles
+                const particleCount = 8;
+                const particleSize = 3 * camera.zoom;
+                const maxDist = 15 * camera.zoom * progress;
+                
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    const dist = maxDist * (0.5 + Math.random() * 0.5);
+                    const px = screen.x + Math.cos(angle) * dist;
+                    const py = screen.y + Math.sin(angle) * dist;
+                    
+                    ctx.fillStyle = '#00B2E1';
+                    ctx.beginPath();
+                    ctx.arc(px, py, particleSize * (1 - progress * 0.5), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            const bulletColor = '#00B2E1';
+            ctx.fillStyle = bulletColor;
+            ctx.strokeStyle = darkenColor(bulletColor, 0.3);
+            ctx.lineWidth = 2 * camera.zoom;
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+            
+            // Draw health bar if toggle is on
+            if (showAllHealthBars && bullet.health !== undefined && bullet.maxHealth !== undefined) {
+                const healthPercent = bullet.health / bullet.maxHealth;
+                const barWidth = size * 2;
+                const barHeight = 4 * camera.zoom;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth * healthPercent, barHeight);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+            }
+        }
+
+        function drawTrap(trap) {
+            const screen = worldToScreen(trap.x, trap.y);
+            const size = trap.size * camera.zoom;
+
+            ctx.save();
+            ctx.translate(screen.x, screen.y);
+            ctx.rotate(trap.rotation);
+
+            // Blue for own traps, red for enemy traps
+            const isOwn = trap.owner === playerId;
+            const trapColor = isOwn ? '#00B2E1' : '#FE7C6D';
+            ctx.fillStyle = trapColor;
+            ctx.strokeStyle = darkenColor(trapColor, 0.3);
+            ctx.lineWidth = 3 * camera.zoom;
+
+            ctx.beginPath();
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                const x = Math.cos(angle) * size;
+                const y = Math.sin(angle) * size;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+            
+            // Draw health bar if toggle is on
+            if (showAllHealthBars && trap.health !== undefined && trap.maxHealth !== undefined) {
+                const healthPercent = trap.health / trap.maxHealth;
+                const barWidth = size * 2.5;
+                const barHeight = 4 * camera.zoom;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth * healthPercent, barHeight);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+            }
+        }
+
+        function drawMinion(minion) {
+            const screen = worldToScreen(minion.x, minion.y);
+            const size = minion.size * camera.zoom;
+
+            ctx.save();
+            ctx.translate(screen.x, screen.y);
+            ctx.rotate(minion.rotation);
+
+            // Draw gun first (trapezoid - wider at end)
+            const gunLength = 20 * camera.zoom;
+            const gunBaseWidth = 8 * camera.zoom;
+            const gunTipWidth = 14 * camera.zoom;
+            
+            ctx.fillStyle = '#999';
+            ctx.strokeStyle = '#404040';
+            ctx.lineWidth = 2 * camera.zoom;
+            
+            ctx.beginPath();
+            ctx.moveTo(size, -gunBaseWidth / 2);
+            ctx.lineTo(size + gunLength, -gunTipWidth / 2);
+            ctx.lineTo(size + gunLength, gunTipWidth / 2);
+            ctx.lineTo(size, gunBaseWidth / 2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw triangle base
+            const minionColor = '#00B2E1';
+            ctx.fillStyle = minionColor;
+            ctx.strokeStyle = darkenColor(minionColor, 0.3);
+            ctx.lineWidth = 2 * camera.zoom;
+
+            ctx.beginPath();
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2 - Math.PI / 2;
+                const x = Math.cos(angle) * size;
+                const y = Math.sin(angle) * size;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+            
+            // Draw health bar if toggle is on
+            if (showAllHealthBars && minion.health !== undefined && minion.maxHealth !== undefined) {
+                const healthPercent = minion.health / minion.maxHealth;
+                const barWidth = size * 2.5;
+                const barHeight = 4 * camera.zoom;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth * healthPercent, barHeight);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+            }
+        }
+
+        // Helper function to check if object is in viewport
+        function isInViewport(obj, size = 50) {
+            const screen = worldToScreen(obj.x, obj.y);
+            const margin = size * camera.zoom + 100; // Extra margin for safety
+            
+            return screen.x > -margin && screen.x < canvas.width + margin &&
+                   screen.y > -margin && screen.y < canvas.height + margin;
+        }
+
+        // Main render loop
+        function render() {
+            // Update mouse world position based on current camera (fixes stuck aim when camera moves)
+            const world = screenToWorld(lastMouseScreenX, lastMouseScreenY);
+            mouseWorldX = world.x;
+            mouseWorldY = world.y;
+            
+            // Prevent text blur - use integer translation
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            
+            // Clear with background color
+            ctx.fillStyle = '#cdcdcd';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameState) {
+                // Draw menu background (view of map center)
+                camera.x = 0;
+                camera.y = 0;
+                camera.zoom = 0.5;
+
+                ctx.restore();
+                requestAnimationFrame(render);
+                return;
+            }
+
+            // If player hasn't joined yet, show overview
+            if (!playerId) {
+                camera.x = 0;
+                camera.y = 0;
+                camera.zoom = 0.5;
+
+                drawGrid();
+                drawMapBorder();
+
+                if (gameState) {
+                    gameState.polygons.filter(p => isInViewport(p, p.size)).forEach(drawPolygon);
+                    gameState.players.filter(p => isInViewport(p, p.size)).forEach(drawTank);
+                }
+
+                ctx.restore();
+                requestAnimationFrame(render);
+                return;
+            }
+
+            const player = gameState.players.find(p => p.id === playerId);
+            if (!player) {
+                ctx.restore();
+                requestAnimationFrame(render);
+                return;
+            }
+
+            // Smooth camera follow with acceleration
+            targetCamera.x = player.x;
+            targetCamera.y = player.y;
+
+            const cameraSpeed = 0.15;
+            camera.x += (targetCamera.x - camera.x) * cameraSpeed;
+            camera.y += (targetCamera.y - camera.y) * cameraSpeed;
+
+            // Draw everything (with frustum culling)
+            drawGrid();
+            drawMapBorder();
+
+            // Draw polygons (only visible ones)
+            gameState.polygons.filter(p => isInViewport(p, p.size)).forEach(drawPolygon);
+
+            // Draw traps (only visible ones)
+            gameState.traps.filter(t => isInViewport(t, t.size)).forEach(drawTrap);
+
+            // Draw bullets (only visible ones)
+            gameState.bullets.filter(b => isInViewport(b, b.size)).forEach(drawBullet);
+
+            // Draw minions (only visible ones)
+            gameState.minions.filter(m => isInViewport(m, m.size)).forEach(drawMinion);
+
+            // Draw tanks (only visible ones)
+            gameState.players.filter(p => isInViewport(p, p.size)).forEach(drawTank);
+
+            ctx.restore();
+            requestAnimationFrame(render);
+        }
+
+        // Start rendering
+        render();
+
+        // Initialize UI state
+        updateControlHighlights();
+    </script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+{
+  "BASIC": {
+    "name": "Basic",
+    "level": 0,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1}],
+    "fov": 1,
+    "upgrades": ["TWIN", "SNIPER", "MACHINE_GUN", "FLANK_GUARD", "TRAPPER"]
+  },
+  "TWIN": {
+    "name": "Twin",
+    "level": 15,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 0, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": ["TRIPLE_SHOT", "QUAD_TANK", "TWIN_FLANK"]
+  },
+  "SNIPER": {
+    "name": "Sniper",
+    "level": 15,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 2.2, "speed": 1.6, "reload": 0.7, "length": 1.3}],
+    "fov": 1.4,
+    "upgrades": ["ASSASSIN", "HUNTER", "OVERSEER", "ROCKETEER"]
+  },
+  "MACHINE_GUN": {
+    "name": "Machine Gun",
+    "level": 15,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.2, "reload": 1.5, "spread": 0.15}],
+    "fov": 1,
+    "upgrades": ["DESTROYER", "GUNNER", "SHOTGUN", "SPRAY", "SMASHER", "ROCKETEER"]
+  },
+  "FLANK_GUARD": {
+    "name": "Flank Guard",
+    "level": 15,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 180, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": ["TRI_ANGLE", "QUAD_TANK", "TWIN_FLANK", "AUTO_5"]
+  },
+  "TRIPLE_SHOT": {
+    "name": "Triple Shot",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": -20, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 20, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": ["PENTA_SHOT", "SPREAD_SHOT"]
+  },
+  "QUAD_TANK": {
+    "name": "Quad Tank",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 90, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 180, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 270, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": ["OCTO_TANK"]
+  },
+  "TWIN_FLANK": {
+    "name": "Twin Flank",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 0, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 180, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 180, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": ["TRIPLE_TWIN", "BATTLESHIP", "CROPDUSTER"]
+  },
+  "ASSASSIN": {
+    "name": "Assassin",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 2.8, "speed": 1.9, "reload": 0.6, "length": 1.5}],
+    "fov": 1.7,
+    "upgrades": ["RANGER", "STALKER"]
+  },
+  "HUNTER": {
+    "name": "Hunter",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 2.2, "speed": 1.6, "reload": 0.7, "length": 1.3},
+      {"type": "normal", "angle": 0, "damage": 1.5, "speed": 1.3, "reload": 0.7, "length": 1, "offsetX": -10}
+    ],
+    "fov": 1.4,
+    "upgrades": ["PREDATOR", "STREAMLINER"]
+  },
+  "OVERSEER": {
+    "name": "Overseer",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 0, "count": 4, "damage": 1.5, "speed": 1.2},
+      {"type": "minion", "angle": 180, "count": 4, "damage": 1.5, "speed": 1.2}
+    ],
+    "fov": 1.2,
+    "upgrades": ["OVERLORD", "NECROMANCER", "MANAGER", "FACTORY", "MASTER"]
+  },
+  "DESTROYER": {
+    "name": "Destroyer",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 4.5, "speed": 0.8, "reload": 0.4, "size": 2, "delay": 0.15}],
+    "fov": 1,
+    "upgrades": ["ANNIHILATOR", "HYBRID", "SKIMMER"]
+  },
+  "GUNNER": {
+    "name": "Gunner",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "offsetY": -12, "damage": 0.6, "speed": 1.3, "reload": 1.6},
+      {"type": "normal", "angle": 0, "offsetY": -4, "damage": 0.6, "speed": 1.3, "reload": 1.6},
+      {"type": "normal", "angle": 0, "offsetY": 4, "damage": 0.6, "speed": 1.3, "reload": 1.6},
+      {"type": "normal", "angle": 0, "offsetY": 12, "damage": 0.6, "speed": 1.3, "reload": 1.6}
+    ],
+    "fov": 1,
+    "upgrades": ["GUNNER_TRAPPER", "AUTO_GUNNER", "CROPDUSTER"]
+  },
+  "SHOTGUN": {
+    "name": "Shotgun",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 0.6, "speed": 1.5, "reload": 2.2, "spread": 0.2, "offsetX": 0, "offsetY": 0},
+      {"type": "normal", "angle": 0, "damage": 0.6, "speed": 1.5, "reload": 2.2, "spread": 0.2, "offsetX": -5, "offsetY": 6},
+      {"type": "normal", "angle": 0, "damage": 0.6, "speed": 1.5, "reload": 2.2, "spread": 0.2, "offsetX": -10, "offsetY": 12},
+      {"type": "normal", "angle": 0, "damage": 0.6, "speed": 1.5, "reload": 2.2, "spread": 0.2, "offsetX": -5, "offsetY": -6},
+      {"type": "normal", "angle": 0, "damage": 0.6, "speed": 1.5, "reload": 2.2, "spread": 0.2, "offsetX": -10, "offsetY": -12}
+    ],
+    "fov": 1,
+    "upgrades": ["CROPDUSTER"]
+  },
+  "SPRAY": {
+    "name": "Spray",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.3, "reload": 1.5, "spread": 0.1, "offsetX": 0, "offsetY": 0, "delay": 0},
+      {"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.3, "reload": 1.5, "spread": 0.1, "offsetX": -3, "offsetY": 0, "delay": 0.05},
+      {"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.3, "reload": 1.5, "spread": 0.1, "offsetX": -6, "offsetY": 0, "delay": 0.1},
+      {"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.3, "reload": 1.5, "spread": 0.1, "offsetX": -9, "offsetY": 0, "delay": 0.15},
+      {"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.3, "reload": 1.5, "spread": 0.1, "offsetX": -12, "offsetY": 0, "delay": 0.2}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "TRI_ANGLE": {
+    "name": "Tri-Angle",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.2, "reload": 1},
+      {"type": "normal", "angle": 150, "damage": 0.8, "speed": 1, "reload": 1.2, "recoil": 1.5},
+      {"type": "normal", "angle": 210, "damage": 0.8, "speed": 1, "reload": 1.2, "recoil": 1.5}
+    ],
+    "fov": 1,
+    "upgrades": ["BOOSTER", "FIGHTER", "FALCON"]
+  },
+  "TRAPPER": {
+    "name": "Trapper",
+    "level": 15,
+    "baseShape": "circle",
+    "guns": [{"type": "trap", "angle": 0, "damage": 1, "speed": 0.8, "reload": 1.2, "maxTraps": 15}],
+    "fov": 1,
+    "upgrades": ["TRI_TRAPPER", "GUNNER_TRAPPER", "MEGA_TRAPPER", "ARTILLERY"]
+  },
+  "OVERLORD": {
+    "name": "Overlord",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 0, "count": 8, "damage": 1.5, "speed": 1.2},
+      {"type": "minion", "angle": 90, "count": 8, "damage": 1.5, "speed": 1.2},
+      {"type": "minion", "angle": 180, "count": 8, "damage": 1.5, "speed": 1.2},
+      {"type": "minion", "angle": 270, "count": 8, "damage": 1.5, "speed": 1.2}
+    ],
+    "fov": 1.3,
+    "upgrades": []
+  },
+  "PENTA_SHOT": {
+    "name": "Penta Shot",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": -15, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 15, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": -30, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 30, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "OCTO_TANK": {
+    "name": "Octo Tank",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1, "delay": 0},
+      {"type": "normal", "angle": 90, "damage": 1, "speed": 1, "reload": 1, "delay": 0},
+      {"type": "normal", "angle": 180, "damage": 1, "speed": 1, "reload": 1, "delay": 0},
+      {"type": "normal", "angle": 270, "damage": 1, "speed": 1, "reload": 1, "delay": 0},
+      {"type": "normal", "angle": 45, "damage": 1, "speed": 1, "reload": 1, "delay": 0.15},
+      {"type": "normal", "angle": 135, "damage": 1, "speed": 1, "reload": 1, "delay": 0.15},
+      {"type": "normal", "angle": 225, "damage": 1, "speed": 1, "reload": 1, "delay": 0.15},
+      {"type": "normal", "angle": 315, "damage": 1, "speed": 1, "reload": 1, "delay": 0.15}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "SMASHER": {
+    "name": "Smasher",
+    "level": 30,
+    "baseShape": "blade",
+    "bladeShape": "square",
+    "bladeCount": 1,
+    "bladeSize": 1.5,
+    "guns": [],
+    "fov": 1,
+    "bodyDamageBonus": 3,
+    "speedBonus": 1.3,
+    "upgrades": ["SPIKE", "LANDMINE", "AUTO_SMASHER", "RAMMER", "BLADE_GUNNER"]
+  },
+  "TRI_TRAPPER": {
+    "name": "Tri-Trapper",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "trap", "angle": 0, "damage": 1, "speed": 0.8, "reload": 1.2, "maxTraps": 20},
+      {"type": "trap", "angle": 120, "damage": 1, "speed": 0.8, "reload": 1.2, "maxTraps": 20},
+      {"type": "trap", "angle": 240, "damage": 1, "speed": 0.8, "reload": 1.2, "maxTraps": 20}
+    ],
+    "fov": 1,
+    "upgrades": ["FORTRESS", "CONSTRUCTOR"]
+  },
+  "MEGA_TRAPPER": {
+    "name": "Mega Trapper",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [{"type": "trap", "angle": 0, "damage": 2.5, "speed": 0.6, "reload": 0.8, "maxTraps": 10}],
+    "fov": 1,
+    "upgrades": ["MEGA_TRAPPER_X"]
+  },
+  "GUNNER_TRAPPER": {
+    "name": "Gunner Trapper",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "offsetY": -8, "damage": 0.7, "speed": 1.3, "reload": 1.5},
+      {"type": "normal", "angle": 0, "offsetY": 8, "damage": 0.7, "speed": 1.3, "reload": 1.5},
+      {"type": "trap", "angle": 180, "damage": 1, "speed": 0.8, "reload": 1.2, "maxTraps": 15}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "BOOSTER": {
+    "name": "Booster",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.2, "reload": 1},
+      {"type": "normal", "angle": 135, "damage": 0.7, "speed": 1, "reload": 1.2, "recoil": 1.8},
+      {"type": "normal", "angle": 180, "damage": 0.7, "speed": 1, "reload": 1.2, "recoil": 1.8},
+      {"type": "normal", "angle": 225, "damage": 0.7, "speed": 1, "reload": 1.2, "recoil": 1.8}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "FIGHTER": {
+    "name": "Fighter",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.2, "reload": 1},
+      {"type": "normal", "angle": 90, "damage": 0.8, "speed": 1, "reload": 1.1},
+      {"type": "normal", "angle": 270, "damage": 0.8, "speed": 1, "reload": 1.1},
+      {"type": "normal", "angle": 150, "damage": 0.7, "speed": 1, "reload": 1.2, "recoil": 1.5},
+      {"type": "normal", "angle": 210, "damage": 0.7, "speed": 1, "reload": 1.2, "recoil": 1.5}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "RANGER": {
+    "name": "Ranger",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 3.5, "speed": 2.2, "reload": 0.5, "length": 1.7}],
+    "fov": 2,
+    "upgrades": []
+  },
+  "STALKER": {
+    "name": "Stalker",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 2.8, "speed": 1.9, "reload": 0.6, "length": 1.5}],
+    "fov": 1.7,
+    "upgrades": []
+  },
+  "PREDATOR": {
+    "name": "Predator",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 2.2, "speed": 1.6, "reload": 0.7, "length": 1.3},
+      {"type": "normal", "angle": 0, "damage": 1.5, "speed": 1.3, "reload": 0.7, "length": 1, "offsetX": -10},
+      {"type": "normal", "angle": 0, "damage": 1.2, "speed": 1.2, "reload": 0.7, "length": 0.8, "offsetX": -18}
+    ],
+    "fov": 1.5,
+    "upgrades": []
+  },
+  "STREAMLINER": {
+    "name": "Streamliner",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.6, "reload": 1.8, "length": 1.3},
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.6, "reload": 1.8, "length": 1.1, "offsetX": -8},
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.6, "reload": 1.8, "length": 0.9, "offsetX": -16},
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.6, "reload": 1.8, "length": 0.7, "offsetX": -24}
+    ],
+    "fov": 1.4,
+    "upgrades": []
+  },
+  "NECROMANCER": {
+    "name": "Necromancer",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 0, "count": 16, "damage": 1, "speed": 1}
+    ],
+    "fov": 1.3,
+    "upgrades": []
+  },
+  "MANAGER": {
+    "name": "Manager",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 0, "count": 6, "damage": 1.8, "speed": 1.3}
+    ],
+    "fov": 1.3,
+    "upgrades": []
+  },
+  "ANNIHILATOR": {
+    "name": "Annihilator",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 6, "speed": 0.7, "reload": 0.3, "size": 2.5, "delay": 0.2}],
+    "fov": 1,
+    "upgrades": []
+  },
+  "HYBRID": {
+    "name": "Hybrid",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 4.5, "speed": 0.8, "reload": 0.4, "size": 2, "delay": 0.15},
+      {"type": "minion", "angle": 180, "count": 4, "damage": 1.5, "speed": 1.2}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "AUTO_GUNNER": {
+    "name": "Auto Gunner",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "offsetY": -10, "damage": 0.6, "speed": 1.3, "reload": 1.7},
+      {"type": "normal", "angle": 0, "offsetY": -3, "damage": 0.6, "speed": 1.3, "reload": 1.7},
+      {"type": "normal", "angle": 0, "offsetY": 3, "damage": 0.6, "speed": 1.3, "reload": 1.7},
+      {"type": "normal", "angle": 0, "offsetY": 10, "damage": 0.6, "speed": 1.3, "reload": 1.7}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "SPREAD_SHOT": {
+    "name": "Spread Shot",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": -10, "damage": 0.9, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 10, "damage": 0.9, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": -20, "damage": 0.8, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 20, "damage": 0.8, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": -30, "damage": 0.7, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 30, "damage": 0.7, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "TRIPLE_TWIN": {
+    "name": "Triple Twin",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 0, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 120, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 120, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 240, "offsetY": -8, "damage": 1, "speed": 1, "reload": 1},
+      {"type": "normal", "angle": 240, "offsetY": 8, "damage": 1, "speed": 1, "reload": 1}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "BATTLESHIP": {
+    "name": "Battleship",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 90, "count": 8, "damage": 0.8, "speed": 1},
+      {"type": "minion", "angle": 270, "count": 8, "damage": 0.8, "speed": 1}
+    ],
+    "fov": 1.1,
+    "upgrades": []
+  },
+  "SPIKE": {
+    "name": "Spike",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "octagon",
+    "bladeCount": 2,
+    "bladeSize": 1.6,
+    "guns": [],
+    "fov": 1,
+    "bodyDamageBonus": 4,
+    "speedBonus": 1.4,
+    "upgrades": []
+  },
+  "LANDMINE": {
+    "name": "Landmine",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "hexagon",
+    "guns": [],
+    "fov": 1,
+    "bodyDamageBonus": 3.5,
+    "speedBonus": 1.5,
+    "upgrades": []
+  },
+  "AUTO_5": {
+    "name": "Auto 5",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.2, "reload": 1.3},
+      {"type": "normal", "angle": 72, "damage": 0.8, "speed": 1.2, "reload": 1.3},
+      {"type": "normal", "angle": 144, "damage": 0.8, "speed": 1.2, "reload": 1.3},
+      {"type": "normal", "angle": 216, "damage": 0.8, "speed": 1.2, "reload": 1.3},
+      {"type": "normal", "angle": 288, "damage": 0.8, "speed": 1.2, "reload": 1.3}
+    ],
+    "fov": 1,
+    "upgrades": ["AUTO_SMASHER"]
+  },
+  "AUTO_SMASHER": {
+    "name": "Auto Smasher",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "square",
+    "guns": [{"type": "normal", "angle": 0, "damage": 0.6, "speed": 1.1, "reload": 1.2, "length": 0.7}],
+    "fov": 1,
+    "bodyDamageBonus": 3.2,
+    "speedBonus": 1.3,
+    "upgrades": []
+  },
+  "MEGA_SMASHER": {
+    "name": "Mega Smasher",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "pentagon",
+    "guns": [],
+    "fov": 0.9,
+    "bodyDamageBonus": 5,
+    "speedBonus": 1.2,
+    "upgrades": []
+  },
+  "ROCKETEER": {
+    "name": "Rocketeer",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [{"type": "normal", "angle": 0, "damage": 3.5, "speed": 0.6, "reload": 0.5, "size": 1.8}],
+    "fov": 1,
+    "upgrades": ["SKIMMER", "LAUNCHER"]
+  },
+  "SKIMMER": {
+    "name": "Skimmer",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 3, "speed": 0.7, "reload": 0.6, "size": 1.6},
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.3, "reload": 1.5, "length": 0.6, "offsetX": -15}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "LAUNCHER": {
+    "name": "Launcher",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 3.5, "speed": 0.6, "reload": 0.5, "size": 1.8},
+      {"type": "normal", "angle": 0, "damage": 3.5, "speed": 0.6, "reload": 0.5, "size": 1.8, "offsetY": 15}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "RAMMER": {
+    "name": "Rammer",
+    "level": 30,
+    "baseShape": "blade",
+    "bladeShape": "triangle",
+    "guns": [],
+    "fov": 1,
+    "bodyDamageBonus": 2.5,
+    "speedBonus": 1.6,
+    "upgrades": ["SPIKE", "LANDMINE", "MEGA_SMASHER"]
+  },
+  "BLADE_GUNNER": {
+    "name": "Blade Gunner",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "hexagon",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.2, "reload": 1.3},
+      {"type": "normal", "angle": 180, "damage": 1, "speed": 1.2, "reload": 1.3}
+    ],
+    "fov": 1.1,
+    "bodyDamageBonus": 2,
+    "speedBonus": 1.2,
+    "upgrades": []
+  },
+  "INTERCEPTOR": {
+    "name": "Interceptor",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "triangle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1.2, "speed": 1.4, "reload": 1.1},
+      {"type": "normal", "angle": 120, "damage": 0.8, "speed": 1.2, "reload": 1.2, "recoil": 1.3},
+      {"type": "normal", "angle": 240, "damage": 0.8, "speed": 1.2, "reload": 1.2, "recoil": 1.3}
+    ],
+    "fov": 1.1,
+    "bodyDamageBonus": 1.8,
+    "speedBonus": 1.4,
+    "upgrades": []
+  },
+  "ARMORED_BLADE": {
+    "name": "Armored Blade",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "octagon",
+    "guns": [],
+    "fov": 0.95,
+    "bodyDamageBonus": 4,
+    "speedBonus": 1.1,
+    "healthBonus": 1.5,
+    "upgrades": []
+  },
+  "ARTILLERY": {
+    "name": "Artillery",
+    "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 2.5, "speed": 0.9, "reload": 0.7, "size": 1.5},
+      {"type": "trap", "angle": 180, "damage": 1, "speed": 0.8, "reload": 1.1, "maxTraps": 12}
+    ],
+    "fov": 1.1,
+    "upgrades": ["FORTRESS", "ARTILLERY_MASTER"]
+  },
+  "FORTRESS": {
+    "name": "Fortress",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 2.5, "speed": 0.9, "reload": 0.7, "size": 1.5},
+      {"type": "trap", "angle": 120, "damage": 1, "speed": 0.8, "reload": 1.1, "maxTraps": 18},
+      {"type": "trap", "angle": 240, "damage": 1, "speed": 0.8, "reload": 1.1, "maxTraps": 18}
+    ],
+    "fov": 1.1,
+    "upgrades": []
+  },
+  "ARTILLERY_MASTER": {
+    "name": "Artillery Master",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 3, "speed": 0.9, "reload": 0.7, "size": 1.6},
+      {"type": "normal", "angle": 0, "offsetY": 12, "damage": 1.5, "speed": 1, "reload": 1, "length": 0.8},
+      {"type": "normal", "angle": 0, "offsetY": -12, "damage": 1.5, "speed": 1, "reload": 1, "length": 0.8},
+      {"type": "trap", "angle": 180, "damage": 1.2, "speed": 0.8, "reload": 1.1, "maxTraps": 15}
+    ],
+    "fov": 1.15,
+    "upgrades": []
+  },
+  "FACTORY": {
+    "name": "Factory",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 0, "count": 6, "damage": 2, "speed": 1.1}
+    ],
+    "fov": 1.25,
+    "upgrades": []
+  },
+  "MASTER": {
+    "name": "Master",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "minion", "angle": 0, "count": 10, "damage": 1.3, "speed": 1.3}
+    ],
+    "fov": 1.3,
+    "upgrades": []
+  },
+  "TRIPLE_BLADE": {
+    "name": "Triple Blade",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "triangle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.2, "reload": 1.2},
+      {"type": "normal", "angle": 120, "damage": 1, "speed": 1.2, "reload": 1.2},
+      {"type": "normal", "angle": 240, "damage": 1, "speed": 1.2, "reload": 1.2}
+    ],
+    "fov": 1,
+    "bodyDamageBonus": 2.2,
+    "speedBonus": 1.25,
+    "upgrades": []
+  },
+  "CONSTRUCTOR": {
+    "name": "Constructor",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "trap", "angle": 0, "damage": 1.5, "speed": 0.9, "reload": 1.3, "maxTraps": 25},
+      {"type": "minion", "angle": 180, "count": 4, "damage": 1.2, "speed": 1}
+    ],
+    "fov": 1.2,
+    "upgrades": []
+  },
+  "FALCON": {
+    "name": "Falcon",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1.3, "speed": 1.5, "reload": 1.2},
+      {"type": "normal", "angle": -15, "damage": 1, "speed": 1.4, "reload": 1.2},
+      {"type": "normal", "angle": 15, "damage": 1, "speed": 1.4, "reload": 1.2},
+      {"type": "normal", "angle": 160, "damage": 0.8, "speed": 1.1, "reload": 1.3, "recoil": 2},
+      {"type": "normal", "angle": 200, "damage": 0.8, "speed": 1.1, "reload": 1.3, "recoil": 2}
+    ],
+    "fov": 1.1,
+    "upgrades": []
+  },
+  "CROPDUSTER": {
+    "name": "Cropduster",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 0.5, "speed": 1.5, "reload": 2.5, "spread": 0.3},
+      {"type": "normal", "angle": 180, "damage": 0.5, "speed": 1.5, "reload": 2.5, "spread": 0.3},
+      {"type": "normal", "angle": 90, "damage": 0.5, "speed": 1.5, "reload": 2.5, "spread": 0.3},
+      {"type": "normal", "angle": 270, "damage": 0.5, "speed": 1.5, "reload": 2.5, "spread": 0.3}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "MEGA_TRAPPER_X": {
+    "name": "Mega Trapper X",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "trap", "angle": 0, "damage": 2.5, "speed": 0.6, "reload": 0.7, "maxTraps": 8},
+      {"type": "trap", "angle": 180, "damage": 2.5, "speed": 0.6, "reload": 0.7, "maxTraps": 8}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "SPEED_BLADE": {
+    "name": "Speed Blade",
+    "level": 45,
+    "baseShape": "blade",
+    "bladeShape": "hexagon",
+    "guns": [],
+    "fov": 1.1,
+    "bodyDamageBonus": 2,
+    "speedBonus": 2,
+    "upgrades": []
+  },
+  "TWIN_BLADE": {
+    "name": "Twin Blade",
+    "level": 45,
+    "baseShape": "blade_twin",
+    "bladeShape": "square",
+    "guns": [],
+    "fov": 1,
+    "bodyDamageBonus": 2.5,
+    "speedBonus": 1.35,
+    "upgrades": []
+  }
+}
