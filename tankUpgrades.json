@@ -193,7 +193,6 @@
       {"type": "minion", "angle": 180, "count": 8, "damage": 1.5, "speed": 1.2},
       {"type": "minion", "angle": 270, "count": 8, "damage": 1.5, "speed": 1.2}
     ],
-    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -348,7 +347,6 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 16, "damage": 1, "speed": 1}
     ],
-    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -359,7 +357,6 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 6, "damage": 1.8, "speed": 1.3}
     ],
-    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },
@@ -623,7 +620,6 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 6, "damage": 2, "speed": 1.1}
     ],
-    "hideGuns": true,
     "fov": 1.25,
     "upgrades": []
   },
@@ -634,7 +630,6 @@
     "guns": [
       {"type": "minion", "angle": 0, "count": 10, "damage": 1.3, "speed": 1.3}
     ],
-    "hideGuns": true,
     "fov": 1.3,
     "upgrades": []
   },

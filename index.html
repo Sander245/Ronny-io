@@ -1618,7 +1618,7 @@
             const tankConfig = tankTypes[player.tankType];
 
             // LAYER 0: Draw guns first (so they appear under the base)
-            if (tankConfig && tankConfig.guns && !tankConfig.hideGuns) {
+            if (tankConfig && tankConfig.guns) {
                 tankConfig.guns.forEach((gun, gunIndex) => {
                     // Get recoil offset for this gun
                     const recoilOffset = (player.gunRecoils && player.gunRecoils[`gun_${gunIndex}`]) || 0;
