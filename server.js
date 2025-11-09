@@ -275,12 +275,18 @@ class Minion extends GameObject {
         this.rotation = 0;
     }
 
-    update(targetX, targetY) {
-        this.targetX = targetX;
-        this.targetY = targetY;
+    update(targetX, targetY, ownerX, ownerY, shooting) {
+        // If shooting, follow mouse; otherwise, return to owner
+        if (shooting) {
+            this.targetX = targetX;
+            this.targetY = targetY;
+        } else {
+            this.targetX = ownerX;
+            this.targetY = ownerY;
+        }
 
-        const dx = targetX - this.x;
-        const dy = targetY - this.y;
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 10) {
@@ -1099,7 +1105,7 @@ function gameLoop() {
     minions.forEach(minion => {
         const owner = players.get(minion.owner);
         if (owner) {
-            minion.update(owner.mouseX, owner.mouseY);
+            minion.update(owner.mouseX, owner.mouseY, owner.x, owner.y, owner.shooting);
 
             // Minion vs polygon
             polygons.forEach(polygon => {
@@ -1151,10 +1157,84 @@ function gameLoop() {
                     }
                 }
             });
+
+            // Minion vs bullet
+            bullets.forEach(bullet => {
+                if (bullet.owner !== minion.owner && !bullet.dying) {
+                    if (checkCollision(minion, bullet, minion.size, bullet.size)) {
+                        bullet.health -= minion.damage / 4;
+                        minion.health -= bullet.damage / 4;
+                        
+                        if (bullet.health <= 0 && !bullet.dying) {
+                            bullet.startDeath();
+                        }
+                        if (minion.health <= 0) {
+                            minions.delete(minion.id);
+                        }
+                    }
+                }
+            });
+
+            // Minion vs trap
+            traps.forEach(trap => {
+                if (trap.owner !== minion.owner) {
+                    if (checkCollision(minion, trap, minion.size, trap.size)) {
+                        trap.health -= minion.damage / 2;
+                        minion.health -= trap.damage / 2;
+                        
+                        if (trap.health <= 0) {
+                            traps.delete(trap.id);
+                        }
+                        if (minion.health <= 0) {
+                            minions.delete(minion.id);
+                        }
+                    }
+                }
+            });
         } else {
             minions.delete(minion.id);
         }
     });
+
+    // Minion vs minion collision
+    const minionArray = Array.from(minions.values());
+    for (let i = 0; i < minionArray.length; i++) {
+        for (let j = i + 1; j < minionArray.length; j++) {
+            const minion1 = minionArray[i];
+            const minion2 = minionArray[j];
+            
+            const dx = minion1.x - minion2.x;
+            const dy = minion1.y - minion2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const minDist = minion1.size + minion2.size;
+            
+            if (dist < minDist && dist > 0) {
+                // If they're from different owners, deal damage
+                if (minion1.owner !== minion2.owner) {
+                    minion1.health -= 2;
+                    minion2.health -= 2;
+                    
+                    if (minion1.health <= 0) {
+                        minions.delete(minion1.id);
+                    }
+                    if (minion2.health <= 0) {
+                        minions.delete(minion2.id);
+                    }
+                }
+                
+                // Push apart regardless of owner
+                const overlap = minDist - dist;
+                const pushForce = overlap * 0.5;
+                const nx = dx / dist;
+                const ny = dy / dist;
+                
+                minion1.x += nx * pushForce * 0.5;
+                minion1.y += ny * pushForce * 0.5;
+                minion2.x -= nx * pushForce * 0.5;
+                minion2.y -= ny * pushForce * 0.5;
+            }
+        }
+    }
 
     // Update polygons
     polygons.forEach(polygon => {

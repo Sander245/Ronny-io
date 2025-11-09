@@ -1403,9 +1403,9 @@
                         ctx.lineWidth = 1.5;
                         ctx.strokeRect(baseSize - 3 * scale, -trapSize / 2, trapSize, trapSize);
                     } else if (gun.type === 'minion') {
-                        // Draw thin diamond/rhombus for minion spawner
+                        // Draw thin rhombus for minion spawner - wide at base, narrow at tip
                         const length = 25 * scale;
-                        const width = 12 * scale;
+                        const width = 20 * scale;
                         const baseX = baseSize - 5 * scale;
                         
                         ctx.fillStyle = '#999';
@@ -1413,10 +1413,10 @@
                         ctx.lineWidth = 1.5;
                         
                         ctx.beginPath();
-                        ctx.moveTo(baseX, 0); // Back center
-                        ctx.lineTo(baseX + length * 0.3, -width / 2); // Top middle
-                        ctx.lineTo(baseX + length, 0); // Front point
-                        ctx.lineTo(baseX + length * 0.3, width / 2); // Bottom middle
+                        ctx.moveTo(baseX, -width / 2); // Back top corner (wide base)
+                        ctx.lineTo(baseX + length, 0); // Front point (narrow tip)
+                        ctx.lineTo(baseX, width / 2); // Back bottom corner (wide base)
+                        ctx.lineTo(baseX, -width / 2); // Close path
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
@@ -1725,19 +1725,19 @@
                         ctx.strokeStyle = '#404040'; // Dark grey outline
                         ctx.lineWidth = 2 * camera.zoom;
                         
-                        // Draw thin diamond/rhombus shape pointing outward
+                        // Draw thin diamond/rhombus shape - wide at base, narrow at tip
                         const length = 25 * camera.zoom * sizeMultiplier; // Length of diamond
-                        const width = 12 * camera.zoom * sizeMultiplier; // Width at widest point
+                        const width = 20 * camera.zoom * sizeMultiplier; // Width at widest point (base)
                         const baseX = size - 5 * camera.zoom;
                         
                         // Apply recoil offset (pushes gun back)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         ctx.beginPath();
-                        ctx.moveTo(baseX + recoilX, 0); // Back center point
-                        ctx.lineTo(baseX + length * 0.3 + recoilX, -width / 2); // Top middle
-                        ctx.lineTo(baseX + length + recoilX, 0); // Front point
-                        ctx.lineTo(baseX + length * 0.3 + recoilX, width / 2); // Bottom middle
+                        ctx.moveTo(baseX + recoilX, -width / 2); // Back top corner (wide base)
+                        ctx.lineTo(baseX + length + recoilX, 0); // Front point (narrow tip)
+                        ctx.lineTo(baseX + recoilX, width / 2); // Back bottom corner (wide base)
+                        ctx.lineTo(baseX + recoilX, -width / 2); // Close path
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
