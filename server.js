@@ -33,10 +33,16 @@ app.get('/', (req, res) => {
 
 // Load tank upgrades from JSON file
 let TANK_TYPES = {};
+let TANK_UPGRADES = {};
 try {
     const upgradesData = fs.readFileSync('./tankUpgrades.json', 'utf8');
     TANK_TYPES = JSON.parse(upgradesData);
     console.log('Loaded', Object.keys(TANK_TYPES).length, 'tank configurations from tankUpgrades.json');
+    
+    // Extract upgrade paths for use in server
+    Object.keys(TANK_TYPES).forEach(key => {
+        TANK_UPGRADES[key] = TANK_TYPES[key].upgrades || [];
+    });
 } catch (err) {
     console.error('Error loading tank upgrades:', err);
 }
