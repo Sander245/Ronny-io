@@ -843,20 +843,24 @@
                     socket.emit('cheatResetTank');
                     return;
                 }
-                
-                // Handle number keys for polygon spawning
+            }
+            
+            // Handle polygon spawning (cheat panel active, no shift required for numbers)
+            if (cheatPanelActive) {
                 const keyToNumber = {
                     '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9
                 };
                 
                 if (keyToNumber[e.key]) {
                     const num = keyToNumber[e.key];
+                    console.log(`[POLYGON SPAWN] Key ${num} pressed at ${mouseWorldX}, ${mouseWorldY}`);
                     
                     if (e.key === '9') {
                         // Spawn all polygon types at cursor
                         const allTypes = [3, 4, 5, 6, 8, 10, 12, 13, 14, 15, 16];
+                        console.log('[POLYGON SPAWN] Spawning all types');
                         allTypes.forEach((type, index) => {
-                            const offsetX = (index % 4) * 30 - 45; // Spread in grid
+                            const offsetX = (index % 4) * 30 - 45;
                             const offsetY = Math.floor(index / 4) * 30 - 30;
                             socket.emit('cheatSpawnPolygon', { type, x: mouseWorldX + offsetX, y: mouseWorldY + offsetY });
                         });
@@ -864,31 +868,21 @@
                     }
                     
                     if (e.shiftKey) {
-                        // Shift+1-8 spawns polygons 9-16 (12, 13, 14, 15, 16 sides, plus extras)
+                        // Shift+1-8 spawns polygons with 12-16 sides
                         const shiftPolygonMap = {
-                            1: 12, // 12 sides
-                            2: 13, // 13 sides
-                            3: 14, // 14 sides
-                            4: 15, // 15 sides
-                            5: 16, // 16 sides
-                            6: 12, // Extra 12-sided
-                            7: 13, // Extra 13-sided
-                            8: 14  // Extra 14-sided
+                            1: 12, 2: 13, 3: 14, 4: 15, 5: 16, 6: 12, 7: 13, 8: 14
                         };
-                        socket.emit('cheatSpawnPolygon', { type: shiftPolygonMap[num], x: mouseWorldX, y: mouseWorldY });
+                        const sides = shiftPolygonMap[num];
+                        console.log(`[POLYGON SPAWN] Shift+${num} - spawning ${sides}-sided polygon`);
+                        socket.emit('cheatSpawnPolygon', { type: sides, x: mouseWorldX, y: mouseWorldY });
                     } else {
-                        // 1-8 spawns polygons 1-8 (3, 4, 5, 6, 8, 10, 12, 13 sides)
+                        // 1-8 spawns polygons with 3-13 sides
                         const normalPolygonMap = {
-                            1: 3,  // Triangle
-                            2: 4,  // Square
-                            3: 5,  // Pentagon
-                            4: 6,  // Hexagon
-                            5: 8,  // Octagon
-                            6: 10, // Decagon
-                            7: 12, // 12-sided
-                            8: 13  // 13-sided
+                            1: 3, 2: 4, 3: 5, 4: 6, 5: 8, 6: 10, 7: 12, 8: 13
                         };
-                        socket.emit('cheatSpawnPolygon', { type: normalPolygonMap[num], x: mouseWorldX, y: mouseWorldY });
+                        const sides = normalPolygonMap[num];
+                        console.log(`[POLYGON SPAWN] ${num} - spawning ${sides}-sided polygon`);
+                        socket.emit('cheatSpawnPolygon', { type: sides, x: mouseWorldX, y: mouseWorldY });
                     }
                     return;
                 }
@@ -2751,6 +2745,9 @@
         let editorState = {
             blocks: [],
             selectedBlock: null,
+            selectedBlade: null,
+            selectedBaseBlock: null,
+            selectedType: null, // 'gun', 'blade', or 'baseBlock'
             rotation: 0,
             zoom: 1,
             dragging: false,
@@ -2759,8 +2756,8 @@
             fov: 1,
             baseMode: 'none', // none, simple, advanced
             baseSides: 4, // for simple mode
-            baseBlocks: [], // for advanced mode: {shape, size, x, y, width, height, rotation}
-            blades: [] // list of blades: {shape (sides), size, x, y, rotation}
+            baseBlocks: [], // for advanced mode: {id, shape, size, x, y, width, height, rotation, layer}
+            blades: [] // list of blades: {id, shape (sides), size, x, y, rotation, layer}
         };
 
         const blockTypes = {
@@ -2776,7 +2773,8 @@
                     reload: 1,
                     length: 1,
                     size: 1,
-                    spread: 0
+                    spread: 0,
+                    layer: 0
                 }
             },
             trap: {
@@ -2790,7 +2788,8 @@
                     speed: 0.8,
                     reload: 1.2,
                     maxTraps: 15,
-                    trapSize: 1
+                    trapSize: 1,
+                    layer: 0
                 }
             },
             minion: {
@@ -2801,7 +2800,8 @@
                     count: 4,
                     damage: 1.5,
                     speed: 1.2,
-                    minionSize: 1
+                    minionSize: 1,
+                    layer: 0
                 }
             }
         };
@@ -2855,6 +2855,9 @@
                 
                 blockItem.addEventListener('click', () => {
                     editorState.selectedBlock = block;
+                    editorState.selectedBlade = null;
+                    editorState.selectedBaseBlock = null;
+                    editorState.selectedType = 'gun';
                     updateCurrentBlocksList();
                     updatePropertiesPanel();
                     renderEditorCanvas();
@@ -2872,6 +2875,9 @@
             };
             editorState.blocks.push(block);
             editorState.selectedBlock = block;
+            editorState.selectedBlade = null;
+            editorState.selectedBaseBlock = null;
+            editorState.selectedType = 'gun';
             updateCurrentBlocksList();
             updatePropertiesPanel();
             renderEditorCanvas();
@@ -2888,7 +2894,8 @@
             
             editorState.blades.forEach((blade, index) => {
                 const bladeItem = document.createElement('div');
-                bladeItem.style.cssText = 'padding: 6px; background: #1a1a1a; border-radius: 4px; display: flex; gap: 8px; align-items: center;';
+                const isSelected = editorState.selectedBlade?.id === blade.id;
+                bladeItem.style.cssText = `padding: 6px; background: ${isSelected ? '#4a9eff' : '#1a1a1a'}; border-radius: 4px; display: flex; gap: 8px; align-items: center; cursor: pointer;`;
                 
                 // Preview canvas
                 const preview = document.createElement('canvas');
@@ -2916,25 +2923,33 @@
                 info.textContent = `Blade ${index + 1} (${sides} sides)`;
                 bladeItem.appendChild(info);
                 
-                // Edit button
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edit';
-                editBtn.style.cssText = 'padding: 4px 8px; background: #4a9eff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;';
-                editBtn.addEventListener('click', () => {
-                    showBladeEditor(index);
-                });
-                bladeItem.appendChild(editBtn);
-                
                 // Delete button
                 const delBtn = document.createElement('button');
                 delBtn.textContent = '×';
                 delBtn.style.cssText = 'padding: 2px 6px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; font-weight: bold;';
-                delBtn.addEventListener('click', () => {
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     editorState.blades.splice(index, 1);
+                    if (editorState.selectedBlade?.id === blade.id) {
+                        editorState.selectedBlade = null;
+                        editorState.selectedType = null;
+                    }
                     updateBladesList();
+                    updatePropertiesPanel();
                     renderEditorCanvas();
                 });
                 bladeItem.appendChild(delBtn);
+                
+                // Click to select
+                bladeItem.addEventListener('click', () => {
+                    editorState.selectedBlade = blade;
+                    editorState.selectedBlock = null;
+                    editorState.selectedBaseBlock = null;
+                    editorState.selectedType = 'blade';
+                    updateBladesList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
                 
                 bladesList.appendChild(bladeItem);
             });
@@ -2951,7 +2966,8 @@
             
             editorState.baseBlocks.forEach((baseBlock, index) => {
                 const blockItem = document.createElement('div');
-                blockItem.style.cssText = 'padding: 6px; background: #1a1a1a; border-radius: 4px; display: flex; gap: 8px; align-items: center;';
+                const isSelected = editorState.selectedBaseBlock?.id === baseBlock.id;
+                blockItem.style.cssText = `padding: 6px; background: ${isSelected ? '#4a9eff' : '#1a1a1a'}; border-radius: 4px; display: flex; gap: 8px; align-items: center; cursor: pointer;`;
                 
                 // Info
                 const info = document.createElement('div');
@@ -2959,138 +2975,223 @@
                 info.textContent = `Block ${index + 1} (${baseBlock.shape === 0 ? 'Circle' : baseBlock.shape + ' sides'})`;
                 blockItem.appendChild(info);
                 
-                // Edit button
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edit';
-                editBtn.style.cssText = 'padding: 4px 8px; background: #4a9eff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;';
-                editBtn.addEventListener('click', () => {
-                    showBaseBlockEditor(index);
-                });
-                blockItem.appendChild(editBtn);
-                
                 // Delete button
                 const delBtn = document.createElement('button');
                 delBtn.textContent = '×';
                 delBtn.style.cssText = 'padding: 2px 6px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; font-weight: bold;';
-                delBtn.addEventListener('click', () => {
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     editorState.baseBlocks.splice(index, 1);
+                    if (editorState.selectedBaseBlock?.id === baseBlock.id) {
+                        editorState.selectedBaseBlock = null;
+                        editorState.selectedType = null;
+                    }
                     updateBaseBlocksList();
+                    updatePropertiesPanel();
                     renderEditorCanvas();
                 });
                 blockItem.appendChild(delBtn);
+                
+                // Click to select
+                blockItem.addEventListener('click', () => {
+                    editorState.selectedBaseBlock = baseBlock;
+                    editorState.selectedBlock = null;
+                    editorState.selectedBlade = null;
+                    editorState.selectedType = 'baseBlock';
+                    updateBaseBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
                 
                 baseBlocksList.appendChild(blockItem);
             });
         }
 
-        function showBladeEditor(index) {
-            // For now, use prompt - could be replaced with proper modal
-            const blade = editorState.blades[index];
-            const sides = prompt('Blade shape (number of sides, 3-16):', blade.shape);
-            if (sides !== null) blade.shape = Math.max(3, Math.min(16, parseInt(sides) || 4));
-            const size = prompt('Blade size (0.5-3):', blade.size);
-            if (size !== null) blade.size = Math.max(0.5, Math.min(3, parseFloat(size) || 1.5));
-            const x = prompt('X position (-50 to 50):', blade.x);
-            if (x !== null) blade.x = Math.max(-50, Math.min(50, parseFloat(x) || 0));
-            const y = prompt('Y position (-50 to 50):', blade.y);
-            if (y !== null) blade.y = Math.max(-50, Math.min(50, parseFloat(y) || 0));
-            const rot = prompt('Rotation (degrees 0-360):', blade.rotation);
-            if (rot !== null) blade.rotation = parseFloat(rot) || 0;
-            updateBladesList();
-            renderEditorCanvas();
-        }
-
-        function showBaseBlockEditor(index) {
-            // For now, use prompt - could be replaced with proper modal
-            const block = editorState.baseBlocks[index];
-            const shape = prompt('Shape (0 for circle, 3-16 for polygon):', block.shape);
-            if (shape !== null) block.shape = Math.max(0, Math.min(16, parseInt(shape) || 0));
-            const size = prompt('Size (10-50):', block.size);
-            if (size !== null) block.size = Math.max(10, Math.min(50, parseFloat(size) || 20));
-            const x = prompt('X position (-50 to 50):', block.x);
-            if (x !== null) block.x = Math.max(-50, Math.min(50, parseFloat(x) || 0));
-            const y = prompt('Y position (-50 to 50):', block.y);
-            if (y !== null) block.y = Math.max(-50, Math.min(50, parseFloat(y) || 0));
-            const width = prompt('Width (10-50):', block.width);
-            if (width !== null) block.width = Math.max(10, Math.min(50, parseFloat(width) || 20));
-            const height = prompt('Height (10-50):', block.height);
-            if (height !== null) block.height = Math.max(10, Math.min(50, parseFloat(height) || 20));
-            const rot = prompt('Rotation (degrees 0-360):', block.rotation);
-            if (rot !== null) block.rotation = parseFloat(rot) || 0;
-            updateBaseBlocksList();
-            renderEditorCanvas();
-        }
-
         function updatePropertiesPanel() {
             const panel = document.getElementById('editorPropertiesContent');
             
-            if (!editorState.selectedBlock) {
-                panel.innerHTML = '<div style="color: #aaa; font-size: 14px;">Select a gun to edit its properties</div>';
-                return;
-            }
+            // Handle guns
+            if (editorState.selectedType === 'gun' && editorState.selectedBlock) {
+                const block = editorState.selectedBlock;
+                
+                panel.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #4a9eff;">${blockTypes[block.type].name}</strong>
+                        <button id="deleteBlockBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                    </div>
+                `;
 
-            const block = editorState.selectedBlock;
-            
-            // Handle regular blocks
-            panel.innerHTML = `
-                <div style="margin-bottom: 15px;">
-                    <strong style="color: #4a9eff;">${blockTypes[block.type].name}</strong>
-                    <button id="deleteBlockBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
-                </div>
-            `;
+                for (const [key, value] of Object.entries(block.props)) {
+                    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    const propDiv = document.createElement('div');
+                    propDiv.style.marginBottom = '12px';
 
-            for (const [key, value] of Object.entries(block.props)) {
-                const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                const propDiv = document.createElement('div');
-                propDiv.style.marginBottom = '12px';
+                    const labelEl = document.createElement('label');
+                    labelEl.textContent = label + ':';
+                    labelEl.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
+                    propDiv.appendChild(labelEl);
 
-                const labelEl = document.createElement('label');
-                labelEl.textContent = label + ':';
-                labelEl.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
-                propDiv.appendChild(labelEl);
+                    let input;
+                    if (key === 'color') {
+                        input = document.createElement('input');
+                        input.type = 'color';
+                        input.value = value;
+                        input.style.cssText = 'width: 100%; height: 35px; border: none; border-radius: 4px; cursor: pointer;';
+                    } else if (typeof value === 'boolean') {
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = value;
+                        input.style.cssText = 'width: 20px; height: 20px; cursor: pointer;';
+                    } else {
+                        input = document.createElement('input');
+                        input.type = 'number';
+                        input.value = value;
+                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') ? '0.1' : '1';
+                        input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
+                    }
 
-                let input;
-                if (key === 'color') {
-                    input = document.createElement('input');
-                    input.type = 'color';
-                    input.value = value;
-                    input.style.cssText = 'width: 100%; height: 35px; border: none; border-radius: 4px; cursor: pointer;';
-                } else if (typeof value === 'boolean') {
-                    input = document.createElement('input');
-                    input.type = 'checkbox';
-                    input.checked = value;
-                    input.style.cssText = 'width: 20px; height: 20px; cursor: pointer;';
-                } else {
-                    input = document.createElement('input');
-                    input.type = 'number';
-                    input.value = value;
-                    input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') ? '0.1' : '1';
-                    input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
+                    input.addEventListener('input', (e) => {
+                        if (input.type === 'checkbox') {
+                            block.props[key] = e.target.checked;
+                        } else if (input.type === 'color') {
+                            block.props[key] = e.target.value;
+                        } else {
+                            block.props[key] = parseFloat(e.target.value) || 0;
+                        }
+                        renderEditorCanvas();
+                    });
+
+                    propDiv.appendChild(input);
+                    panel.appendChild(propDiv);
                 }
 
-                // Use 'input' event for real-time updates instead of 'change'
-                input.addEventListener('input', (e) => {
-                    if (input.type === 'checkbox') {
-                        block.props[key] = e.target.checked;
-                    } else if (input.type === 'color') {
-                        block.props[key] = e.target.value;
-                    } else {
-                        block.props[key] = parseFloat(e.target.value) || 0;
-                    }
+                document.getElementById('deleteBlockBtn').addEventListener('click', () => {
+                    editorState.blocks = editorState.blocks.filter(b => b.id !== block.id);
+                    editorState.selectedBlock = null;
+                    editorState.selectedType = null;
+                    updateCurrentBlocksList();
+                    updatePropertiesPanel();
                     renderEditorCanvas();
                 });
-
-                propDiv.appendChild(input);
-                panel.appendChild(propDiv);
             }
+            // Handle blades
+            else if (editorState.selectedType === 'blade' && editorState.selectedBlade) {
+                const blade = editorState.selectedBlade;
+                
+                panel.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #4a9eff;">Blade</strong>
+                        <button id="deleteBladeBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                    </div>
+                `;
 
-            document.getElementById('deleteBlockBtn').addEventListener('click', () => {
-                editorState.blocks = editorState.blocks.filter(b => b.id !== block.id);
-                editorState.selectedBlock = null;
-                updateCurrentBlocksList();
-                updatePropertiesPanel();
-                renderEditorCanvas();
-            });
+                const props = {
+                    'Shape (sides)': { key: 'shape', min: 3, max: 16, step: 1, value: blade.shape },
+                    'Size': { key: 'size', min: 0.5, max: 3, step: 0.1, value: blade.size },
+                    'X Position': { key: 'x', min: -50, max: 50, step: 1, value: blade.x },
+                    'Y Position': { key: 'y', min: -50, max: 50, step: 1, value: blade.y },
+                    'Rotation': { key: 'rotation', min: 0, max: 360, step: 1, value: blade.rotation },
+                    'Layer': { key: 'layer', min: -10, max: 10, step: 1, value: blade.layer }
+                };
+
+                for (const [label, prop] of Object.entries(props)) {
+                    const propDiv = document.createElement('div');
+                    propDiv.style.marginBottom = '12px';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.textContent = label + ':';
+                    labelEl.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
+                    propDiv.appendChild(labelEl);
+
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = prop.value;
+                    input.min = prop.min;
+                    input.max = prop.max;
+                    input.step = prop.step;
+                    input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
+
+                    input.addEventListener('input', (e) => {
+                        blade[prop.key] = parseFloat(e.target.value) || 0;
+                        updateBladesList();
+                        renderEditorCanvas();
+                    });
+
+                    propDiv.appendChild(input);
+                    panel.appendChild(propDiv);
+                }
+
+                document.getElementById('deleteBladeBtn').addEventListener('click', () => {
+                    editorState.blades = editorState.blades.filter(b => b.id !== blade.id);
+                    editorState.selectedBlade = null;
+                    editorState.selectedType = null;
+                    updateBladesList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+            }
+            // Handle base blocks
+            else if (editorState.selectedType === 'baseBlock' && editorState.selectedBaseBlock) {
+                const baseBlock = editorState.selectedBaseBlock;
+                
+                panel.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #4a9eff;">Base Block</strong>
+                        <button id="deleteBaseBlockBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                    </div>
+                `;
+
+                const props = {
+                    'Shape (0=circle)': { key: 'shape', min: 0, max: 16, step: 1, value: baseBlock.shape },
+                    'Size': { key: 'size', min: 10, max: 50, step: 1, value: baseBlock.size },
+                    'X Position': { key: 'x', min: -50, max: 50, step: 1, value: baseBlock.x },
+                    'Y Position': { key: 'y', min: -50, max: 50, step: 1, value: baseBlock.y },
+                    'Width': { key: 'width', min: 10, max: 50, step: 1, value: baseBlock.width },
+                    'Height': { key: 'height', min: 10, max: 50, step: 1, value: baseBlock.height },
+                    'Rotation': { key: 'rotation', min: 0, max: 360, step: 1, value: baseBlock.rotation },
+                    'Layer': { key: 'layer', min: -10, max: 10, step: 1, value: baseBlock.layer }
+                };
+
+                for (const [label, prop] of Object.entries(props)) {
+                    const propDiv = document.createElement('div');
+                    propDiv.style.marginBottom = '12px';
+
+                    const labelEl = document.createElement('label');
+                    labelEl.textContent = label + ':';
+                    labelEl.style.cssText = 'display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;';
+                    propDiv.appendChild(labelEl);
+
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = prop.value;
+                    input.min = prop.min;
+                    input.max = prop.max;
+                    input.step = prop.step;
+                    input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
+
+                    input.addEventListener('input', (e) => {
+                        baseBlock[prop.key] = parseFloat(e.target.value) || 0;
+                        updateBaseBlocksList();
+                        renderEditorCanvas();
+                    });
+
+                    propDiv.appendChild(input);
+                    panel.appendChild(propDiv);
+                }
+
+                document.getElementById('deleteBaseBlockBtn').addEventListener('click', () => {
+                    editorState.baseBlocks = editorState.baseBlocks.filter(b => b.id !== baseBlock.id);
+                    editorState.selectedBaseBlock = null;
+                    editorState.selectedType = null;
+                    updateBaseBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+            }
+            // Nothing selected
+            else {
+                panel.innerHTML = '<div style="color: #aaa; font-size: 14px;">Select a gun, blade, or base block to edit</div>';
+            }
         }
 
         function renderEditorCanvas() {
@@ -3354,11 +3455,22 @@
 
         // Open/Close Tank Editor
         document.getElementById('openTankEditorBtn').addEventListener('click', () => {
+            // If in game, leave it before opening editor
+            if (playerId) {
+                console.log('[EDITOR] Leaving game before opening editor');
+                socket.emit('leaveGame');
+                playerId = null;
+                document.getElementById('hud').classList.remove('visible');
+            }
+            
             document.getElementById('tankEditor').style.display = 'block';
+            document.getElementById('startMenu').classList.remove('hidden');
             document.getElementById('cheatPanel').style.display = 'none';
             cheatPanelActive = false;
             populateBlockList();
             updateCurrentBlocksList();
+            updateBladesList();
+            updateBaseBlocksList();
             renderEditorCanvas();
         });
 
@@ -3389,29 +3501,45 @@
 
         // Add Blade Button
         document.getElementById('addBladeBtn').addEventListener('click', () => {
-            editorState.blades.push({
+            const newBlade = {
+                id: Date.now(),
                 shape: 4, // square
                 size: 1.5,
                 x: 0,
                 y: 0,
-                rotation: 0
-            });
+                rotation: 0,
+                layer: 0
+            };
+            editorState.blades.push(newBlade);
+            editorState.selectedBlade = newBlade;
+            editorState.selectedBlock = null;
+            editorState.selectedBaseBlock = null;
+            editorState.selectedType = 'blade';
             updateBladesList();
+            updatePropertiesPanel();
             renderEditorCanvas();
         });
 
         // Add Base Block Button (for advanced mode)
         document.getElementById('addBaseBlockBtn').addEventListener('click', () => {
-            editorState.baseBlocks.push({
+            const newBaseBlock = {
+                id: Date.now(),
                 shape: 0, // 0 = circle
                 size: 20,
                 x: 0,
                 y: 0,
                 width: 20,
                 height: 20,
-                rotation: 0
-            });
+                rotation: 0,
+                layer: 0
+            };
+            editorState.baseBlocks.push(newBaseBlock);
+            editorState.selectedBaseBlock = newBaseBlock;
+            editorState.selectedBlock = null;
+            editorState.selectedBlade = null;
+            editorState.selectedType = 'baseBlock';
             updateBaseBlocksList();
+            updatePropertiesPanel();
             renderEditorCanvas();
         });
 
@@ -3420,6 +3548,9 @@
                 editorState = {
                     blocks: [],
                     selectedBlock: null,
+                    selectedBlade: null,
+                    selectedBaseBlock: null,
+                    selectedType: null,
                     rotation: 0,
                     zoom: 1,
                     dragging: false,
@@ -3677,33 +3808,36 @@
                 }, 500);
             }
             
+            
             // Setup exit handler - Press ESC to exit test mode
             const exitHandler = (e) => {
                 if (e && e.key !== 'Escape') return;
                 
-                // Restore original tank or go back to basic
-                if (wasInGame && originalTankType && playerId) {
-                    socket.emit('upgradeTank', originalTankType);
-                } else if (playerId) {
-                    socket.emit('upgradeTank', 'basic');
+                console.log('[TEST MODE] Exiting test mode...');
+                
+                // Leave game entirely
+                if (playerId) {
+                    console.log('[TEST MODE] Leaving game');
+                    socket.emit('leaveGame');
+                    playerId = null;
                 }
                 
                 // Clean up test tank from server
+                console.log('[TEST MODE] Clearing test tank from server');
                 socket.emit('clearTestTank', testTankName);
                 
                 // Clean up local test tank
                 delete tankTypes[testTankName];
                 
-                // Return to editor
+                // Return to start menu (not editor)
                 document.getElementById('hud').classList.remove('visible');
                 document.getElementById('startMenu').classList.remove('hidden');
-                document.getElementById('tankEditor').style.display = 'block';
+                document.getElementById('tankEditor').style.display = 'none';
                 
                 // Remove event listener
                 window.removeEventListener('keydown', exitHandler);
                 
-                // Show message
-                alert('Test mode ended. Press ESC to exit test mode anytime.');
+                console.log('[TEST MODE] Test mode ended');
             };
             
             // Add ESC key listener
@@ -3711,9 +3845,10 @@
             
             // Show instruction
             setTimeout(() => {
-                alert('Test mode active! Press ESC to exit and return to editor.');
+                console.log('[TEST MODE] Press ESC to exit test mode');
             }, 500);
         });
     </script>
 </body>
 </html>
+
