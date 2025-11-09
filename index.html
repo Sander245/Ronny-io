@@ -1677,6 +1677,31 @@
                         ctx.strokeRect(size - 5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
 
                         ctx.restore();
+                    } else if (gun.type === 'minion') {
+                        // Draw spawner/drone barrel for Overlord-like tanks
+                        const gunAngle = gun.angle * Math.PI / 180;
+                        const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
+                        const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
+
+                        ctx.save();
+                        ctx.rotate(player.rotation + gunAngle);
+                        ctx.translate(offsetX, offsetY);
+
+                        const gunColor = '#999';
+                        ctx.fillStyle = gunColor;
+                        ctx.strokeStyle = '#404040'; // Dark grey outline
+                        ctx.lineWidth = 2 * camera.zoom;
+                        
+                        // Draw wider, shorter barrel for spawner
+                        const gunLength = 15 * camera.zoom * sizeMultiplier;
+                        const gunWidth = 25 * camera.zoom * sizeMultiplier;
+                        
+                        // Apply recoil offset (pushes gun back)
+                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
+                        ctx.fillRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.strokeRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+
+                        ctx.restore();
                     }
                 });
             } else if (!tankConfig) {
