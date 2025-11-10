@@ -335,9 +335,9 @@ class Minion extends GameObject {
         super(x, y);
         this.owner = owner;
         this.damage = damage;
-        this.maxSpeed = speed * 0.8; // Reduced max speed
-        this.acceleration = 0.15; // How quickly it accelerates
-        this.deceleration = 0.92; // Friction/drag (0.92 = loses 8% speed per frame)
+        this.maxSpeed = speed * 1.2; // Increased max speed
+        this.acceleration = 0.25; // Faster acceleration
+        this.deceleration = 0.94; // Less drag (keeps more momentum)
         this.size = size;
         this.health = health;
         this.maxHealth = health;

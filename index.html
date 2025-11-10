@@ -546,8 +546,12 @@
         </div>
         <div><strong>Shift+C</strong> - Clear All Polygons</div>
         <div><strong>Shift+A</strong> - Morph to ADMIN Tank</div>
-        <div><strong>1-8</strong> - Spawn Polygon (3-10 sides) at Cursor</div>
-        <div><strong>Shift+1-8</strong> - Spawn Polygon (12-16 sides) at Cursor</div>
+        <div style="display: flex; align-items: center; gap: 5px; margin-top: 5px;">
+            <strong>Shift+1</strong> - Spawn: 
+            <button id="prevPolygon" style="padding: 2px 8px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">◀</button>
+            <span id="polygonDisplay" style="min-width: 150px; text-align: center; font-weight: bold;">Triangle (Tier 1)</span>
+            <button id="nextPolygon" style="padding: 2px 8px; background: #44ff44; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">▶</button>
+        </div>
         <div><strong>9</strong> - Spawn All Polygon Types at Cursor</div>
         <div><strong>Shift+R</strong> - Reset Tank & Upgrades</div>
         <div><strong>ESC</strong> - Close Panel</div>
@@ -735,6 +739,22 @@
         let cheatCodeBuffer = '';
         let cheatPanelActive = false;
         let xpAmount = 100; // Variable XP amount for give XP cheat
+        
+        // Polygon spawn system
+        let selectedPolygonIndex = 0;
+        const polygonTypes = [
+            { sides: 3, name: 'Triangle', tier: 1 },
+            { sides: 4, name: 'Square', tier: 1 },
+            { sides: 5, name: 'Pentagon', tier: 2 },
+            { sides: 6, name: 'Hexagon', tier: 2 },
+            { sides: 8, name: 'Octagon', tier: 3 },
+            { sides: 10, name: 'Decagon', tier: 3 },
+            { sides: 12, name: 'Dodecagon', tier: 4 },
+            { sides: 13, name: 'Tridecagon', tier: 4 },
+            { sides: 14, name: 'Tetradecagon', tier: 5 },
+            { sides: 15, name: 'Pentadecagon', tier: 5 },
+            { sides: 16, name: 'Hexadecagon', tier: 5 }
+        ];
 
         // Input state
         const input = {
@@ -798,6 +818,9 @@
         });
 
         window.addEventListener('keydown', (e) => {
+            // Only allow cheat code detection when in game
+            if (!playerId && !cheatPanelActive) return;
+            
             // Cheat code detection (only when in game)
             if (playerId && e.key.length === 1 && !cheatPanelActive) {
                 cheatCodeBuffer += e.key.toLowerCase();
@@ -843,39 +866,25 @@
                     socket.emit('cheatResetTank');
                     return;
                 }
-            }
-            
-            // Handle polygon spawning (cheat panel active, no shift required for numbers)
-            if (cheatPanelActive) {
-                const keyToNumber = {
-                    '!': 1, '@': 2, '#': 3, '$': 4, '%': 5, '^': 6, '&': 7, '*': 8, '9': 9
-                };
-                
-                if (keyToNumber[e.key]) {
-                    const num = keyToNumber[e.key];
-                    console.log(`[POLYGON SPAWN] Key ${e.key} (${num}) pressed at ${mouseWorldX}, ${mouseWorldY}`);
-                    
-                    if (e.key === '9') {
-                        // Spawn all polygon types at cursor
-                        const allTypes = [3, 4, 5, 6, 8, 10, 12, 13, 14, 15, 16];
-                        console.log('[POLYGON SPAWN] Spawning all types');
-                        allTypes.forEach((type, index) => {
-                            const offsetX = (index % 4) * 30 - 45;
-                            const offsetY = Math.floor(index / 4) * 30 - 30;
-                            socket.emit('cheatSpawnPolygon', { type, x: mouseWorldX + offsetX, y: mouseWorldY + offsetY });
-                        });
-                        return;
-                    }
-                    
-                    // !-* spawns polygons with 3-13 sides
-                    const normalPolygonMap = {
-                        1: 3, 2: 4, 3: 5, 4: 6, 5: 8, 6: 10, 7: 12, 8: 13
-                    };
-                    const sides = normalPolygonMap[num];
-                    console.log(`[POLYGON SPAWN] ${e.key} - spawning ${sides}-sided polygon`);
-                    socket.emit('cheatSpawnPolygon', { type: sides, x: mouseWorldX, y: mouseWorldY });
+                // Shift+1 spawns selected polygon
+                if (e.key === '!') {
+                    const polygon = polygonTypes[selectedPolygonIndex];
+                    console.log(`[POLYGON SPAWN] Spawning ${polygon.name} (${polygon.sides}-sided, tier ${polygon.tier})`);
+                    socket.emit('cheatSpawnPolygon', { type: polygon.sides, x: mouseWorldX, y: mouseWorldY });
                     return;
                 }
+            }
+            
+            // Handle polygon spawning - 9 for all types
+            if (cheatPanelActive && e.key === '9') {
+                const allTypes = [3, 4, 5, 6, 8, 10, 12, 13, 14, 15, 16];
+                console.log('[POLYGON SPAWN] Spawning all types');
+                allTypes.forEach((type, index) => {
+                    const offsetX = (index % 4) * 30 - 45;
+                    const offsetY = Math.floor(index / 4) * 30 - 30;
+                    socket.emit('cheatSpawnPolygon', { type, x: mouseWorldX + offsetX, y: mouseWorldY + offsetY });
+                });
+                return;
             }
             
             // Close admin panel with Escape (no shift required)
@@ -886,11 +895,14 @@
                 return;
             }
             
-            // Toggle health bars with 'n' key
-            if (!chatFocused && (e.key === 'n' || e.key === 'N')) {
+            // Toggle health bars with 'n' key (only in game)
+            if (playerId && !chatFocused && (e.key === 'n' || e.key === 'N')) {
                 showAllHealthBars = !showAllHealthBars;
                 console.log('Health bars:', showAllHealthBars ? 'ON' : 'OFF');
             }
+            
+            // Movement and game controls - only work when in game
+            if (!playerId) return;
             
             if (!chatFocused && (e.key === 'w' || e.key === 'W')) {
                 input.moving.up = true;
@@ -1273,6 +1285,23 @@
             teleportMode = 'you';
             updateTeleportButtons();
         });
+
+        // Polygon selection buttons
+        function updatePolygonDisplay() {
+            const polygon = polygonTypes[selectedPolygonIndex];
+            document.getElementById('polygonDisplay').textContent = `${polygon.name} (Tier ${polygon.tier})`;
+        }
+
+        document.getElementById('prevPolygon').addEventListener('click', () => {
+            selectedPolygonIndex = (selectedPolygonIndex - 1 + polygonTypes.length) % polygonTypes.length;
+            updatePolygonDisplay();
+        });
+
+        document.getElementById('nextPolygon').addEventListener('click', () => {
+            selectedPolygonIndex = (selectedPolygonIndex + 1) % polygonTypes.length;
+            updatePolygonDisplay();
+        });
+
 
         // Setup upgrade menu
         function setupUpgradeMenu() {
