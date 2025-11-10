@@ -817,6 +817,21 @@ function gameLoop() {
     players.forEach(player => {
         player.update();
 
+        // Update gun self-rotation angles
+        const tankConfig = TANK_TYPES[player.tankType];
+        if (tankConfig && tankConfig.guns) {
+            tankConfig.guns.forEach((gun) => {
+                if (gun.selfAngleSpeed && gun.selfAngleSpeed !== 0) {
+                    // Update selfAngle based on speed (degrees per second)
+                    // deltaTime is in seconds (1/TICK_RATE)
+                    const deltaTime = 1 / GAME_CONFIG.TICK_RATE;
+                    gun.selfAngle = (gun.selfAngle || 0) + gun.selfAngleSpeed * deltaTime;
+                    // Keep angle in 0-360 range
+                    gun.selfAngle = gun.selfAngle % 360;
+                }
+            });
+        }
+
         // Shooting
         if (player.shooting) {
             const now = Date.now();
@@ -831,16 +846,31 @@ function gameLoop() {
                 
                 // Check if this gun's reload time has passed
                 if (now >= lastGunShot + gunReloadTime) {
-                    const gunAngle = player.rotation + (gun.angle * Math.PI / 180);
+                    // Calculate gun angle: start with base angle + self rotation
+                    let gunBaseAngle = (gun.angle || 0) * Math.PI / 180;
+                    const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
+                    
+                    // If angleMode is 'relative' (default), add player rotation
+                    // If 'fixed', gun points in absolute direction
+                    let gunAngle;
+                    if (gun.angleMode === 'fixed') {
+                        gunAngle = gunBaseAngle + selfAngle;
+                    } else {
+                        // Default 'relative' behavior - gun follows tank rotation
+                        gunAngle = player.rotation + gunBaseAngle + selfAngle;
+                    }
+                    
                     const offsetX = gun.offsetX || 0;
                     const offsetY = gun.offsetY || 0;
                     
-                    const startX = player.x + Math.cos(gunAngle) * (player.size + 10) + 
-                                   Math.cos(gunAngle + Math.PI/2) * offsetY +
-                                   Math.cos(gunAngle) * offsetX;
-                    const startY = player.y + Math.sin(gunAngle) * (player.size + 10) + 
-                                   Math.sin(gunAngle + Math.PI/2) * offsetY +
-                                   Math.sin(gunAngle) * offsetX;
+                    // Calculate bullet spawn position relative to tank
+                    const relativeAngle = player.rotation + gunBaseAngle; // For positioning, always use tank-relative
+                    const startX = player.x + Math.cos(relativeAngle) * (player.size + 10) + 
+                                   Math.cos(relativeAngle + Math.PI/2) * offsetY +
+                                   Math.cos(relativeAngle) * offsetX;
+                    const startY = player.y + Math.sin(relativeAngle) * (player.size + 10) + 
+                                   Math.sin(relativeAngle + Math.PI/2) * offsetY +
+                                   Math.sin(relativeAngle) * offsetX;
                     
                     if (gun.type === 'normal') {
                         const spread = gun.spread || 0;

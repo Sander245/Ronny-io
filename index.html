@@ -2107,13 +2107,18 @@
                     
                     if (gun.type === 'normal') {
                         const gunAngle = gun.angle * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const gunLength = (gun.length || 1) * 20 * camera.zoom * sizeMultiplier;
                         const gunWidth = (gun.size || 1) * 20 * camera.zoom * sizeMultiplier;
                         const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        ctx.rotate(gunAngle); // Only gun's angle, player rotation already applied
+                        // If angleMode is 'fixed', undo player rotation first
+                        if (gun.angleMode === 'fixed') {
+                            ctx.rotate(-player.rotation); // Undo player rotation
+                        }
+                        ctx.rotate(gunAngle + selfAngle); // Apply gun's base angle + self rotation
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = gun.color || '#999';
@@ -2129,11 +2134,16 @@
                         ctx.restore();
                     } else if (gun.type === 'trap') {
                         const gunAngle = gun.angle * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        ctx.rotate(gunAngle); // Only gun's angle, player rotation already applied
+                        // If angleMode is 'fixed', undo player rotation first
+                        if (gun.angleMode === 'fixed') {
+                            ctx.rotate(-player.rotation); // Undo player rotation
+                        }
+                        ctx.rotate(gunAngle + selfAngle); // Apply gun's base angle + self rotation
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = gun.color || '#999';
@@ -2162,11 +2172,16 @@
                     } else if (gun.type === 'minion') {
                         // Draw spawner/drone barrel as thin trapezoid - wide side facing out
                         const gunAngle = gun.angle * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        ctx.rotate(gunAngle); // Only gun's angle, player rotation already applied
+                        // If angleMode is 'fixed', undo player rotation first
+                        if (gun.angleMode === 'fixed') {
+                            ctx.rotate(-player.rotation); // Undo player rotation
+                        }
+                        ctx.rotate(gunAngle + selfAngle); // Apply gun's base angle + self rotation
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = gun.color || '#ff9500';
@@ -2871,6 +2886,9 @@
                 defaultProps: {
                     type: 'normal',
                     angle: 0,
+                    angleMode: 'relative', // 'relative' or 'fixed'
+                    selfAngle: 0, // Current self-rotation angle (updated each frame)
+                    selfAngleSpeed: 0, // Degrees per second to spin
                     offsetX: 0,
                     offsetY: 0,
                     damage: 1,
@@ -2888,6 +2906,9 @@
                 defaultProps: {
                     type: 'trap',
                     angle: 0,
+                    angleMode: 'relative',
+                    selfAngle: 0,
+                    selfAngleSpeed: 0,
                     offsetX: 0,
                     offsetY: 0,
                     damage: 1,
@@ -2904,10 +2925,14 @@
                 defaultProps: {
                     type: 'minion',
                     angle: 0,
+                    angleMode: 'relative',
+                    selfAngle: 0,
+                    selfAngleSpeed: 0,
                     count: 4,
                     damage: 1.5,
                     speed: 1.2,
                     minionSize: 1,
+                    reload: 1,
                     layer: 0,
                     color: '#ff9500'
                 }
@@ -3130,8 +3155,8 @@
                 `;
 
                 for (const [key, value] of Object.entries(block.props)) {
-                    // Skip the 'type' property - it's determined by the block type, not editable
-                    if (key === 'type') continue;
+                    // Skip the 'type' and 'selfAngle' properties - type is determined by block type, selfAngle is internal state
+                    if (key === 'type' || key === 'selfAngle') continue;
                     
                     const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     const propDiv = document.createElement('div');
@@ -3148,6 +3173,11 @@
                         input.type = 'color';
                         input.value = value;
                         input.style.cssText = 'width: 100%; height: 35px; border: none; border-radius: 4px; cursor: pointer;';
+                    } else if (key === 'angleMode') {
+                        input = document.createElement('select');
+                        input.innerHTML = '<option value="relative">Relative (follows tank)</option><option value="fixed">Fixed (absolute angle)</option>';
+                        input.value = value;
+                        input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; cursor: pointer;';
                     } else if (typeof value === 'boolean') {
                         input = document.createElement('input');
                         input.type = 'checkbox';
@@ -3157,7 +3187,7 @@
                         input = document.createElement('input');
                         input.type = 'number';
                         input.value = value;
-                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') ? '0.1' : '1';
+                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') ? '0.1' : '1';
                         input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
                     }
 
