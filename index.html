@@ -3760,11 +3760,22 @@
 
         // Base Mode Handler
         document.getElementById('baseModeSelect').addEventListener('change', (e) => {
-            editorState.baseMode = e.target.value;
+            const newMode = e.target.value;
+            
+            // Warn when leaving advanced mode with custom base blocks
+            if (editorState.baseMode === 'advanced' && newMode !== 'advanced' && editorState.baseBlocks.length > 0) {
+                if (!confirm('Switching modes will delete all custom base blocks. Continue?')) {
+                    e.target.value = editorState.baseMode; // Revert selection
+                    return;
+                }
+                editorState.baseBlocks = []; // Clear custom base blocks
+            }
+            
+            editorState.baseMode = newMode;
             const simpleSettings = document.getElementById('simpleBaseSettings');
             const advancedSettings = document.getElementById('advancedBaseSettings');
-            simpleSettings.style.display = e.target.value === 'simple' ? 'block' : 'none';
-            advancedSettings.style.display = e.target.value === 'advanced' ? 'block' : 'none';
+            simpleSettings.style.display = newMode === 'simple' ? 'block' : 'none';
+            advancedSettings.style.display = newMode === 'advanced' ? 'block' : 'none';
             renderEditorCanvas();
         });
 

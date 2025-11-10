@@ -124,14 +124,22 @@ class Polygon extends GameObject {
         super(x, y);
         this.sides = sides;
         this.size = this.getSizeFromSides(sides);
-        // Special health calculation for triangles (lower health)
-        if (sides === 3) {
-            this.health = this.size * 10; // Reduced health for triangles
-        } else {
-            this.health = this.size * 20 * 3; // Tripled health for others (was size * 20)
-        }
+        
+        // Health calculation with tier bonuses
+        let healthMultiplier = 20 * 3; // Base multiplier (tripled)
+        if (sides >= 14) healthMultiplier = 20 * 8; // Tier 5: 8x health
+        else if (sides >= 12) healthMultiplier = 20 * 5; // Tier 4: 5x health
+        else if (sides === 3) healthMultiplier = 10; // Triangles: low health
+        
+        this.health = this.size * healthMultiplier;
         this.maxHealth = this.health;
-        this.xp = Math.floor(this.size * 5 * sides);
+        
+        // XP calculation with tier bonuses
+        let xpMultiplier = 5;
+        if (sides >= 14) xpMultiplier = 50; // Tier 5: 10x XP
+        else if (sides >= 12) xpMultiplier = 25; // Tier 4: 5x XP
+        
+        this.xp = Math.floor(this.size * xpMultiplier * sides);
         this.color = this.getColorFromSides(sides);
         this.type = this.getTypeFromSides(sides);
         this.rotationSpeed = 0.02 * (1 / Math.sqrt(sides)); // Smoother rotation
@@ -750,16 +758,16 @@ function spawnPolygon() {
     const rand = Math.random();
     
     if (distanceRatio < 0.3) {
-        // Center - spawn big polygons (including rare ultra-large ones)
+        // Center - spawn big polygons (tier 4 and 5 much rarer)
         if (rand < 0.60) sides = 5;          // 60% pentagons
         else if (rand < 0.90) sides = 6;     // 30% hexagons
         else if (rand < 0.97) sides = 8;     // 7% octagons
         else if (rand < 0.990) sides = 10;   // 2% decagons
-        else if (rand < 0.997) sides = 12;   // 0.7% dodecagons
-        else if (rand < 0.9985) sides = 13;  // 0.15% tridecagons
-        else if (rand < 0.9995) sides = 14;  // 0.10% tetradecagons
-        else if (rand < 0.9999) sides = 15;  // 0.04% pentadecagons
-        else sides = 16;                      // 0.01% hexadecagons (ultra rare)
+        else if (rand < 0.996) sides = 12;   // 0.6% dodecagons (tier 4)
+        else if (rand < 0.9985) sides = 13;  // 0.25% tridecagons (tier 4)
+        else if (rand < 0.9995) sides = 14;  // 0.10% tetradecagons (tier 5 - rare)
+        else if (rand < 0.99985) sides = 15; // 0.035% pentadecagons (tier 5 - very rare)
+        else sides = 16;                      // 0.015% hexadecagons (tier 5 - ultra rare)
         
     } else if (distanceRatio < 0.7) {
         // Mid - spawn medium polygons
@@ -1024,7 +1032,8 @@ function gameLoop() {
             const dx = player.x - polygon.x;
             const dy = player.y - polygon.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const minDist = player.size + polygon.size;
+            // Player hitbox is slightly smaller (85% of visual size)
+            const minDist = (player.size * 0.85) + polygon.size;
             
             if (dist < minDist) {
                 // Check if tank has blade base
@@ -1093,7 +1102,8 @@ function gameLoop() {
                 const dx = player.x - otherPlayer.x;
                 const dy = player.y - otherPlayer.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const minDist = player.size + otherPlayer.size;
+                // Both players have 85% hitbox
+                const minDist = (player.size * 0.85) + (otherPlayer.size * 0.85);
                 
                 if (dist < minDist) {
                     // Reduced body damage: 1/16 for player-player collisions (4x weaker than before)
@@ -1178,7 +1188,8 @@ function gameLoop() {
         // Bullet vs player
         players.forEach(player => {
             if (player.id !== bullet.owner) {
-                if (checkCollision(bullet, player, bullet.size, player.size)) {
+                // Player hitbox is 85% of visual size
+                if (checkCollision(bullet, player, bullet.size, player.size * 0.85)) {
                     const owner = players.get(bullet.owner);
                     const destroyed = player.takeDamage(bullet.damage, {
                         type: 'player',
@@ -1262,7 +1273,8 @@ function gameLoop() {
         // Trap vs player (not owner)
         players.forEach(player => {
             if (player.id !== trap.owner && player.health > 0) {
-                if (checkCollision(trap, player, trap.size, player.size)) {
+                // Player hitbox is 85% of visual size
+                if (checkCollision(trap, player, trap.size, player.size * 0.85)) {
                     const owner = players.get(trap.owner);
                     player.takeDamage(trap.damage, {
                         type: 'player',
@@ -1359,7 +1371,8 @@ function gameLoop() {
             // Minion vs player (not owner)
             players.forEach(player => {
                 if (player.id !== minion.owner && player.health > 0) {
-                    if (checkCollision(minion, player, minion.size, player.size)) {
+                    // Player hitbox is 85% of visual size
+                    if (checkCollision(minion, player, minion.size, player.size * 0.85)) {
                         player.takeDamage(minion.damage / 2, {
                             type: 'player',
                             name: owner ? owner.name : 'Unknown',
