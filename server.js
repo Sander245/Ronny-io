@@ -335,14 +335,18 @@ class Minion extends GameObject {
         super(x, y);
         this.owner = owner;
         this.damage = damage;
-        this.speed = speed * 1.5; // Reduced from 5 to 1.5 for more reasonable speed
+        this.maxSpeed = speed * 0.8; // Reduced max speed
+        this.acceleration = 0.15; // How quickly it accelerates
+        this.deceleration = 0.92; // Friction/drag (0.92 = loses 8% speed per frame)
         this.size = size;
         this.health = health;
         this.maxHealth = health;
-        this.penetration = penetration; // For future use if needed
+        this.penetration = penetration;
         this.targetX = x;
         this.targetY = y;
         this.rotation = 0;
+        this.vx = 0; // Velocity X
+        this.vy = 0; // Velocity Y
     }
 
     update(targetX, targetY, ownerX, ownerY, shooting) {
@@ -360,9 +364,32 @@ class Minion extends GameObject {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 10) {
-            this.x += (dx / dist) * this.speed;
-            this.y += (dy / dist) * this.speed;
+            // Accelerate towards target
+            const dirX = dx / dist;
+            const dirY = dy / dist;
+            
+            this.vx += dirX * this.acceleration;
+            this.vy += dirY * this.acceleration;
+            
+            // Cap speed at maxSpeed
+            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (currentSpeed > this.maxSpeed) {
+                this.vx = (this.vx / currentSpeed) * this.maxSpeed;
+                this.vy = (this.vy / currentSpeed) * this.maxSpeed;
+            }
+        } else {
+            // Close to target, apply stronger deceleration
+            this.vx *= 0.8;
+            this.vy *= 0.8;
         }
+        
+        // Apply deceleration (drag)
+        this.vx *= this.deceleration;
+        this.vy *= this.deceleration;
+        
+        // Update position
+        this.x += this.vx;
+        this.y += this.vy;
 
         // Smooth rotation interpolation
         const targetRotation = Math.atan2(dy, dx);
