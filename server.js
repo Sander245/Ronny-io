@@ -150,7 +150,7 @@ class Polygon extends GameObject {
     }
 
     getSizeFromSides(sides) {
-        const sizes = {3: 12, 4: 18, 5: 25, 6: 35, 8: 50, 10: 70, 12: 90, 13: 110, 14: 130, 15: 150, 16: 170};
+        const sizes = {3: 12, 4: 18, 5: 25, 6: 35, 8: 75, 10: 100, 12: 130, 13: 150, 14: 200, 15: 250, 16: 300};
         return sizes[sides] || 20;
     }
 
@@ -314,19 +314,49 @@ class Trap extends GameObject {
         this.vx = Math.cos(angle) * 8; // Increased from 3 to 8
         this.vy = Math.sin(angle) * 8;
         this.friction = 0.92; // Slower deceleration (was 0.9)
+        
+        // Death animation
+        this.dying = false;
+        this.deathStartTime = 0;
+        this.deathDuration = 200; // 0.2 seconds
     }
 
     update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vx *= this.friction;
-        this.vy *= this.friction;
-        this.rotation += this.rotationSpeed;
+        // Only move if not dying
+        if (!this.dying) {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vx *= this.friction;
+            this.vy *= this.friction;
+            this.rotation += this.rotationSpeed;
+        }
+    }
+    
+    startDeath() {
+        this.dying = true;
+        this.deathStartTime = Date.now();
+        this.vx = 0;
+        this.vy = 0;
+    }
+
+    getDeathProgress() {
+        if (!this.dying) return 0;
+        const elapsed = Date.now() - this.deathStartTime;
+        return Math.min(elapsed / this.deathDuration, 1);
+    }
+
+    isDeathComplete() {
+        return this.dying && this.getDeathProgress() >= 1;
     }
     
     takeDamage(amount) {
+        if (this.dying) return false;
         this.health -= amount;
-        return this.health <= 0;
+        if (this.health <= 0) {
+            this.startDeath();
+            return true;
+        }
+        return false;
     }
 }
 
@@ -335,7 +365,7 @@ class Minion extends GameObject {
         super(x, y);
         this.owner = owner;
         this.damage = damage;
-        this.maxSpeed = speed * 1.2; // Increased max speed
+        this.maxSpeed = speed * 1.8; // Scale well with bullet speed upgrades
         this.acceleration = 0.25; // Faster acceleration
         this.deceleration = 0.94; // Less drag (keeps more momentum)
         this.size = size;
@@ -347,6 +377,10 @@ class Minion extends GameObject {
         this.rotation = 0;
         this.vx = 0; // Velocity X
         this.vy = 0; // Velocity Y
+        // Death animation
+        this.dying = false;
+        this.deathStartTime = 0;
+        this.deathDuration = 200; // 0.2 seconds
     }
 
     update(targetX, targetY, ownerX, ownerY, shooting) {
@@ -400,6 +434,23 @@ class Minion extends GameObject {
         while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
         
         this.rotation += angleDiff * 0.15;
+    }
+
+    startDeath() {
+        this.dying = true;
+        this.deathStartTime = Date.now();
+        this.vx = 0;
+        this.vy = 0;
+    }
+
+    getDeathProgress() {
+        if (!this.dying) return 0;
+        const elapsed = Date.now() - this.deathStartTime;
+        return Math.min(elapsed / this.deathDuration, 1);
+    }
+
+    isDeathComplete() {
+        return this.dying && this.getDeathProgress() >= 1;
     }
 }
 
@@ -1182,14 +1233,10 @@ function gameLoop() {
         
         // Bullet vs trap (not owner's trap)
         traps.forEach(trap => {
-            if (bullet.owner !== trap.owner && !bullet.dying) {
+            if (bullet.owner !== trap.owner && !bullet.dying && !trap.dying) {
                 if (checkCollision(bullet, trap, bullet.size, trap.size)) {
-                    const trapDestroyed = trap.takeDamage(bullet.damage);
+                    trap.takeDamage(bullet.damage);
                     bullet.health -= 1;
-                    
-                    if (trapDestroyed) {
-                        traps.delete(trap.id);
-                    }
                     
                     if (bullet.health <= 0) {
                         bullet.startDeath();
@@ -1202,10 +1249,19 @@ function gameLoop() {
     // Update traps
     traps.forEach(trap => {
         trap.update();
+        
+        // Remove if death animation complete
+        if (trap.isDeathComplete()) {
+            traps.delete(trap.id);
+            return;
+        }
+        
+        // Skip interactions if dying
+        if (trap.dying) return;
 
         // Trap vs player (not owner)
         players.forEach(player => {
-            if (player.id !== trap.owner) {
+            if (player.id !== trap.owner && player.health > 0) {
                 if (checkCollision(trap, player, trap.size, player.size)) {
                     const owner = players.get(trap.owner);
                     player.takeDamage(trap.damage, {
@@ -1213,11 +1269,7 @@ function gameLoop() {
                         name: owner ? owner.name : 'Unknown',
                         tankType: owner ? owner.tankType : 'BASIC'
                     });
-                    trap.health -= 10;
-                    
-                    if (trap.health <= 0) {
-                        traps.delete(trap.id);
-                    }
+                    trap.takeDamage(10);
                 }
             }
         });
@@ -1261,6 +1313,15 @@ function gameLoop() {
         const owner = players.get(minion.owner);
         if (owner) {
             minion.update(owner.mouseX, owner.mouseY, owner.x, owner.y, owner.shooting);
+            
+            // Remove if death animation complete
+            if (minion.isDeathComplete()) {
+                minions.delete(minion.id);
+                return;
+            }
+            
+            // Skip interactions if dying
+            if (minion.dying) return;
 
             // Minion vs polygon
             polygons.forEach(polygon => {
@@ -1290,14 +1351,14 @@ function gameLoop() {
                     }
                     
                     if (minion.health <= 0) {
-                        minions.delete(minion.id);
+                        minion.startDeath();
                     }
                 }
             });
 
             // Minion vs player (not owner)
             players.forEach(player => {
-                if (player.id !== minion.owner) {
+                if (player.id !== minion.owner && player.health > 0) {
                     if (checkCollision(minion, player, minion.size, player.size)) {
                         player.takeDamage(minion.damage / 2, {
                             type: 'player',
@@ -1307,7 +1368,7 @@ function gameLoop() {
                         minion.health -= 10;
                         
                         if (minion.health <= 0) {
-                            minions.delete(minion.id);
+                            minion.startDeath();
                         }
                     }
                 }
@@ -1324,7 +1385,7 @@ function gameLoop() {
                             bullet.startDeath();
                         }
                         if (minion.health <= 0) {
-                            minions.delete(minion.id);
+                            minion.startDeath();
                         }
                     }
                 }
@@ -1332,16 +1393,13 @@ function gameLoop() {
 
             // Minion vs trap
             traps.forEach(trap => {
-                if (trap.owner !== minion.owner) {
+                if (trap.owner !== minion.owner && !trap.dying) {
                     if (checkCollision(minion, trap, minion.size, trap.size)) {
-                        trap.health -= minion.damage / 2;
+                        trap.takeDamage(minion.damage / 2);
                         minion.health -= trap.damage / 2;
                         
-                        if (trap.health <= 0) {
-                            traps.delete(trap.id);
-                        }
                         if (minion.health <= 0) {
-                            minions.delete(minion.id);
+                            minion.startDeath();
                         }
                     }
                 }
@@ -1364,27 +1422,31 @@ function gameLoop() {
             const minDist = minion1.size + minion2.size;
             
             if (dist < minDist && dist > 0) {
-                // If they're from different owners, deal damage
-                if (minion1.owner !== minion2.owner) {
+                // If they're from different owners, deal damage (skip if either is dying)
+                if (minion1.owner !== minion2.owner && !minion1.dying && !minion2.dying) {
                     minion1.health -= 2;
                     minion2.health -= 2;
                     
                     if (minion1.health <= 0) {
-                        minions.delete(minion1.id);
+                        minion1.startDeath();
                     }
                     if (minion2.health <= 0) {
-                        minions.delete(minion2.id);
+                        minion2.startDeath();
                     }
                 }
                 
-                // Push apart regardless of owner
-                const overlap = minDist - dist;
-                const pushForce = overlap * 0.5;
-                const nx = dx / dist;
-                const ny = dy / dist;
-                
-                minion1.x += nx * pushForce * 0.5;
-                minion1.y += ny * pushForce * 0.5;
+                // Push apart regardless of owner (only if not dying)
+                if (!minion1.dying && !minion2.dying) {
+                    const overlap = minDist - dist;
+                    const pushForce = overlap * 0.5;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    
+                    minion1.x += nx * pushForce * 0.5;
+                    minion1.y += ny * pushForce * 0.5;
+                    minion2.x -= nx * pushForce * 0.5;
+                    minion2.y -= ny * pushForce * 0.5;
+                }
                 minion2.x -= nx * pushForce * 0.5;
                 minion2.y -= ny * pushForce * 0.5;
             }
@@ -1493,7 +1555,9 @@ function gameLoop() {
             size: t.size,
             rotation: t.rotation,
             health: t.health,
-            maxHealth: t.maxHealth
+            maxHealth: t.maxHealth,
+            dying: t.dying,
+            deathProgress: t.getDeathProgress()
         })),
         minions: Array.from(minions.values()).map(m => ({
             id: m.id,
@@ -1502,7 +1566,9 @@ function gameLoop() {
             size: m.size,
             rotation: m.rotation,
             health: m.health,
-            maxHealth: m.maxHealth
+            maxHealth: m.maxHealth,
+            dying: m.dying,
+            deathProgress: m.getDeathProgress()
         }))
     };
 

@@ -2458,17 +2458,28 @@
                     if (baseBlock.shape === 0) {
                         // Circle
                         ctx.beginPath();
-                        ctx.arc(0, 0, baseBlock.size * camera.zoom * sizeMultiplier, 0, Math.PI * 2);
+                        const radius = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
+                        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    } else if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
+                        // Rectangle (when shape is 4 and width/height are set)
+                        const totalWidth = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
+                        const totalHeight = (baseBlock.size + (baseBlock.height || 0)) * camera.zoom * sizeMultiplier;
+                        ctx.beginPath();
+                        ctx.rect(-totalWidth/2, -totalHeight/2, totalWidth, totalHeight);
                         ctx.fill();
                         ctx.stroke();
                     } else {
                         // Polygon
                         const sides = baseBlock.shape;
+                        const radiusX = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
+                        const radiusY = (baseBlock.size + (baseBlock.height || 0)) * camera.zoom * sizeMultiplier;
                         ctx.beginPath();
                         for (let i = 0; i < sides; i++) {
                             const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                            const x = Math.cos(angle) * baseBlock.size * camera.zoom * sizeMultiplier;
-                            const y = Math.sin(angle) * baseBlock.size * camera.zoom * sizeMultiplier;
+                            const x = Math.cos(angle) * radiusX;
+                            const y = Math.sin(angle) * radiusY;
                             if (i === 0) ctx.moveTo(x, y);
                             else ctx.lineTo(x, y);
                         }
@@ -2605,9 +2616,19 @@
 
         function drawTrap(trap) {
             const screen = worldToScreen(trap.x, trap.y);
-            const size = trap.size * camera.zoom;
+            let size = trap.size * camera.zoom;
+            
+            // Death animation - shrink and fade
+            let alpha = 1;
+            if (trap.dying) {
+                const progress = trap.deathProgress || 0;
+                size *= (1 - progress);
+                alpha = 1 - progress;
+                if (progress >= 1) return; // Don't draw if animation complete
+            }
 
             ctx.save();
+            ctx.globalAlpha = alpha;
             ctx.translate(screen.x, screen.y);
             ctx.rotate(trap.rotation);
 
@@ -2632,8 +2653,8 @@
 
             ctx.restore();
             
-            // Draw health bar if toggle is on
-            if (showAllHealthBars && trap.health !== undefined && trap.maxHealth !== undefined) {
+            // Draw health bar if toggle is on and not dying
+            if (!trap.dying && showAllHealthBars && trap.health !== undefined && trap.maxHealth !== undefined) {
                 const healthPercent = trap.health / trap.maxHealth;
                 const barWidth = size * 2.5;
                 const barHeight = 4 * camera.zoom;
@@ -2652,9 +2673,19 @@
 
         function drawMinion(minion) {
             const screen = worldToScreen(minion.x, minion.y);
-            const size = minion.size * camera.zoom;
+            let size = minion.size * camera.zoom;
+            
+            // Death animation - shrink and fade
+            let alpha = 1;
+            if (minion.dying) {
+                const progress = minion.deathProgress || 0;
+                size *= (1 - progress);
+                alpha = 1 - progress;
+                if (progress >= 1) return; // Don't draw if animation complete
+            }
 
             ctx.save();
+            ctx.globalAlpha = alpha;
             ctx.translate(screen.x, screen.y);
             ctx.rotate(minion.rotation);
 
@@ -2678,8 +2709,8 @@
 
             ctx.restore();
             
-            // Draw health bar if toggle is on
-            if (showAllHealthBars && minion.health !== undefined && minion.maxHealth !== undefined) {
+            // Draw health bar if toggle is on and not dying
+            if (!minion.dying && showAllHealthBars && minion.health !== undefined && minion.maxHealth !== undefined) {
                 const healthPercent = minion.health / minion.maxHealth;
                 const barWidth = size * 2.5;
                 const barHeight = 4 * camera.zoom;
@@ -3478,7 +3509,17 @@
                     if (baseBlock.shape === 0) {
                         // Circle
                         ctx.beginPath();
-                        ctx.arc(0, 0, baseBlock.size, 0, Math.PI * 2);
+                        ctx.arc(0, 0, baseBlock.size + (baseBlock.width || 0), 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    } else if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
+                        // Rectangle (when shape is 4 and width/height are set)
+                        const totalWidth = baseBlock.size + (baseBlock.width || 0);
+                        const totalHeight = baseBlock.size + (baseBlock.height || 0);
+                        ctx.beginPath();
+                        ctx.rect(-totalWidth/2, -totalHeight/2, totalWidth, totalHeight);
                         ctx.fill();
                         ctx.strokeStyle = '#333';
                         ctx.lineWidth = 2;
@@ -3487,10 +3528,12 @@
                         // Polygon
                         ctx.beginPath();
                         const sides = baseBlock.shape;
+                        const radiusX = baseBlock.size + (baseBlock.width || 0);
+                        const radiusY = baseBlock.size + (baseBlock.height || 0);
                         for (let i = 0; i <= sides; i++) {
                             const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                            const x = Math.cos(angle) * baseBlock.size;
-                            const y = Math.sin(angle) * baseBlock.size;
+                            const x = Math.cos(angle) * radiusX;
+                            const y = Math.sin(angle) * radiusY;
                             if (i === 0) ctx.moveTo(x, y);
                             else ctx.lineTo(x, y);
                         }
