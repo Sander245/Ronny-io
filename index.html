@@ -702,8 +702,9 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Connect to server - Render deployment
-        const socket = io('https://ronny-io.onrender.com');
+        // Connect to server - Auto-detect Railway deployment or local
+        // Railway will automatically provide the correct URL via window.location
+        const socket = io();
         
         // Set canvas size
         canvas.width = window.innerWidth;
