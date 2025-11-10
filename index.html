@@ -2094,6 +2094,7 @@
 
             ctx.save();
             ctx.translate(screen.x, screen.y);
+            ctx.rotate(player.rotation); // Rotate entire tank
 
             // Get tank config
             const tankConfig = tankTypes[player.tankType];
@@ -2112,7 +2113,7 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        ctx.rotate(player.rotation + gunAngle);
+                        ctx.rotate(gunAngle); // Only gun's angle, player rotation already applied
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = '#999';
@@ -2132,7 +2133,7 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        ctx.rotate(player.rotation + gunAngle);
+                        ctx.rotate(gunAngle); // Only gun's angle, player rotation already applied
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = '#999';
@@ -2165,7 +2166,7 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        ctx.rotate(player.rotation + gunAngle);
+                        ctx.rotate(gunAngle); // Only gun's angle, player rotation already applied
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = '#999';
@@ -2209,8 +2210,7 @@
 
             // LAYER 1: Draw base (body) on top of guns
             if (tankConfig && (tankConfig.baseShape === 'blade' || tankConfig.baseShape === 'blade_twin')) {
-                // Blade tank (like Smasher)
-                ctx.rotate(player.rotation);
+                // Blade tank (like Smasher) - already rotated
                 
                 const bladeShape = tankConfig.bladeShape || 'square';
                 const bladeCount = tankConfig.bladeCount || 1;
@@ -2329,8 +2329,7 @@
                     ctx.stroke();
                 }
             } else if (tankConfig && tankConfig.baseShape === 'blade_twin_OLD') {
-                // Twin blade - two circles side by side (DISABLED - using single shape now)
-                ctx.rotate(player.rotation);
+                // Twin blade - two circles side by side (DISABLED - using single shape now) - already rotated
                 
                 // Draw spikes for both circles
                 const spikeCount = 10;
@@ -2377,8 +2376,29 @@
                     ctx.fill();
                     ctx.stroke();
                 });
+            } else if (tankConfig && typeof tankConfig.baseShape === 'number' && tankConfig.baseShape >= 3) {
+                // Simple mode - polygon base - already rotated
+                const sides = tankConfig.baseShape;
+                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                ctx.fillStyle = baseColor;
+                ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * size;
+                    const y = Math.sin(angle) * size;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else if (tankConfig && tankConfig.baseShape === 'advanced' && tankConfig.baseBlocks && tankConfig.baseBlocks.length > 0) {
+                // Advanced mode - custom base blocks only, no default circle
+                // Base blocks are rendered separately below, so do nothing here
             } else {
-                // Normal circular base
+                // Normal circular base (default)
                 const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
                 ctx.fillStyle = baseColor;
                 ctx.strokeStyle = darkenColor(baseColor, 0.3);
@@ -3311,148 +3331,172 @@
             ctx.scale(editorState.zoom, editorState.zoom);
             ctx.rotate(editorState.rotation);
 
-            // Draw tank body based on base mode
-            ctx.fillStyle = '#00b2e1';
+            // Collect all drawable elements with layers
+            const drawables = [];
             
-            if (editorState.baseMode === 'none') {
-                // Circle base
-                ctx.beginPath();
-                ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            } else if (editorState.baseMode === 'simple') {
-                // Polygon base
-                const sides = editorState.baseSides;
-                ctx.beginPath();
-                for (let i = 0; i <= sides; i++) {
-                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * tankSize;
-                    const y = Math.sin(angle) * tankSize;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            } else if (editorState.baseMode === 'advanced') {
-                // Custom base blocks
-                if (editorState.baseBlocks.length === 0) {
-                    // Default circle if no blocks
-                    ctx.beginPath();
-                    ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-                } else {
-                    editorState.baseBlocks.forEach(baseBlock => {
-                        ctx.save();
-                        ctx.translate(baseBlock.x, baseBlock.y);
-                        ctx.rotate(baseBlock.rotation * Math.PI / 180);
-                        
-                        if (baseBlock.shape === 0) {
-                            // Circle
+            // Add base (layer 0 by default)
+            drawables.push({ type: 'base', layer: 0 });
+            
+            // Add base blocks
+            editorState.baseBlocks.forEach(baseBlock => {
+                drawables.push({ type: 'baseBlock', layer: baseBlock.layer || 0, data: baseBlock });
+            });
+            
+            // Add blades
+            editorState.blades.forEach(blade => {
+                drawables.push({ type: 'blade', layer: blade.layer || 0, data: blade });
+            });
+            
+            // Add guns
+            editorState.blocks.forEach(block => {
+                drawables.push({ type: 'gun', layer: block.props.layer || 0, data: block });
+            });
+            
+            // Sort by layer (lower = behind, higher = in front)
+            drawables.sort((a, b) => a.layer - b.layer);
+            
+            // Render all elements in layer order
+            drawables.forEach(drawable => {
+                if (drawable.type === 'base') {
+                    // Draw tank body based on base mode
+                    ctx.fillStyle = '#00b2e1';
+                    
+                    if (editorState.baseMode === 'none') {
+                        // Circle base
+                        ctx.beginPath();
+                        ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    } else if (editorState.baseMode === 'simple') {
+                        // Polygon base
+                        const sides = editorState.baseSides;
+                        ctx.beginPath();
+                        for (let i = 0; i <= sides; i++) {
+                            const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                            const x = Math.cos(angle) * tankSize;
+                            const y = Math.sin(angle) * tankSize;
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    } else if (editorState.baseMode === 'advanced') {
+                        // Advanced mode - base blocks render separately, no default base
+                        if (editorState.baseBlocks.length === 0) {
+                            // Only show placeholder circle if no blocks added yet
                             ctx.beginPath();
-                            ctx.arc(0, 0, baseBlock.size, 0, Math.PI * 2);
+                            ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.strokeStyle = '#333';
-                            ctx.lineWidth = 2;
-                            ctx.stroke();
-                        } else {
-                            // Polygon
-                            ctx.beginPath();
-                            const sides = baseBlock.shape;
-                            for (let i = 0; i <= sides; i++) {
-                                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                                const x = Math.cos(angle) * baseBlock.size;
-                                const y = Math.sin(angle) * baseBlock.size;
-                                if (i === 0) ctx.moveTo(x, y);
-                                else ctx.lineTo(x, y);
-                            }
-                            ctx.closePath();
-                            ctx.fill();
-                            ctx.strokeStyle = '#333';
-                            ctx.lineWidth = 2;
+                            ctx.lineWidth = 3;
                             ctx.stroke();
                         }
-                        
-                        ctx.restore();
-                    });
-                }
-            }
-            
-            // Draw blades
-            editorState.blades.forEach(blade => {
-                ctx.save();
-                ctx.translate(blade.x, blade.y);
-                ctx.rotate(blade.rotation * Math.PI / 180);
-                
-                const sides = blade.shape;
-                const bladeSize = blade.size * 20;
-                
-                ctx.fillStyle = blade.color || '#999999';
-                ctx.beginPath();
-                for (let j = 0; j <= sides; j++) {
-                    const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
-                    const x = Math.cos(angle) * bladeSize;
-                    const y = Math.sin(angle) * bladeSize;
-                    if (j === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                ctx.restore();
-            });
-
-            // Draw guns
-            editorState.blocks.forEach(block => {
-                ctx.save();
-                
-                const angle = (block.props.angle || 0) * Math.PI / 180;
-                ctx.rotate(angle);
-                ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
-                
-                if (block.type === 'normal' || block.type === 'trap') {
-                    // Normal gun or trap launcher - both render the same way in editor
-                    const gunLength = (block.props.length || 1) * 40;
-                    const gunWidth = (block.props.size || 1) * 15;
+                    }
+                } else if (drawable.type === 'baseBlock') {
+                    const baseBlock = drawable.data;
+                    ctx.save();
+                    ctx.translate(baseBlock.x, baseBlock.y);
+                    ctx.rotate(baseBlock.rotation * Math.PI / 180);
                     
-                    ctx.fillStyle = '#999999';
-                    ctx.fillRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
+                    ctx.fillStyle = '#00b2e1';
+                    if (baseBlock.shape === 0) {
+                        // Circle
+                        ctx.beginPath();
+                        ctx.arc(0, 0, baseBlock.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    } else {
+                        // Polygon
+                        ctx.beginPath();
+                        const sides = baseBlock.shape;
+                        for (let i = 0; i <= sides; i++) {
+                            const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                            const x = Math.cos(angle) * baseBlock.size;
+                            const y = Math.sin(angle) * baseBlock.size;
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                } else if (drawable.type === 'blade') {
+                    const blade = drawable.data;
+                    ctx.save();
+                    ctx.translate(blade.x, blade.y);
+                    ctx.rotate(blade.rotation * Math.PI / 180);
                     
-                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
-                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                    ctx.strokeRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
+                    const sides = blade.shape;
+                    const bladeSize = blade.size * 20;
                     
-                } else if (block.type === 'minion') {
-                    // Minion spawner - show as special marker
-                    ctx.fillStyle = '#ff9500';
+                    ctx.fillStyle = blade.color || '#999999';
                     ctx.beginPath();
-                    ctx.arc(0, tankSize + 20, 12, 0, Math.PI * 2);
+                    for (let j = 0; j <= sides; j++) {
+                        const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
+                        const x = Math.cos(angle) * bladeSize;
+                        const y = Math.sin(angle) * bladeSize;
+                        if (j === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
                     ctx.fill();
                     
-                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
-                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
                     ctx.stroke();
                     
-                    // Draw count indicator
-                    ctx.fillStyle = 'white';
-                    ctx.font = '10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(block.props.count || 4, 0, tankSize + 20);
-                }
+                    ctx.restore();
+                } else if (drawable.type === 'gun') {
+                    const block = drawable.data;
+                    ctx.save();
+                    
+                    const angle = (block.props.angle || 0) * Math.PI / 180;
+                    ctx.rotate(angle);
+                    ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
-                ctx.restore();
+                    if (block.type === 'normal' || block.type === 'trap') {
+                        // Normal gun or trap launcher - both render the same way in editor
+                        const gunLength = (block.props.length || 1) * 40;
+                        const gunWidth = (block.props.size || 1) * 15;
+                        
+                        ctx.fillStyle = '#999999';
+                        ctx.fillRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
+                        
+                        ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
+                        ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                        ctx.strokeRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
+                        
+                    } else if (block.type === 'minion') {
+                        // Minion spawner - show as special marker
+                        ctx.fillStyle = '#ff9500';
+                        ctx.beginPath();
+                        ctx.arc(0, tankSize + 20, 12, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
+                        ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                        ctx.stroke();
+                        
+                        // Draw count indicator
+                        ctx.fillStyle = 'white';
+                        ctx.font = '10px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(block.props.count || 4, 0, tankSize + 20);
+                    }
+                    
+                    ctx.restore();
+                }
             });
 
             ctx.restore();
