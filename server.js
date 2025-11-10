@@ -1588,7 +1588,8 @@ function gameLoop() {
 
 // Socket.IO events
 io.on('connection', (socket) => {
-    console.log('Player connected:', socket.id);
+    const timestamp = new Date().toLocaleTimeString();
+    console.log(`[${timestamp}] ✅ Player connected: ${socket.id} | Total players: ${players.size + 1}`);
 
     socket.on('joinGame', (name) => {
         const spawnPos = findSafeSpawnPosition();
@@ -1608,7 +1609,8 @@ io.on('connection', (socket) => {
             tankUpgrades: tankUpgrades
         });
         
-        console.log('Player joined game:', socket.id, 'Name:', player.name);
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[${timestamp}] 🎮 Player joined game: "${player.name}" (${socket.id})`);
     });
 
     socket.on('playerInput', (input) => {
@@ -1909,7 +1911,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('Player disconnected:', socket.id);
+        const timestamp = new Date().toLocaleTimeString();
+        const player = players.get(socket.id);
+        const playerName = player ? player.name : 'Unknown';
+        
+        console.log(`[${timestamp}] ❌ Player disconnected: "${playerName}" (${socket.id}) | Remaining: ${players.size - 1}`);
+        
         players.delete(socket.id);
         adminPlayers.delete(socket.id); // Remove from admin list
         
@@ -1945,4 +1952,32 @@ http.listen(PORT, () => {
     console.log('   RONNY IO - Version 2.0');
     console.log('=================================');
     console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Time: ${new Date().toLocaleString()}`);
+    console.log('=================================');
 });
+
+// Server activity logging
+setInterval(() => {
+    const playerCount = players.size;
+    const polygonCount = polygons.size;
+    const bulletCount = bullets.size;
+    const trapCount = traps.size;
+    const minionCount = minions.size;
+    
+    console.log(`[${new Date().toLocaleTimeString()}] Players: ${playerCount} | Polygons: ${polygonCount} | Bullets: ${bulletCount} | Traps: ${trapCount} | Minions: ${minionCount}`);
+}, 60000); // Log every 60 seconds
+
+// Log player activity
+let lastActivityTime = Date.now();
+setInterval(() => {
+    const now = Date.now();
+    const idleMinutes = Math.floor((now - lastActivityTime) / 60000);
+    
+    if (players.size > 0) {
+        lastActivityTime = now;
+        console.log(`[ACTIVE] ${players.size} player(s) online`);
+    } else if (idleMinutes > 0) {
+        console.log(`[IDLE] Server idle for ${idleMinutes} minute(s)`);
+    }
+}, 300000); // Check every 5 minutes
