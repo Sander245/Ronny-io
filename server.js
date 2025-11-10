@@ -1447,8 +1447,6 @@ function gameLoop() {
                     minion2.x -= nx * pushForce * 0.5;
                     minion2.y -= ny * pushForce * 0.5;
                 }
-                minion2.x -= nx * pushForce * 0.5;
-                minion2.y -= ny * pushForce * 0.5;
             }
         }
     }
