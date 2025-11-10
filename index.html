@@ -848,12 +848,12 @@
             // Handle polygon spawning (cheat panel active, no shift required for numbers)
             if (cheatPanelActive) {
                 const keyToNumber = {
-                    '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9
+                    '!': 1, '@': 2, '#': 3, '$': 4, '%': 5, '^': 6, '&': 7, '*': 8, '9': 9
                 };
                 
                 if (keyToNumber[e.key]) {
                     const num = keyToNumber[e.key];
-                    console.log(`[POLYGON SPAWN] Key ${num} pressed at ${mouseWorldX}, ${mouseWorldY}`);
+                    console.log(`[POLYGON SPAWN] Key ${e.key} (${num}) pressed at ${mouseWorldX}, ${mouseWorldY}`);
                     
                     if (e.key === '9') {
                         // Spawn all polygon types at cursor
@@ -867,23 +867,13 @@
                         return;
                     }
                     
-                    if (e.shiftKey) {
-                        // Shift+1-8 spawns polygons with 12-16 sides
-                        const shiftPolygonMap = {
-                            1: 12, 2: 13, 3: 14, 4: 15, 5: 16, 6: 12, 7: 13, 8: 14
-                        };
-                        const sides = shiftPolygonMap[num];
-                        console.log(`[POLYGON SPAWN] Shift+${num} - spawning ${sides}-sided polygon`);
-                        socket.emit('cheatSpawnPolygon', { type: sides, x: mouseWorldX, y: mouseWorldY });
-                    } else {
-                        // 1-8 spawns polygons with 3-13 sides
-                        const normalPolygonMap = {
-                            1: 3, 2: 4, 3: 5, 4: 6, 5: 8, 6: 10, 7: 12, 8: 13
-                        };
-                        const sides = normalPolygonMap[num];
-                        console.log(`[POLYGON SPAWN] ${num} - spawning ${sides}-sided polygon`);
-                        socket.emit('cheatSpawnPolygon', { type: sides, x: mouseWorldX, y: mouseWorldY });
-                    }
+                    // !-* spawns polygons with 3-13 sides
+                    const normalPolygonMap = {
+                        1: 3, 2: 4, 3: 5, 4: 6, 5: 8, 6: 10, 7: 12, 8: 13
+                    };
+                    const sides = normalPolygonMap[num];
+                    console.log(`[POLYGON SPAWN] ${e.key} - spawning ${sides}-sided polygon`);
+                    socket.emit('cheatSpawnPolygon', { type: sides, x: mouseWorldX, y: mouseWorldY });
                     return;
                 }
             }
