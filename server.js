@@ -1597,6 +1597,11 @@ io.on('connection', (socket) => {
         player.id = socket.id; // Set player ID to socket ID so client can find itself
         players.set(socket.id, player);
         
+        // Start game loop if this is the first player
+        if (players.size === 1 && !isServerActive) {
+            startGameLoop();
+        }
+        
         // Extract upgrade paths from TANK_TYPES for client
         const tankUpgrades = {};
         Object.keys(TANK_TYPES).forEach(key => {
@@ -1933,15 +1938,74 @@ io.on('connection', (socket) => {
     });
 });
 
-// Start game loop
-setInterval(gameLoop, 1000 / GAME_CONFIG.TICK_RATE);
+// Idle server management
+let gameLoopInterval = null;
+let polygonSpawnInterval = null;
+let isServerActive = false;
+let lastPlayerTime = Date.now();
+let idleCheckInterval = null;
 
-// Spawn polygon clusters every 30 seconds
-setInterval(() => {
-    spawnPolygonCluster();
-}, 30000);
+function startGameLoop() {
+    if (isServerActive) return; // Already running
+    
+    isServerActive = true;
+    console.log(`[${new Date().toLocaleTimeString()}] 🟢 Game loop STARTED`);
+    
+    // Start game loop
+    gameLoopInterval = setInterval(gameLoop, 1000 / GAME_CONFIG.TICK_RATE);
+    
+    // Start polygon spawning
+    polygonSpawnInterval = setInterval(() => {
+        spawnPolygonCluster();
+    }, 30000);
+    
+    // Spawn initial polygons if needed
+    if (polygons.size < 50) {
+        for (let i = polygons.size; i < 50; i++) {
+            spawnPolygon();
+        }
+    }
+}
 
-// Initial polygons
+function stopGameLoop() {
+    if (!isServerActive) return; // Already stopped
+    
+    isServerActive = false;
+    console.log(`[${new Date().toLocaleTimeString()}] 🔴 Game loop STOPPED (no players)`);
+    
+    // Stop game loop
+    if (gameLoopInterval) {
+        clearInterval(gameLoopInterval);
+        gameLoopInterval = null;
+    }
+    
+    // Stop polygon spawning
+    if (polygonSpawnInterval) {
+        clearInterval(polygonSpawnInterval);
+        polygonSpawnInterval = null;
+    }
+}
+
+function checkIdleStatus() {
+    const now = Date.now();
+    const idleTime = (now - lastPlayerTime) / 1000; // seconds
+    
+    if (players.size > 0) {
+        lastPlayerTime = now;
+        if (!isServerActive) {
+            console.log(`[${new Date().toLocaleTimeString()}] ⚡ Players detected, starting game loop...`);
+            startGameLoop();
+        }
+    } else if (isServerActive && idleTime > 180) { // 3 minutes = 180 seconds
+        console.log(`[${new Date().toLocaleTimeString()}] 💤 No players for 3 minutes, stopping game loop...`);
+        stopGameLoop();
+    }
+}
+
+// Check for idle every 10 seconds
+idleCheckInterval = setInterval(checkIdleStatus, 10000);
+
+// Initial polygons (only spawn if we start with players)
 for (let i = 0; i < 50; i++) {
     spawnPolygon();
 }
@@ -1957,8 +2021,10 @@ http.listen(PORT, () => {
     console.log('=================================');
 });
 
-// Server activity logging
+// Server activity logging (only log if server is active)
 setInterval(() => {
+    if (!isServerActive) return; // Don't log when idle
+    
     const playerCount = players.size;
     const polygonCount = polygons.size;
     const bulletCount = bullets.size;
@@ -1972,12 +2038,11 @@ setInterval(() => {
 let lastActivityTime = Date.now();
 setInterval(() => {
     const now = Date.now();
-    const idleMinutes = Math.floor((now - lastActivityTime) / 60000);
+    const idleMinutes = Math.floor((now - lastPlayerTime) / 60000);
     
     if (players.size > 0) {
         lastActivityTime = now;
-        console.log(`[ACTIVE] ${players.size} player(s) online`);
-    } else if (idleMinutes > 0) {
-        console.log(`[IDLE] Server idle for ${idleMinutes} minute(s)`);
+    } else if (idleMinutes >= 1 && !isServerActive) {
+        console.log(`[${new Date().toLocaleTimeString()}] 💤 Server sleeping (idle for ${idleMinutes} minute(s))`);
     }
 }, 300000); // Check every 5 minutes
