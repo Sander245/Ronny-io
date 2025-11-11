@@ -850,6 +850,40 @@ function checkCollision(obj1, obj2, size1, size2) {
     return distance < (size1 + size2);
 }
 
+// Calculate distance from center to edge of base at given angle
+function getBaseRadiusAtAngle(player, angle) {
+    const tankConfig = TANK_TYPES[player.tankType];
+    
+    // For circle or simple polygon base
+    if (typeof tankConfig.baseShape === 'number') {
+        const sides = tankConfig.baseShape;
+        if (sides === 0) {
+            // Circle - constant radius
+            return player.size;
+        } else {
+            // Regular polygon - calculate distance to edge at this angle
+            // Find which edge the angle points toward
+            const anglePerSide = (Math.PI * 2) / sides;
+            const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+            
+            // Distance from center to edge of regular polygon at given angle
+            // Formula: radius / cos(angle_to_nearest_edge)
+            const angleToEdge = angle - sideAngle + Math.PI / 2;
+            const cosAngle = Math.cos(angleToEdge);
+            
+            if (Math.abs(cosAngle) < 0.001) {
+                return player.size; // Avoid division by zero
+            }
+            
+            return player.size / cosAngle;
+        }
+    }
+    
+    // For advanced base with custom blocks, use conservative estimate (circle)
+    // TODO: Could calculate actual outline from baseBlocks if needed
+    return player.size;
+}
+
 function findSafeSpawnPosition() {
     let attempts = 0;
     const maxAttempts = 50;
@@ -954,11 +988,13 @@ function gameLoop() {
                     const offsetY = gun.offsetY || 0;
                     
                     // Calculate bullet spawn position relative to tank
+                    // Get base radius at this angle to position gun on perimeter
                     const relativeAngle = player.rotation + gunBaseAngle; // For positioning, always use tank-relative
-                    const startX = player.x + Math.cos(relativeAngle) * (player.size + 10) + 
+                    const baseRadius = getBaseRadiusAtAngle(player, gunBaseAngle);
+                    const startX = player.x + Math.cos(relativeAngle) * (baseRadius + 10) + 
                                    Math.cos(relativeAngle + Math.PI/2) * offsetY +
                                    Math.cos(relativeAngle) * offsetX;
-                    const startY = player.y + Math.sin(relativeAngle) * (player.size + 10) + 
+                    const startY = player.y + Math.sin(relativeAngle) * (baseRadius + 10) + 
                                    Math.sin(relativeAngle + Math.PI/2) * offsetY +
                                    Math.sin(relativeAngle) * offsetX;
                     
@@ -1196,7 +1232,7 @@ function gameLoop() {
 
         // Bullet vs player
         players.forEach(player => {
-            if (player.id !== bullet.owner) {
+            if (player.id !== bullet.owner && player.health > 0) {
                 // Player hitbox is 85% of visual size
                 if (checkCollision(bullet, player, bullet.size, player.size * 0.85)) {
                     const owner = players.get(bullet.owner);
@@ -1242,7 +1278,7 @@ function gameLoop() {
                             spectateId: owner ? owner.id : null
                         });
                         
-                        if (owner) {
+                        if (owner && owner.health > 0) {
                             owner.addXP(player.score / 2);
                         }
                         

@@ -804,6 +804,38 @@
             return { x: screenX, y: screenY };
         }
 
+        // Calculate distance from center to edge of base at given angle
+        function getBaseRadiusAtAngle(player, angle) {
+            const tankConfig = tankTypes[player.tankType];
+            if (!tankConfig) return player.size;
+            
+            // For circle or simple polygon base
+            if (typeof tankConfig.baseShape === 'number') {
+                const sides = tankConfig.baseShape;
+                if (sides === 0) {
+                    // Circle - constant radius
+                    return player.size;
+                } else {
+                    // Regular polygon - calculate distance to edge at this angle
+                    const anglePerSide = (Math.PI * 2) / sides;
+                    const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+                    
+                    // Distance from center to edge of regular polygon at given angle
+                    const angleToEdge = angle - sideAngle + Math.PI / 2;
+                    const cosAngle = Math.cos(angleToEdge);
+                    
+                    if (Math.abs(cosAngle) < 0.001) {
+                        return player.size;
+                    }
+                    
+                    return player.size / cosAngle;
+                }
+            }
+            
+            // For advanced base, use conservative estimate (circle)
+            return player.size;
+        }
+
         // Event listeners
         document.getElementById('playButton').addEventListener('click', () => {
             const name = document.getElementById('nameInput').value || 'Tank';
@@ -2159,9 +2191,11 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        // Position gun on perimeter at 'angle'
+                        // Position gun on perimeter at 'angle' - use base radius calculation
                         ctx.rotate(gunAngle); // Rotate to position on perimeter
-                        ctx.translate(size, 0); // Move to perimeter
+                        const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
+                        const gunDistance = baseRadius * camera.zoom;
+                        ctx.translate(gunDistance, 0); // Move to actual perimeter
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2184,9 +2218,11 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        // Position gun on perimeter at 'angle'
+                        // Position gun on perimeter at 'angle' - use base radius calculation
                         ctx.rotate(gunAngle); // Rotate to position on perimeter
-                        ctx.translate(size, 0); // Move to perimeter
+                        const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
+                        const gunDistance = baseRadius * camera.zoom;
+                        ctx.translate(gunDistance, 0); // Move to actual perimeter
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2222,9 +2258,11 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        // Position gun on perimeter at 'angle'
+                        // Position gun on perimeter at 'angle' - use base radius calculation
                         ctx.rotate(gunAngle); // Rotate to position on perimeter
-                        ctx.translate(size, 0); // Move to perimeter
+                        const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
+                        const gunDistance = baseRadius * camera.zoom;
+                        ctx.translate(gunDistance, 0); // Move to actual perimeter
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -3441,6 +3479,33 @@
             }
         }
 
+        // Calculate base radius at angle for editor preview
+        function getEditorBaseRadius(angle) {
+            const tankSize = 40;
+            
+            if (editorState.baseMode === 'none') {
+                // Circle - constant radius
+                return tankSize;
+            } else if (editorState.baseMode === 'simple') {
+                // Regular polygon
+                const sides = editorState.baseSides;
+                const anglePerSide = (Math.PI * 2) / sides;
+                const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+                
+                const angleToEdge = angle - sideAngle + Math.PI / 2;
+                const cosAngle = Math.cos(angleToEdge);
+                
+                if (Math.abs(cosAngle) < 0.001) {
+                    return tankSize;
+                }
+                
+                return tankSize / cosAngle;
+            }
+            
+            // For advanced mode, use conservative estimate
+            return tankSize;
+        }
+
         function renderEditorCanvas() {
             const canvas = document.getElementById('editorCanvas');
             const ctx = canvas.getContext('2d');
@@ -3598,10 +3663,18 @@
                     ctx.restore();
                 } else if (drawable.type === 'gun') {
                     const block = drawable.data;
+                    const tankSize = 40;
                     ctx.save();
                     
                     const angle = (block.props.angle || 0) * Math.PI / 180;
+                    const blockRotation = (block.props.blockRotation || 0) * Math.PI / 180;
+                    const selfAngle = (block.props.selfAngle || 0) * Math.PI / 180;
+                    
+                    // Position gun on perimeter at 'angle' - use base radius calculation
                     ctx.rotate(angle);
+                    const baseRadius = getEditorBaseRadius(angle);
+                    ctx.translate(baseRadius, 0); // Move to actual perimeter
+                    ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
                     if (block.type === 'normal' || block.type === 'trap') {
@@ -3610,11 +3683,11 @@
                         const gunWidth = (block.props.size || 1) * 15;
                         
                         ctx.fillStyle = block.props.color || '#999999';
-                        ctx.fillRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
+                        ctx.fillRect(-gunWidth / 2, 0, gunWidth, gunLength);
                         
                         ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#333';
                         ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                        ctx.strokeRect(-gunWidth / 2, tankSize, gunWidth, gunLength);
+                        ctx.strokeRect(-gunWidth / 2, 0, gunWidth, gunLength);
                         
                     } else if (block.type === 'minion') {
                         // Minion spawner - show as gun with number (not circle)
@@ -3624,10 +3697,10 @@
                         ctx.fillStyle = block.props.color || '#ff9500';
                         // Draw trapezoid gun barrel
                         ctx.beginPath();
-                        ctx.moveTo(-gunWidth / 3, tankSize);
-                        ctx.lineTo(-gunWidth / 2, tankSize + gunLength);
-                        ctx.lineTo(gunWidth / 2, tankSize + gunLength);
-                        ctx.lineTo(gunWidth / 3, tankSize);
+                        ctx.moveTo(-gunWidth / 3, 0);
+                        ctx.lineTo(-gunWidth / 2, gunLength);
+                        ctx.lineTo(gunWidth / 2, gunLength);
+                        ctx.lineTo(gunWidth / 3, 0);
                         ctx.closePath();
                         ctx.fill();
                         
@@ -3640,7 +3713,7 @@
                         ctx.font = '10px Arial';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillText(block.props.count || 4, 0, tankSize + 20);
+                        ctx.fillText(block.props.count || 4, 0, 20);
                     }
                     
                     ctx.restore();
