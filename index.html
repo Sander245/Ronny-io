@@ -3518,36 +3518,31 @@
             const { radius: baseRadius, faceAngle } = getEditorBaseRadiusAndFace(angle);
             
             // Editor transform sequence (matching renderEditorCanvas exactly):
-            // 1. ctx.rotate(angle)
-            // 2. ctx.translate(baseRadius, 0)
-            // 3. ctx.rotate(faceAngle - angle)
-            // 4. ctx.rotate(blockRotation + selfAngle)
-            // 5. ctx.translate(offsetX, offsetY)
+            // 1. ctx.rotate(angle) - rotates coordinate system by angle
+            // 2. ctx.translate(baseRadius, 0) - moves baseRadius units along rotated X-axis
+            // 3. ctx.rotate(faceAngle - angle) - rotates by additional (faceAngle - angle)
+            // 4. ctx.rotate(blockRotation + selfAngle) - rotates by blockRotation + selfAngle
+            // 5. ctx.translate(offsetX, offsetY) - moves along final rotated axes
             
-            // Calculate final rotation: angle + (faceAngle - angle) + blockRotation + selfAngle
-            // Simplifies to: faceAngle + blockRotation + selfAngle
+            // Final rotation is cumulative: angle + (faceAngle - angle) + blockRotation + selfAngle
             const finalRotation = faceAngle + blockRotation + selfAngle;
             
-            // Calculate final position by applying transforms step by step
-            let x = 0, y = 0;
-            let currentRotation = 0;
+            // Calculate final position using matrix transformations
+            // After step 1 (rotate angle): position is still (0, 0)
+            // After step 2 (translate baseRadius, 0 in rotated space):
+            //   x = baseRadius * cos(angle), y = baseRadius * sin(angle)
+            let x = Math.cos(angle) * baseRadius;
+            let y = Math.sin(angle) * baseRadius;
             
-            // Step 1: rotate by angle
-            currentRotation = angle;
+            // After steps 3-4 (rotations don't change position, only orientation)
+            // Position is still (x, y)
             
-            // Step 2: translate by baseRadius (along current rotation)
-            x += Math.cos(currentRotation) * baseRadius;
-            y += Math.sin(currentRotation) * baseRadius;
-            
-            // Step 3: rotate by (faceAngle - angle)
-            currentRotation = faceAngle;
-            
-            // Step 4: rotate by (blockRotation + selfAngle)
-            currentRotation = finalRotation;
-            
-            // Step 5: translate by (offsetX, offsetY) along current rotation
-            x += Math.cos(currentRotation) * offsetX - Math.sin(currentRotation) * offsetY;
-            y += Math.sin(currentRotation) * offsetX + Math.cos(currentRotation) * offsetY;
+            // After step 5 (translate offsetX, offsetY in the rotated space):
+            // The current rotation is finalRotation, so:
+            //   dx = offsetX * cos(finalRotation) - offsetY * sin(finalRotation)
+            //   dy = offsetX * sin(finalRotation) + offsetY * cos(finalRotation)
+            x += Math.cos(finalRotation) * offsetX - Math.sin(finalRotation) * offsetY;
+            y += Math.sin(finalRotation) * offsetX + Math.cos(finalRotation) * offsetY;
             
             return {
                 x: x,
