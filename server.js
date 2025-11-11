@@ -866,30 +866,33 @@ function getBaseRadiusAndFaceAtAngle(player, angle) {
             return { radius: player.size, faceAngle: angle };
         } else {
             // Regular polygon - calculate distance to edge at this angle
-            // The polygon has vertices at distance player.size from center (inscribed in circle)
+            // The polygon has vertices at distance player.size from center (circumscribed)
             const anglePerSide = (Math.PI * 2) / sides;
             
-            // Find which side this angle points to
-            // Polygon is drawn with first vertex at -PI/2, so we need to account for this rotation
-            const normalizedAngle = angle - (-Math.PI / 2); // Remove the -PI/2 offset
-            const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide) % sides;
-            const sideAngle = sideIndex * anglePerSide - Math.PI / 2; // Add the offset back
+            // Polygon is drawn with first vertex at -PI/2 (straight up)
+            // Find which edge the ray intersects
+            const normalizedAngle = angle + Math.PI / 2; // Normalize to start from 0
+            const sideIndex = Math.floor(normalizedAngle / anglePerSide) % sides;
             
-            // For an inscribed polygon, the perpendicular distance from center to an edge
+            // Get the two vertices of this edge
+            const vertex1Angle = (sideIndex / sides) * Math.PI * 2 - Math.PI / 2;
+            const vertex2Angle = ((sideIndex + 1) / sides) * Math.PI * 2 - Math.PI / 2;
+            
+            // Calculate the perpendicular distance from origin to the edge (apothem)
             const apothem = player.size * Math.cos(anglePerSide / 2);
             
-            // The angle from center perpendicular to this side
-            // Each side's normal points outward at sideAngle + anglePerSide/2
-            const sideCenterAngle = sideAngle + anglePerSide / 2;
+            // The normal to the edge points outward at the midpoint angle
+            const edgeNormalAngle = vertex1Angle + anglePerSide / 2;
             
-            // Calculate actual distance along the ray at 'angle' to hit the side
-            const angleDiff = angle - sideCenterAngle;
+            // Calculate intersection distance
+            const angleDiff = angle - edgeNormalAngle;
             const cosAngleDiff = Math.cos(angleDiff);
             
+            // Distance along ray = apothem / cos(angle difference from normal)
             const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
             
-            // Face angle is perpendicular to the side
-            const faceAngle = sideCenterAngle;
+            // Face angle is the outward normal to the edge
+            const faceAngle = edgeNormalAngle;
             
             return { radius, faceAngle };
         }
