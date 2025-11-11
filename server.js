@@ -501,6 +501,8 @@ class Player extends GameObject {
         this.upgradePoints = 0;
         // Damage tracking for death screen
         this.damageHistory = [];
+        // AFK detection
+        this.lastActivityTime = Date.now();
         // Initialize size based on level
         this.updateSize();
     }
@@ -1586,6 +1588,42 @@ function gameLoop() {
     io.emit('gameState', gameState);
 }
 
+// AFK kick system - check every 30 seconds
+function checkAFKPlayers() {
+    const now = Date.now();
+    const AFK_TIMEOUT = 120000; // 2 minutes in milliseconds
+    
+    players.forEach((player, socketId) => {
+        const afkTime = now - player.lastActivityTime;
+        
+        if (afkTime > AFK_TIMEOUT) {
+            const afkMinutes = Math.floor(afkTime / 60000);
+            console.log(`[${new Date().toLocaleTimeString()}] ⏰ Kicking AFK player: "${player.name}" (${socketId}) - Inactive for ${afkMinutes} min`);
+            
+            // Get socket and disconnect
+            const socket = io.sockets.sockets.get(socketId);
+            if (socket) {
+                socket.emit('afkKick', { reason: 'Kicked for inactivity (2 minutes)' });
+                socket.disconnect(true);
+            }
+            
+            // Clean up player data
+            players.delete(socketId);
+            bullets.forEach((bullet, id) => {
+                if (bullet.owner === socketId) bullets.delete(id);
+            });
+            traps.forEach((trap, id) => {
+                if (trap.owner === socketId) traps.delete(id);
+            });
+            minions.forEach((minion, id) => {
+                if (minion.owner === socketId) minions.delete(id);
+            });
+        }
+    });
+}
+
+setInterval(checkAFKPlayers, 30000); // Check every 30 seconds
+
 // Socket.IO events
 io.on('connection', (socket) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -1625,6 +1663,9 @@ io.on('connection', (socket) => {
             player.shooting = input.shooting;
             player.mouseX = input.mouseX;
             player.mouseY = input.mouseY;
+            
+            // Update activity time on any input
+            player.lastActivityTime = Date.now();
         }
     });
 

@@ -1191,6 +1191,7 @@
         });
 
         // Handle player death
+        // Handle player death
         socket.on('playerDied', (data) => {
             // Return to main menu on death
             playerId = null;
@@ -1216,6 +1217,29 @@
                     }
                 });
             }
+            
+            deathScreen.classList.add('visible');
+            
+            // Auto-hide and show menu after 3 seconds
+            setTimeout(() => {
+                deathScreen.classList.remove('visible');
+                document.getElementById('startMenu').classList.remove('hidden');
+                document.getElementById('hud').classList.remove('visible');
+            }, 3000);
+        });
+
+        // Handle AFK kick
+        socket.on('afkKick', (data) => {
+            playerId = null;
+            gameState = null;
+            
+            const deathScreen = document.getElementById('deathScreen');
+            const killedByList = document.getElementById('killedByList');
+            
+            killedByList.innerHTML = `
+                <div class="death-title">KICKED</div>
+                <div class="killed-by" style="font-size: 18px; margin-top: 10px;">${data.reason}</div>
+            `;
             
             deathScreen.classList.add('visible');
             
