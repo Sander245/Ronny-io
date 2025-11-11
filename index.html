@@ -3057,7 +3057,7 @@
                     reload: 1,
                     knockback: 0, // NEW: Knockback for minions
                     layer: 0,
-                    color: '#ff9500'
+                    color: '#999999'
                 }
             }
         };
@@ -3545,7 +3545,7 @@
                 // Circle - constant radius
                 return tankSize;
             } else if (editorState.baseMode === 'simple') {
-                // Regular polygon
+                // Regular polygon centered at origin
                 const sides = editorState.baseSides;
                 const anglePerSide = (Math.PI * 2) / sides;
                 const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
@@ -3559,54 +3559,102 @@
                 
                 return tankSize / cosAngle;
             } else if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
-                // Advanced mode with custom base blocks
-                // Find the largest radius at this angle from all base blocks
-                let maxRadius = tankSize;
+                // Advanced mode with custom positioned/rotated base blocks
+                // Cast a ray from origin at 'angle' and find furthest intersection
+                let maxRadius = 0;
                 
+                // For each base block, calculate distance to edge along the ray
                 for (const baseBlock of editorState.baseBlocks) {
+                    const bx = baseBlock.x || 0;
+                    const by = baseBlock.y || 0;
+                    const bRot = (baseBlock.rotation || 0) * Math.PI / 180;
                     const shape = baseBlock.shape || 0;
                     const size = baseBlock.size || tankSize;
                     const width = baseBlock.width || 0;
                     const height = baseBlock.height || 0;
                     
+                    // Transform angle to baseBlock's local space
+                    const localAngle = angle - bRot;
+                    
                     if (shape === 0) {
-                        // Circle
-                        maxRadius = Math.max(maxRadius, size + width);
+                        // Circle - distance from origin to furthest point of circle
+                        const centerDist = Math.sqrt(bx * bx + by * by);
+                        const radius = size + width;
+                        const angleToCenter = Math.atan2(by, bx);
+                        const angleDiff = angle - angleToCenter;
+                        
+                        // Distance along ray to circle edge
+                        const distToEdge = centerDist * Math.cos(angleDiff) + Math.sqrt(
+                            radius * radius - (centerDist * Math.sin(angleDiff)) ** 2
+                        );
+                        if (!isNaN(distToEdge) && distToEdge > 0) {
+                            maxRadius = Math.max(maxRadius, distToEdge);
+                        }
                     } else if (shape === 4 && (width || height)) {
-                        // Rectangle - calculate distance to edge at angle
+                        // Rectangle - check intersection with rotated rectangle
                         const totalWidth = size + width;
                         const totalHeight = size + height;
-                        const absAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                        const cos = Math.cos(absAngle);
-                        const sin = Math.sin(absAngle);
                         
-                        // Find intersection with rectangle
-                        let dist;
-                        if (Math.abs(cos) > Math.abs(sin)) {
-                            dist = Math.abs((totalWidth / 2) / cos);
-                        } else {
-                            dist = Math.abs((totalHeight / 2) / sin);
+                        // Transform ray to rectangle's local space
+                        const dx = Math.cos(angle);
+                        const dy = Math.sin(angle);
+                        
+                        // Rotate ray direction to local space
+                        const localDx = dx * Math.cos(-bRot) - dy * Math.sin(-bRot);
+                        const localDy = dx * Math.sin(-bRot) + dy * Math.cos(-bRot);
+                        
+                        // Rotate position offset to local space
+                        const localX = bx * Math.cos(-bRot) - by * Math.sin(-bRot);
+                        const localY = bx * Math.sin(-bRot) + by * Math.cos(-bRot);
+                        
+                        // Calculate intersection with local rectangle
+                        const halfW = totalWidth / 2;
+                        const halfH = totalHeight / 2;
+                        
+                        let tMax = Infinity;
+                        if (Math.abs(localDx) > 0.001) {
+                            const t1 = (halfW - localX) / localDx;
+                            const t2 = (-halfW - localX) / localDx;
+                            tMax = Math.min(tMax, Math.max(t1, t2));
                         }
-                        maxRadius = Math.max(maxRadius, dist);
-                    } else {
-                        // Polygon
+                        if (Math.abs(localDy) > 0.001) {
+                            const t1 = (halfH - localY) / localDy;
+                            const t2 = (-halfH - localY) / localDy;
+                            tMax = Math.min(tMax, Math.max(t1, t2));
+                        }
+                        
+                        if (tMax > 0 && tMax < Infinity) {
+                            maxRadius = Math.max(maxRadius, tMax);
+                        }
+                    } else if (shape > 0) {
+                        // Regular polygon
                         const sides = shape;
                         const anglePerSide = (Math.PI * 2) / sides;
-                        const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+                        const sideAngle = Math.floor((localAngle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
                         
-                        const angleToEdge = angle - sideAngle + Math.PI / 2;
+                        const angleToEdge = localAngle - sideAngle + Math.PI / 2;
                         const cosAngle = Math.cos(angleToEdge);
                         
+                        let radiusAtAngle;
                         if (Math.abs(cosAngle) > 0.001) {
-                            const radiusX = size + width;
-                            maxRadius = Math.max(maxRadius, radiusX / cosAngle);
+                            radiusAtAngle = (size + width) / cosAngle;
                         } else {
-                            maxRadius = Math.max(maxRadius, size + width);
+                            radiusAtAngle = size + width;
+                        }
+                        
+                        // Transform back to world space
+                        const centerDist = Math.sqrt(bx * bx + by * by);
+                        const angleToCenter = Math.atan2(by, bx);
+                        const angleDiff = angle - angleToCenter;
+                        
+                        const distToEdge = centerDist * Math.cos(angleDiff) + radiusAtAngle;
+                        if (distToEdge > 0) {
+                            maxRadius = Math.max(maxRadius, distToEdge);
                         }
                     }
                 }
                 
-                return maxRadius;
+                return maxRadius > 0 ? maxRadius : tankSize;
             }
             
             // Default to circle
@@ -3904,9 +3952,18 @@
                 // Check guns (in reverse order to prioritize top-most)
                 for (let i = editorState.blocks.length - 1; i >= 0; i--) {
                     const block = editorState.blocks[i];
+                    const angle = (block.props.angle || 0) * Math.PI / 180;
+                    const blockRotation = (block.props.blockRotation || 0) * Math.PI / 180;
+                    const selfAngle = (block.props.selfAngle || 0) * Math.PI / 180;
+                    
+                    // Calculate gun position on perimeter
+                    const baseRadius = getEditorBaseRadius(angle);
+                    const gunX = Math.cos(angle) * baseRadius + (block.props.offsetX || 0);
+                    const gunY = Math.sin(angle) * baseRadius + (block.props.offsetY || 0);
+                    
                     const blockDist = Math.sqrt(
-                        (worldX - (block.props.offsetX || 0)) ** 2 + 
-                        (worldY - (block.props.offsetY || 0)) ** 2
+                        (worldX - gunX) ** 2 + 
+                        (worldY - gunY) ** 2
                     );
                     
                     // Simple hit detection - 40 pixel radius

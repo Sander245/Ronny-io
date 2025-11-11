@@ -1019,11 +1019,9 @@ function gameLoop() {
                         
                         // Recoil from shooting
                         const recoil = gun.recoil || 0;
-                        const shootingKnockback = 0.3; // Slight knockback from firing
-                        const totalKnockback = recoil + shootingKnockback;
-                        if (totalKnockback > 0) {
-                            player.vx -= Math.cos(gunAngle) * totalKnockback;
-                            player.vy -= Math.sin(gunAngle) * totalKnockback;
+                        if (recoil > 0) {
+                            player.vx -= Math.cos(gunAngle) * recoil;
+                            player.vy -= Math.sin(gunAngle) * recoil;
                         }
                     } else if (gun.type === 'trap') {
                         const maxTraps = gun.maxTraps || 10;
