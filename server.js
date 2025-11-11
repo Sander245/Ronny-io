@@ -982,8 +982,7 @@ function gameLoop() {
                     
                     // Gun is always positioned on perimeter at 'angle'
                     // blockRotation and selfAngle control barrel direction
-                    // Add -90 degree offset so 0 = pointing outward
-                    let gunAngle = player.rotation + gunBaseAngle - Math.PI / 2 + blockRotation + selfAngle;
+                    let gunAngle = player.rotation + gunBaseAngle + blockRotation + selfAngle;
                     
                     const offsetX = gun.offsetX || 0;
                     const offsetY = gun.offsetY || 0;
