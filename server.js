@@ -1272,6 +1272,25 @@ function gameLoop() {
                 }
             }
         });
+        
+        // Bullet vs bullet (not same owner)
+        bullets.forEach(otherBullet => {
+            if (bullet.id !== otherBullet.id && bullet.owner !== otherBullet.owner && 
+                !bullet.dying && !otherBullet.dying) {
+                if (checkCollision(bullet, otherBullet, bullet.size, otherBullet.size)) {
+                    // Both bullets take damage
+                    bullet.health -= 1;
+                    otherBullet.health -= 1;
+                    
+                    if (bullet.health <= 0) {
+                        bullet.startDeath();
+                    }
+                    if (otherBullet.health <= 0) {
+                        otherBullet.startDeath();
+                    }
+                }
+            }
+        });
     });
 
     // Update traps
