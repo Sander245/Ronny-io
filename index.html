@@ -2175,12 +2175,34 @@
             // Get tank config
             const tankConfig = tankTypes[player.tankType];
             
+            if (!tankConfig) {
+                // Fallback: draw simple tank if config not loaded
+                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                ctx.fillStyle = baseColor;
+                ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Simple gun
+                ctx.fillStyle = '#999';
+                ctx.strokeStyle = '#404040';
+                ctx.lineWidth = 2 * camera.zoom;
+                ctx.fillRect(size - 5 * camera.zoom, -10 * camera.zoom, 20 * camera.zoom, 20 * camera.zoom);
+                ctx.strokeRect(size - 5 * camera.zoom, -10 * camera.zoom, 20 * camera.zoom, 20 * camera.zoom);
+                
+                ctx.restore();
+                return;
+            }
+
             // Collect all drawable elements with layers (like editor)
             const drawables = [];
             
-            // Add base shape (layer 0 by default, or from baseBlocks)
-            if (tankConfig && tankConfig.baseBlocks && tankConfig.baseBlocks.length > 0) {
-                // Advanced base with base blocks
+            // Add base shape (layer determined by baseShape type or baseBlocks)
+            if (tankConfig.baseBlocks && tankConfig.baseBlocks.length > 0) {
+                // Advanced base with custom base blocks
                 tankConfig.baseBlocks.forEach(baseBlock => {
                     drawables.push({ type: 'baseBlock', layer: baseBlock.layer || 0, data: baseBlock });
                 });
@@ -2190,14 +2212,14 @@
             }
             
             // Add blades
-            if (tankConfig && tankConfig.blades) {
+            if (tankConfig.blades) {
                 tankConfig.blades.forEach(blade => {
                     drawables.push({ type: 'blade', layer: blade.layer || 0, data: blade });
                 });
             }
             
             // Add guns
-            if (tankConfig && tankConfig.guns) {
+            if (tankConfig.guns) {
                 tankConfig.guns.forEach((gun, gunIndex) => {
                     drawables.push({ type: 'gun', layer: gun.layer || 0, data: gun, index: gunIndex });
                 });
@@ -2209,351 +2231,19 @@
             // Render all elements in layer order
             drawables.forEach(drawable => {
                 if (drawable.type === 'gun') {
-                    const gun = drawable.data;
-                    const gunIndex = drawable.index;
-                    // Get recoil offset for this gun
-                    const recoilOffset = (player.gunRecoils && player.gunRecoils[`gun_${gunIndex}`]) || 0;
-                    
-                    if (gun.type === 'normal') {
-                        const gunAngle = gun.angle * Math.PI / 180;
-                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
-                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
-                        const gunLength = (gun.length || 1) * 20 * camera.zoom * sizeMultiplier;
-                        const gunWidth = (gun.size || 1) * 20 * camera.zoom * sizeMultiplier;
-                        const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
-                        const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
-
-                        ctx.save();
-                        // Position gun on perimeter at 'angle' - use base radius calculation
-                        ctx.rotate(gunAngle); // Rotate to position on perimeter
-                        const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
-                        const gunDistance = baseRadius * camera.zoom;
-                        ctx.translate(gunDistance, 0); // Move to actual perimeter
-                        ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
-                        ctx.translate(offsetX, offsetY);
-
-                        const gunColor = gun.color || '#999';
-                        ctx.fillStyle = gunColor;
-                        ctx.strokeStyle = '#404040'; // Dark grey outline
-                        ctx.lineWidth = 2 * camera.zoom;
-                        
-                        // Apply recoil offset (pushes gun back along the barrel)
-                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        ctx.fillRect(-gunWidth / 2, recoilX - 5 * camera.zoom, gunWidth, gunLength);
-                        ctx.strokeRect(-gunWidth / 2, recoilX - 5 * camera.zoom, gunWidth, gunLength);
-
-                        ctx.restore();
-                    } else if (gun.type === 'trap') {
-                        const gunAngle = gun.angle * Math.PI / 180;
-                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
-                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
-                        const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
-                        const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
-
-                        ctx.save();
-                        // Position gun on perimeter at 'angle' - use base radius calculation
-                        ctx.rotate(gunAngle); // Rotate to position on perimeter
-                        const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
-                        const gunDistance = baseRadius * camera.zoom;
-                        ctx.translate(gunDistance, 0); // Move to actual perimeter
-                        ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
-                        ctx.translate(offsetX, offsetY);
-
-                        const gunColor = gun.color || '#999';
-                        ctx.fillStyle = gunColor;
-                        ctx.strokeStyle = '#404040'; // Dark grey outline
-                        ctx.lineWidth = 2 * camera.zoom;
-                        
-                        // Draw flattened T shape for trap launcher
-                        const baseLength = 20 * camera.zoom * sizeMultiplier;
-                        const baseHeight = 20 * camera.zoom * sizeMultiplier;
-                        const flatRectWidth = 30 * camera.zoom * sizeMultiplier;
-                        const flatRectHeight = 8 * camera.zoom * sizeMultiplier;
-                        
-                        // Apply recoil offset (pushes gun back along the barrel)
-                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        
-                        // Base rectangle (vertical part of T)
-                        ctx.fillRect(-baseHeight / 2, recoilX - 5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
-                        ctx.strokeRect(-baseHeight / 2, recoilX - 5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
-                        
-                        // Front flat rectangle (horizontal part of T)
-                        ctx.fillRect(-flatRectWidth / 2, recoilX - 5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
-                        ctx.strokeRect(-flatRectWidth / 2, recoilX - 5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
-
-                        ctx.restore();
-                    } else if (gun.type === 'minion') {
-                        // Draw spawner/drone barrel as thin trapezoid - wide side facing out
-                        const gunAngle = gun.angle * Math.PI / 180;
-                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
-                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
-                        const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
-                        const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
-
-                        ctx.save();
-                        // Position gun on perimeter at 'angle' - use base radius calculation
-                        ctx.rotate(gunAngle); // Rotate to position on perimeter
-                        const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
-                        const gunDistance = baseRadius * camera.zoom;
-                        ctx.translate(gunDistance, 0); // Move to actual perimeter
-                        ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
-                        ctx.translate(offsetX, offsetY);
-
-                        const gunColor = gun.color || '#ff9500';
-                        ctx.fillStyle = gunColor;
-                        ctx.strokeStyle = '#404040'; // Dark grey outline
-                        ctx.lineWidth = 2 * camera.zoom;
-                        
-                        // Draw thin trapezoid shape - narrow at base, wide at tip
-                        const length = 25 * camera.zoom * sizeMultiplier; // Length of trapezoid
-                        const baseWidth = 8 * camera.zoom * sizeMultiplier; // Width at narrow end (at tank)
-                        const tipWidth = 18 * camera.zoom * sizeMultiplier; // Width at wide end (facing out)
-                        
-                        // Apply recoil offset (pushes gun back along the barrel)
-                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(-baseWidth / 2, recoilX - 5 * camera.zoom); // Back left (narrow base)
-                        ctx.lineTo(-tipWidth / 2, recoilX - 5 * camera.zoom + length); // Front left (wide tip)
-                        ctx.lineTo(tipWidth / 2, recoilX - 5 * camera.zoom + length); // Front right (wide tip)
-                        ctx.lineTo(baseWidth / 2, recoilX - 5 * camera.zoom); // Back right (narrow base)
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-
-                        ctx.restore();
-                    }
+                    renderGun(drawable.data, drawable.index, player, size, sizeMultiplier);
                 } else if (drawable.type === 'base') {
-                    // Draw base shape (simple or blade tanks)
-                    const config = drawable.data;
-                    
-                    if (!config) {
-                        // Fallback: simple circle
-                        const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
-                        ctx.fillStyle = baseColor;
-                        ctx.strokeStyle = darkenColor(baseColor, 0.3);
-                        ctx.lineWidth = 3 * camera.zoom;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, size, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                    } else if (config.baseShape === 'blade' || config.baseShape === 'blade_twin') {
-                        // Blade tank (like Smasher)
-                        const bladeShape = config.bladeShape || 'square';
-                        const bladeCount = config.bladeCount || 1;
-                        const bladeSize = config.bladeSize || 1.35;
-                        
-                        let baseSides = 4;
-                        if (bladeShape === 'triangle') baseSides = 3;
-                        else if (bladeShape === 'square') baseSides = 4;
-                        else if (bladeShape === 'pentagon') baseSides = 5;
-                        else if (bladeShape === 'hexagon') baseSides = 6;
-                        else if (bladeShape === 'octagon') baseSides = 8;
-                        
-                        // Draw multiple blade layers
-                        for (let layer = 0; layer < bladeCount; layer++) {
-                            const layerRotation = (layer / bladeCount) * (Math.PI / baseSides);
-                            const layerSize = size * bladeSize * (1 - layer * 0.15);
-                            
-                            ctx.save();
-                            ctx.rotate(layerRotation);
-                            
-                            ctx.fillStyle = '#999';
-                            ctx.strokeStyle = '#404040';
-                            ctx.lineWidth = 3 * camera.zoom;
-                            ctx.beginPath();
-                            for (let i = 0; i < baseSides; i++) {
-                                const angle = (i / baseSides) * Math.PI * 2 - Math.PI / 2;
-                                const x = Math.cos(angle) * layerSize;
-                                const y = Math.sin(angle) * layerSize;
-                                if (i === 0) ctx.moveTo(x, y);
-                                else ctx.lineTo(x, y);
-                            }
-                            ctx.closePath();
-                            ctx.fill();
-                            ctx.stroke();
-                            
-                            ctx.restore();
-                        }
-
-                        // Draw base circles
-                        const baseLayers = config.baseLayers || 1;
-                        const circleColors = player.id === playerId ? 
-                            ['#00B2E1', '#0099C9', '#0080B0'] : 
-                            ['#F14E54', '#D9444A', '#C03A40'];
-                        
-                        if (Array.isArray(baseLayers)) {
-                            baseLayers.forEach((layer, i) => {
-                                const layerSize = size * (layer.size || 1.0);
-                                const layerColor = layer.color || circleColors[i % circleColors.length];
-                                const sides = layer.sides || 0;
-                                const stretch = layer.stretch || { x: 1, y: 1 };
-                                const position = layer.position || { x: 0, y: 0 };
-                                
-                                ctx.save();
-                                ctx.translate(position.x * camera.zoom, position.y * camera.zoom);
-                                ctx.scale(stretch.x, stretch.y);
-                                
-                                ctx.fillStyle = layerColor;
-                                ctx.strokeStyle = darkenColor(layerColor, 0.3);
-                                ctx.lineWidth = 3 * camera.zoom;
-                                
-                                if (sides === 0) {
-                                    ctx.beginPath();
-                                    ctx.arc(0, 0, layerSize, 0, Math.PI * 2);
-                                    ctx.fill();
-                                    ctx.stroke();
-                                } else {
-                                    ctx.beginPath();
-                                    for (let i = 0; i < sides; i++) {
-                                        const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                                        const x = Math.cos(angle) * layerSize;
-                                        const y = Math.sin(angle) * layerSize;
-                                        if (i === 0) ctx.moveTo(x, y);
-                                        else ctx.lineTo(x, y);
-                                    }
-                                    ctx.closePath();
-                                    ctx.fill();
-                                    ctx.stroke();
-                                }
-                                
-                                ctx.restore();
-                            });
-                        } else if (typeof baseLayers === 'number') {
-                            let circleSizes;
-                            if (baseLayers === 2) {
-                                circleSizes = [size * 1.1, size * 0.75];
-                            } else if (baseLayers >= 3) {
-                                circleSizes = [size * 1.1, size * 0.85, size * 0.6];
-                            } else {
-                                circleSizes = [size * 1.1, size * 0.85, size * 0.6];
-                            }
-                            
-                            circleSizes.slice(0, Math.max(baseLayers, 1)).forEach((circleSize, i) => {
-                                const color = circleColors[i % circleColors.length];
-                                ctx.fillStyle = color;
-                                ctx.strokeStyle = darkenColor(color, 0.3);
-                                ctx.lineWidth = 3 * camera.zoom;
-                                ctx.beginPath();
-                                ctx.arc(0, 0, circleSize, 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.stroke();
-                            });
-                        } else {
-                            const color = circleColors[0];
-                            ctx.fillStyle = color;
-                            ctx.strokeStyle = darkenColor(color, 0.3);
-                            ctx.lineWidth = 3 * camera.zoom;
-                            ctx.beginPath();
-                            ctx.arc(0, 0, size * 1.1, 0, Math.PI * 2);
-                            ctx.fill();
-                            ctx.stroke();
-                        }
-                    } else if (typeof config.baseShape === 'number' && config.baseShape >= 3) {
-                        // Simple polygon base
-                        const sides = config.baseShape;
-                        const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
-                        ctx.fillStyle = baseColor;
-                        ctx.strokeStyle = darkenColor(baseColor, 0.3);
-                        ctx.lineWidth = 3 * camera.zoom;
-                        ctx.beginPath();
-                        for (let i = 0; i < sides; i++) {
-                            const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                            const x = Math.cos(angle) * size;
-                            const y = Math.sin(angle) * size;
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-                    } else {
-                        // Default circular base
-                        const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
-                        ctx.fillStyle = baseColor;
-                        ctx.strokeStyle = darkenColor(baseColor, 0.3);
-                        ctx.lineWidth = 3 * camera.zoom;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, size, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                    }
+                    renderBase(drawable.data, player, size, sizeMultiplier);
                 } else if (drawable.type === 'baseBlock') {
-                    // Draw custom base block (advanced mode)
-                    const baseBlock = drawable.data;
-                    ctx.save();
-                    ctx.translate(baseBlock.x * camera.zoom * sizeMultiplier, baseBlock.y * camera.zoom * sizeMultiplier);
-                    ctx.rotate((baseBlock.rotation || 0) * Math.PI / 180);
-                    
-                    const blockColor = baseBlock.color || (player.id === playerId ? '#00B2E1' : '#F14E54');
-                    ctx.fillStyle = blockColor;
-                    ctx.strokeStyle = darkenColor(blockColor, 0.3);
-                    ctx.lineWidth = 3 * camera.zoom;
-                    
-                    if (baseBlock.shape === 0) {
-                        const radius = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                    } else if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
-                        const totalWidth = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
-                        const totalHeight = (baseBlock.size + (baseBlock.height || 0)) * camera.zoom * sizeMultiplier;
-                        ctx.beginPath();
-                        ctx.rect(-totalWidth/2, -totalHeight/2, totalWidth, totalHeight);
-                        ctx.fill();
-                        ctx.stroke();
-                    } else {
-                        const sides = baseBlock.shape;
-                        const radiusX = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
-                        const radiusY = (baseBlock.size + (baseBlock.height || 0)) * camera.zoom * sizeMultiplier;
-                        ctx.beginPath();
-                        for (let i = 0; i < sides; i++) {
-                            const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                            const x = Math.cos(angle) * radiusX;
-                            const y = Math.sin(angle) * radiusY;
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-                    }
-                    
-                    ctx.restore();
+                    renderBaseBlock(drawable.data, player, size, sizeMultiplier);
                 } else if (drawable.type === 'blade') {
-                    // Draw blade
-                    const blade = drawable.data;
-                    ctx.save();
-                    ctx.translate(blade.x * camera.zoom * sizeMultiplier, blade.y * camera.zoom * sizeMultiplier);
-                    ctx.rotate((blade.rotation || 0) * Math.PI / 180);
-                    
-                    const bladeSize = blade.size * size;
-                    const sides = blade.shape;
-                    
-                    ctx.fillStyle = blade.color || '#999999';
-                    ctx.strokeStyle = darkenColor(blade.color || '#999999', 0.3);
-                    ctx.lineWidth = 3 * camera.zoom;
-                    
-                    ctx.beginPath();
-                    for (let i = 0; i < sides; i++) {
-                        const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                        const x = Math.cos(angle) * bladeSize;
-                        const y = Math.sin(angle) * bladeSize;
-                        if (i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    }
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                    
-                    ctx.restore();
+                    renderBlade(drawable.data, player, size, sizeMultiplier);
                 }
             });
 
             ctx.restore();
 
-            // Name and health bar
+            // Name and health bar (outside rotation)
             ctx.font = `${14 * camera.zoom}px Arial`;
             ctx.textAlign = 'center';
             ctx.fillStyle = 'white';
@@ -2576,6 +2266,290 @@
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 1;
             ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
+        }
+        
+        // Helper function to render a gun
+        function renderGun(gun, gunIndex, player, size, sizeMultiplier) {
+            const recoilOffset = (player.gunRecoils && player.gunRecoils[`gun_${gunIndex}`]) || 0;
+            
+            const gunAngle = gun.angle * Math.PI / 180;
+            const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+            const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
+            const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
+            const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
+
+            ctx.save();
+            // Position gun on perimeter at 'angle'
+            ctx.rotate(gunAngle);
+            const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
+            const gunDistance = baseRadius * camera.zoom;
+            ctx.translate(gunDistance, 0);
+            ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
+            ctx.rotate(blockRotation + selfAngle);
+            ctx.translate(offsetX, offsetY);
+
+            const gunColor = gun.color || '#999';
+            ctx.fillStyle = gunColor;
+            ctx.strokeStyle = '#404040';
+            ctx.lineWidth = 2 * camera.zoom;
+            
+            const recoilY = -recoilOffset * camera.zoom * sizeMultiplier;
+            
+            if (gun.type === 'normal') {
+                const gunLength = (gun.length || 1) * 20 * camera.zoom * sizeMultiplier;
+                const gunWidth = (gun.size || 1) * 20 * camera.zoom * sizeMultiplier;
+                
+                ctx.fillRect(-gunWidth / 2, -5 * camera.zoom + recoilY, gunWidth, gunLength);
+                ctx.strokeRect(-gunWidth / 2, -5 * camera.zoom + recoilY, gunWidth, gunLength);
+            } else if (gun.type === 'trap') {
+                const baseLength = 20 * camera.zoom * sizeMultiplier;
+                const baseHeight = 20 * camera.zoom * sizeMultiplier;
+                const flatRectWidth = 30 * camera.zoom * sizeMultiplier;
+                const flatRectHeight = 8 * camera.zoom * sizeMultiplier;
+                
+                // Base rectangle (vertical part of T)
+                ctx.fillRect(-baseHeight / 2, -5 * camera.zoom * sizeMultiplier + recoilY, baseHeight, baseLength);
+                ctx.strokeRect(-baseHeight / 2, -5 * camera.zoom * sizeMultiplier + recoilY, baseHeight, baseLength);
+                
+                // Front flat rectangle (horizontal part of T)
+                ctx.fillRect(-flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength + recoilY, flatRectWidth, flatRectHeight);
+                ctx.strokeRect(-flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength + recoilY, flatRectWidth, flatRectHeight);
+            } else if (gun.type === 'minion') {
+                const length = 25 * camera.zoom * sizeMultiplier;
+                const baseWidth = 8 * camera.zoom * sizeMultiplier;
+                const tipWidth = 18 * camera.zoom * sizeMultiplier;
+                
+                ctx.beginPath();
+                ctx.moveTo(-baseWidth / 2, -5 * camera.zoom + recoilY);
+                ctx.lineTo(-tipWidth / 2, -5 * camera.zoom + length + recoilY);
+                ctx.lineTo(tipWidth / 2, -5 * camera.zoom + length + recoilY);
+                ctx.lineTo(baseWidth / 2, -5 * camera.zoom + recoilY);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+        
+        // Helper function to render base shape
+        function renderBase(tankConfig, player, size, sizeMultiplier) {
+            if (tankConfig.baseShape === 'blade' || tankConfig.baseShape === 'blade_twin') {
+                // Blade tank (like Smasher)
+                const bladeShape = tankConfig.bladeShape || 'square';
+                const bladeCount = tankConfig.bladeCount || 1;
+                const bladeSize = tankConfig.bladeSize || 1.35;
+                
+                let baseSides = 4;
+                if (bladeShape === 'triangle') baseSides = 3;
+                else if (bladeShape === 'square') baseSides = 4;
+                else if (bladeShape === 'pentagon') baseSides = 5;
+                else if (bladeShape === 'hexagon') baseSides = 6;
+                else if (bladeShape === 'octagon') baseSides = 8;
+                
+                // Draw multiple blade layers
+                for (let layer = 0; layer < bladeCount; layer++) {
+                    const layerRotation = (layer / bladeCount) * (Math.PI / baseSides);
+                    const layerSize = size * bladeSize * (1 - layer * 0.15);
+                    
+                    ctx.save();
+                    ctx.rotate(layerRotation);
+                    
+                    ctx.fillStyle = '#999';
+                    ctx.strokeStyle = '#404040';
+                    ctx.lineWidth = 3 * camera.zoom;
+                    ctx.beginPath();
+                    for (let i = 0; i < baseSides; i++) {
+                        const angle = (i / baseSides) * Math.PI * 2 - Math.PI / 2;
+                        const x = Math.cos(angle) * layerSize;
+                        const y = Math.sin(angle) * layerSize;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+
+                // Draw center circles
+                const baseLayers = tankConfig.baseLayers || 1;
+                const circleColors = player.id === playerId ? 
+                    ['#00B2E1', '#0099C9', '#0080B0'] : 
+                    ['#F14E54', '#D9444A', '#C03A40'];
+                
+                if (Array.isArray(baseLayers)) {
+                    baseLayers.forEach((layer, i) => {
+                        const layerSize = size * (layer.size || 1.0);
+                        const layerColor = layer.color || circleColors[i % circleColors.length];
+                        const sides = layer.sides || 0;
+                        const stretch = layer.stretch || { x: 1, y: 1 };
+                        const position = layer.position || { x: 0, y: 0 };
+                        
+                        ctx.save();
+                        ctx.translate(position.x * camera.zoom, position.y * camera.zoom);
+                        ctx.scale(stretch.x, stretch.y);
+                        
+                        ctx.fillStyle = layerColor;
+                        ctx.strokeStyle = darkenColor(layerColor, 0.3);
+                        ctx.lineWidth = 3 * camera.zoom;
+                        
+                        if (sides === 0) {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, layerSize, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.stroke();
+                        } else {
+                            ctx.beginPath();
+                            for (let i = 0; i < sides; i++) {
+                                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                                const x = Math.cos(angle) * layerSize;
+                                const y = Math.sin(angle) * layerSize;
+                                if (i === 0) ctx.moveTo(x, y);
+                                else ctx.lineTo(x, y);
+                            }
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+                        }
+                        
+                        ctx.restore();
+                    });
+                } else if (typeof baseLayers === 'number') {
+                    let circleSizes;
+                    if (baseLayers === 2) {
+                        circleSizes = [size * 1.1, size * 0.75];
+                    } else if (baseLayers >= 3) {
+                        circleSizes = [size * 1.1, size * 0.85, size * 0.6];
+                    } else {
+                        circleSizes = [size * 1.1, size * 0.85, size * 0.6];
+                    }
+                    
+                    circleSizes.slice(0, Math.max(baseLayers, 1)).forEach((circleSize, i) => {
+                        const color = circleColors[i % circleColors.length];
+                        ctx.fillStyle = color;
+                        ctx.strokeStyle = darkenColor(color, 0.3);
+                        ctx.lineWidth = 3 * camera.zoom;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, circleSize, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+                } else {
+                    const color = circleColors[0];
+                    ctx.fillStyle = color;
+                    ctx.strokeStyle = darkenColor(color, 0.3);
+                    ctx.lineWidth = 3 * camera.zoom;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, size * 1.1, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            } else if (typeof tankConfig.baseShape === 'number' && tankConfig.baseShape >= 3) {
+                // Polygon base
+                const sides = tankConfig.baseShape;
+                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                ctx.fillStyle = baseColor;
+                ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * size;
+                    const y = Math.sin(angle) * size;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else if (tankConfig.baseShape !== 'advanced') {
+                // Default circular base
+                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                ctx.fillStyle = baseColor;
+                ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.beginPath();
+                ctx.arc(0, 0, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        
+        // Helper function to render a base block
+        function renderBaseBlock(baseBlock, player, size, sizeMultiplier) {
+            ctx.save();
+            ctx.translate(baseBlock.x * camera.zoom * sizeMultiplier, baseBlock.y * camera.zoom * sizeMultiplier);
+            ctx.rotate((baseBlock.rotation || 0) * Math.PI / 180);
+            
+            const blockColor = baseBlock.color || (player.id === playerId ? '#00B2E1' : '#F14E54');
+            ctx.fillStyle = blockColor;
+            ctx.strokeStyle = darkenColor(blockColor, 0.3);
+            ctx.lineWidth = 3 * camera.zoom;
+            
+            if (baseBlock.shape === 0) {
+                // Circle
+                const radius = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
+                // Rectangle
+                const totalWidth = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
+                const totalHeight = (baseBlock.size + (baseBlock.height || 0)) * camera.zoom * sizeMultiplier;
+                ctx.beginPath();
+                ctx.rect(-totalWidth/2, -totalHeight/2, totalWidth, totalHeight);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                // Polygon
+                const sides = baseBlock.shape;
+                const radiusX = (baseBlock.size + (baseBlock.width || 0)) * camera.zoom * sizeMultiplier;
+                const radiusY = (baseBlock.size + (baseBlock.height || 0)) * camera.zoom * sizeMultiplier;
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * radiusX;
+                    const y = Math.sin(angle) * radiusY;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+        
+        // Helper function to render a blade
+        function renderBlade(blade, player, size, sizeMultiplier) {
+            ctx.save();
+            ctx.translate(blade.x * camera.zoom * sizeMultiplier, blade.y * camera.zoom * sizeMultiplier);
+            ctx.rotate((blade.rotation || 0) * Math.PI / 180);
+            
+            const bladeSize = blade.size * size;
+            const sides = blade.shape;
+            
+            ctx.fillStyle = blade.color || '#999999';
+            ctx.strokeStyle = darkenColor(blade.color || '#999999', 0.3);
+            ctx.lineWidth = 3 * camera.zoom;
+            
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                const x = Math.cos(angle) * bladeSize;
+                const y = Math.sin(angle) * bladeSize;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.restore();
         }
 
         function drawBullet(bullet) {
@@ -3673,14 +3647,14 @@
                     // Draw tank body based on base mode
                     const baseColor = '#00b2e1';
                     ctx.fillStyle = baseColor;
+                    ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                    ctx.lineWidth = 3;
                     
                     if (editorState.baseMode === 'none') {
                         // Circle base
                         ctx.beginPath();
                         ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
                         ctx.fill();
-                        ctx.strokeStyle = darkenColor(baseColor, 0.3);
-                        ctx.lineWidth = 3;
                         ctx.stroke();
                     } else if (editorState.baseMode === 'simple') {
                         // Polygon base
@@ -3695,8 +3669,6 @@
                         }
                         ctx.closePath();
                         ctx.fill();
-                        ctx.strokeStyle = darkenColor(baseColor, 0.3);
-                        ctx.lineWidth = 3;
                         ctx.stroke();
                     } else if (editorState.baseMode === 'advanced') {
                         // Advanced mode - base blocks render separately, no default base
@@ -3705,7 +3677,8 @@
                             ctx.beginPath();
                             ctx.arc(0, 0, tankSize, 0, Math.PI * 2);
                             ctx.fill();
-                            ctx.strokeStyle = darkenColor(baseColor, 0.3);
+                            ctx.stroke();
+                            ctx.strokeStyle = '#333';
                             ctx.lineWidth = 3;
                             ctx.stroke();
                         }
@@ -3716,16 +3689,14 @@
                     ctx.translate(baseBlock.x, baseBlock.y);
                     ctx.rotate(baseBlock.rotation * Math.PI / 180);
                     
-                    const blockColor = baseBlock.color || '#00b2e1';
-                    ctx.fillStyle = blockColor;
-                    ctx.strokeStyle = darkenColor(blockColor, 0.3);
-                    ctx.lineWidth = 3;
-                    
+                    ctx.fillStyle = baseBlock.color || '#00b2e1';
                     if (baseBlock.shape === 0) {
                         // Circle
                         ctx.beginPath();
                         ctx.arc(0, 0, baseBlock.size + (baseBlock.width || 0), 0, Math.PI * 2);
                         ctx.fill();
+                        ctx.strokeStyle = darkenColor(baseBlock.color || '#00b2e1', 0.3);
+                        ctx.lineWidth = 3;
                         ctx.stroke();
                     } else if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
                         // Rectangle (when shape is 4 and width/height are set)
@@ -3734,6 +3705,8 @@
                         ctx.beginPath();
                         ctx.rect(-totalWidth/2, -totalHeight/2, totalWidth, totalHeight);
                         ctx.fill();
+                        ctx.strokeStyle = darkenColor(baseBlock.color || '#00b2e1', 0.3);
+                        ctx.lineWidth = 3;
                         ctx.stroke();
                     } else {
                         // Polygon
@@ -3750,6 +3723,8 @@
                         }
                         ctx.closePath();
                         ctx.fill();
+                        ctx.strokeStyle = darkenColor(baseBlock.color || '#00b2e1', 0.3);
+                        ctx.lineWidth = 3;
                         ctx.stroke();
                     }
                     ctx.restore();
@@ -3762,11 +3737,7 @@
                     const sides = blade.shape;
                     const bladeSize = blade.size * 20;
                     
-                    const bladeColor = blade.color || '#999999';
-                    ctx.fillStyle = bladeColor;
-                    ctx.strokeStyle = darkenColor(bladeColor, 0.3);
-                    ctx.lineWidth = 3;
-                    
+                    ctx.fillStyle = blade.color || '#999999';
                     ctx.beginPath();
                     for (let j = 0; j <= sides; j++) {
                         const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
@@ -3777,67 +3748,68 @@
                     }
                     ctx.closePath();
                     ctx.fill();
+                    
+                    ctx.strokeStyle = darkenColor(blade.color || '#999999', 0.3);
+                    ctx.lineWidth = 3;
                     ctx.stroke();
                     
                     ctx.restore();
                 } else if (drawable.type === 'gun') {
                     const block = drawable.data;
                     const tankSize = 40;
+                    const editorSizeMultiplier = 1; // Editor uses 1:1 scale
+                    
                     ctx.save();
                     
                     const angle = (block.props.angle || 0) * Math.PI / 180;
                     const blockRotation = (block.props.blockRotation || 0) * Math.PI / 180;
                     const selfAngle = (block.props.selfAngle || 0) * Math.PI / 180;
                     
-                    // Position gun on perimeter at 'angle' - use base radius calculation
+                    // Position gun on perimeter at 'angle'
                     ctx.rotate(angle);
                     const baseRadius = getEditorBaseRadius(angle);
-                    ctx.translate(baseRadius, 0); // Move to actual perimeter
-                    ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
+                    ctx.translate(baseRadius, 0);
+                    ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
+                    ctx.rotate(blockRotation + selfAngle);
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
-                    if (block.type === 'normal' || block.type === 'trap') {
-                        // Normal gun or trap launcher - render same as game
-                        const sizeMultiplier = 1; // Editor doesn't use camera zoom, so use 1
-                        const gunLength = (block.props.length || 1) * 20 * sizeMultiplier;
-                        const gunWidth = (block.props.size || 1) * 20 * sizeMultiplier;
+                    const gunColor = block.props.color || '#999';
+                    ctx.fillStyle = gunColor;
+                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#404040';
+                    ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
+                    
+                    if (block.type === 'normal') {
+                        const gunLength = (block.props.length || 1) * 20;
+                        const gunWidth = (block.props.size || 1) * 20;
                         
-                        const gunColor = block.props.color || '#999999';
-                        ctx.fillStyle = gunColor;
-                        ctx.fillRect(-gunWidth / 2, -5 * sizeMultiplier, gunWidth, gunLength);
+                        ctx.fillRect(-gunWidth / 2, -5, gunWidth, gunLength);
+                        ctx.strokeRect(-gunWidth / 2, -5, gunWidth, gunLength);
+                    } else if (block.type === 'trap') {
+                        const baseLength = 20;
+                        const baseHeight = 20;
+                        const flatRectWidth = 30;
+                        const flatRectHeight = 8;
                         
-                        ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#404040';
-                        ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                        ctx.strokeRect(-gunWidth / 2, -5 * sizeMultiplier, gunWidth, gunLength);
+                        // Base rectangle (vertical part of T)
+                        ctx.fillRect(-baseHeight / 2, -5, baseHeight, baseLength);
+                        ctx.strokeRect(-baseHeight / 2, -5, baseHeight, baseLength);
                         
+                        // Front flat rectangle (horizontal part of T)
+                        ctx.fillRect(-flatRectWidth / 2, -5 + baseLength, flatRectWidth, flatRectHeight);
+                        ctx.strokeRect(-flatRectWidth / 2, -5 + baseLength, flatRectWidth, flatRectHeight);
                     } else if (block.type === 'minion') {
-                        // Minion spawner - render same as game
-                        const sizeMultiplier = 1;
-                        const length = 25 * sizeMultiplier;
-                        const baseWidth = 8 * sizeMultiplier;
-                        const tipWidth = 18 * sizeMultiplier;
-                        
-                        const gunColor = block.props.color || '#ff9500';
-                        ctx.fillStyle = gunColor;
+                        const length = 25;
+                        const baseWidth = 8;
+                        const tipWidth = 18;
                         
                         ctx.beginPath();
-                        ctx.moveTo(-baseWidth / 2, -5); // Back left (narrow base)
-                        ctx.lineTo(-tipWidth / 2, -5 + length); // Front left (wide tip)
-                        ctx.lineTo(tipWidth / 2, -5 + length); // Front right (wide tip)
-                        ctx.lineTo(baseWidth / 2, -5); // Back right (narrow base)
+                        ctx.moveTo(-baseWidth / 2, -5);
+                        ctx.lineTo(-tipWidth / 2, -5 + length);
+                        ctx.lineTo(tipWidth / 2, -5 + length);
+                        ctx.lineTo(baseWidth / 2, -5);
                         ctx.closePath();
                         ctx.fill();
-                        
-                        ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#404040';
-                        ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
                         ctx.stroke();
-                        
-                        // Draw count indicator
-                        ctx.fillStyle = 'white';
-                        ctx.font = '10px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(block.props.count || 4, 0, 20);
                     }
                     
                     ctx.restore();
