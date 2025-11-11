@@ -2964,7 +2964,8 @@
             baseMode: 'none', // none, simple, advanced
             baseSides: 4, // for simple mode
             baseBlocks: [], // for advanced mode: {id, shape, size, x, y, width, height, rotation, layer}
-            blades: [] // list of blades: {id, shape (sides), size, x, y, rotation, layer}
+            blades: [], // list of blades: {id, shape (sides), size, x, y, rotation, layer}
+            debugPerimeter: null // {angle, timestamp} for showing perimeter debug
         };
 
         const blockTypes = {
@@ -3287,6 +3288,14 @@
                             block.props[key] = e.target.value;
                         } else {
                             block.props[key] = parseFloat(e.target.value) || 0;
+                            
+                            // Trigger debug visualization when angle changes
+                            if (key === 'angle') {
+                                editorState.debugPerimeter = {
+                                    angle: block.props.angle * Math.PI / 180,
+                                    timestamp: Date.now()
+                                };
+                            }
                         }
                         renderEditorCanvas();
                     });
@@ -3964,6 +3973,59 @@
             });
 
             ctx.restore();
+            
+            // Debug: Show perimeter calculation for selected gun or when angle changes
+            if (editorState.debugPerimeter && Date.now() - editorState.debugPerimeter.timestamp < 3000) {
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.scale(editorState.zoom, editorState.zoom);
+                ctx.rotate(editorState.rotation);
+                
+                // Draw red circles at various angles around the perimeter
+                const numPoints = 72; // Every 5 degrees
+                ctx.strokeStyle = 'red';
+                ctx.fillStyle = 'red';
+                ctx.lineWidth = 2;
+                
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    const { radius } = getEditorBaseRadiusAndFace(angle);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Highlight the specific angle that was changed
+                if (editorState.debugPerimeter.angle !== undefined) {
+                    const angle = editorState.debugPerimeter.angle;
+                    const { radius, faceAngle } = getEditorBaseRadiusAndFace(angle);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    
+                    // Draw larger circle at the specific point
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = 'yellow';
+                    ctx.fill();
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Draw line showing face direction
+                    const faceLen = 15;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + Math.cos(faceAngle) * faceLen, y + Math.sin(faceAngle) * faceLen);
+                    ctx.strokeStyle = 'lime';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
             
             // Display zoom and rotation info in top-left corner
             ctx.save();
