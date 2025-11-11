@@ -3476,7 +3476,7 @@
 
         // Calculate base radius at angle for editor preview
         function getEditorBaseRadius(angle) {
-            const tankSize = 40;
+            const tankSize = 20; // Match in-game base tank size
             
             if (editorState.baseMode === 'none') {
                 // Circle - constant radius
@@ -3609,7 +3609,7 @@
 
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
-            const tankSize = 40;
+            const tankSize = 20; // Match in-game base tank size
 
             ctx.save();
             ctx.translate(centerX, centerY);
@@ -3755,7 +3755,6 @@
                     ctx.restore();
                 } else if (drawable.type === 'gun') {
                     const block = drawable.data;
-                    const tankSize = 40;
                     const editorSizeMultiplier = 1; // Editor uses 1:1 scale
                     
                     ctx.save();
