@@ -521,7 +521,9 @@ class Player extends GameObject {
     getMaxHealth() {
         const tankConfig = TANK_TYPES[this.tankType];
         const healthBonus = tankConfig.healthBonus || 1;
-        return (this.maxHealth + (this.stats.maxHealth * 20)) * healthBonus;
+        // Level-based health: higher level = more health (10 HP per level)
+        const levelBonus = this.level * 10;
+        return ((this.maxHealth + (this.stats.maxHealth * 20)) * healthBonus + levelBonus) * 3; // 3x health multiplier
     }
 
     getRegenRate() {
@@ -531,15 +533,20 @@ class Player extends GameObject {
     getBodyDamage() {
         const tankConfig = TANK_TYPES[this.tankType];
         const bonus = tankConfig.bodyDamageBonus || 1;
-        return (10 + this.stats.bodyDamage * 2) * bonus; // Reduced from 5 to 2
+        return (10 + this.stats.bodyDamage * 2) * bonus * 2; // 2x faster body damage
     }
 
     getBulletSpeed() {
-        return 6 + this.stats.bulletSpeed * 0.6; // Reduced from 8 + 0.8 to 6 + 0.6
+        return 6 + this.stats.bulletSpeed * 0.6;
     }
 
     getBulletDamage() {
         return 20 + this.stats.bulletDamage * 5;
+    }
+    
+    // Damage modifier for bullets hitting players (reduced)
+    getBulletDamageToPlayers() {
+        return this.getBulletDamage() * 0.5; // 50% damage to players
     }
 
     getBulletHealth() {
@@ -1193,7 +1200,9 @@ function gameLoop() {
                 // Player hitbox is 85% of visual size
                 if (checkCollision(bullet, player, bullet.size, player.size * 0.85)) {
                     const owner = players.get(bullet.owner);
-                    const destroyed = player.takeDamage(bullet.damage, {
+                    // Bullets deal 50% damage to players
+                    const damageToPlayer = bullet.damage * 0.5;
+                    const destroyed = player.takeDamage(damageToPlayer, {
                         type: 'player',
                         name: owner ? owner.name : 'Unknown',
                         tankType: owner ? owner.tankType : 'BASIC'
@@ -1731,13 +1740,33 @@ io.on('connection', (socket) => {
             player.x = spawnPos.x;
             player.y = spawnPos.y;
             player.health = player.getMaxHealth();
-            player.score = 0;
+            player.score = 0; // Score always resets
             player.vx = 0;
             player.vy = 0;
             player.damageHistory = [];
-            player.level = 0; // Start at level 0
-            player.xp = 0;
+            
+            // Keep 1/3 of XP (rounded down)
+            const keptXP = Math.floor(player.xp / 3);
+            player.xp = keptXP;
+            player.level = 0; // Reset to level 0
             player.upgradePoints = 0; // Remove all upgrade points
+            
+            // Auto-level up with kept XP
+            while (player.xp >= player.level * 100) {
+                const requiredXP = player.level * 100;
+                player.xp -= requiredXP;
+                player.level++;
+                player.updateSize();
+                
+                // Award upgrade points
+                if (player.level <= 5) {
+                    player.upgradePoints += 1;
+                } else if ((player.level - 5) % 2 === 1) {
+                    player.upgradePoints += 1;
+                }
+            }
+            
+            // Reset to basic tank and clear stats
             player.tankType = 'BASIC';
             player.stats = {
                 healthRegen: 0,
@@ -1749,6 +1778,8 @@ io.on('connection', (socket) => {
                 reload: 0,
                 movementSpeed: 0
             };
+            
+            console.log(`[${new Date().toLocaleTimeString()}] 🔄 "${player.name}" respawned with ${keptXP} XP (level ${player.level})`);
         }
     });
 
