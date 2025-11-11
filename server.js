@@ -866,36 +866,49 @@ function getBaseRadiusAndFaceAtAngle(player, angle) {
             return { radius: player.size, faceAngle: angle };
         } else {
             // Regular polygon - calculate distance to edge at this angle
-            // The polygon has vertices at distance player.size from center (circumscribed)
             const anglePerSide = (Math.PI * 2) / sides;
             
-            // Polygon is drawn with first vertex at -PI/2 (straight up in negative Y direction)
-            // Normalize angle to [0, 2π)
-            let normalizedAngle = angle % (Math.PI * 2);
-            if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+            // Cast a ray from origin at 'angle' and find intersection with polygon edges
+            const rayDx = Math.cos(angle);
+            const rayDy = Math.sin(angle);
             
-            // Adjust for the -PI/2 rotation offset
-            let adjustedAngle = normalizedAngle + Math.PI / 2;
-            if (adjustedAngle >= Math.PI * 2) adjustedAngle -= Math.PI * 2;
+            let minT = Infinity;
+            let intersectEdgeIndex = 0;
             
-            // Find which edge (edges are numbered by their first vertex)
-            const sideIndex = Math.floor(adjustedAngle / anglePerSide) % sides;
+            // Check all edges
+            for (let i = 0; i < sides; i++) {
+                // Get the two vertices of this edge
+                const a1 = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                const a2 = ((i + 1) / sides) * Math.PI * 2 - Math.PI / 2;
+                
+                const v1x = Math.cos(a1) * player.size;
+                const v1y = Math.sin(a1) * player.size;
+                const v2x = Math.cos(a2) * player.size;
+                const v2y = Math.sin(a2) * player.size;
+                
+                // Edge direction
+                const edgeDx = v2x - v1x;
+                const edgeDy = v2y - v1y;
+                
+                // Solve: origin + t * ray = v1 + s * edge
+                const denom = rayDx * edgeDy - rayDy * edgeDx;
+                if (Math.abs(denom) < 0.0001) continue; // Parallel
+                
+                const s = (rayDx * v1y - rayDy * v1x) / denom;
+                const t = (v1x * edgeDy - v1y * edgeDx) / denom;
+                
+                // Check if intersection is on the edge (0 <= s <= 1) and in front (t > 0)
+                if (s >= 0 && s <= 1 && t > 0 && t < minT) {
+                    minT = t;
+                    intersectEdgeIndex = i;
+                }
+            }
             
-            // Angle of the center of this edge (perpendicular from origin hits edge here)
-            const edgeCenterAngle = (sideIndex + 0.5) * anglePerSide - Math.PI / 2;
+            const radius = minT < Infinity ? minT : player.size;
             
-            // Calculate the perpendicular distance from origin to the edge (apothem)
-            const apothem = player.size * Math.cos(anglePerSide / 2);
-            
-            // Calculate intersection distance along the ray
-            const angleDiff = angle - edgeCenterAngle;
-            const cosAngleDiff = Math.cos(angleDiff);
-            
-            // Distance along ray = apothem / cos(angle difference from perpendicular)
-            const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
-            
-            // Face angle is the outward normal to the edge
-            const faceAngle = edgeCenterAngle;
+            // Calculate face angle (perpendicular to the edge)
+            const edgeMidAngle = (intersectEdgeIndex + 0.5) / sides * Math.PI * 2 - Math.PI / 2;
+            const faceAngle = edgeMidAngle;
             
             return { radius, faceAngle };
         }
