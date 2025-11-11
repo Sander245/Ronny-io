@@ -1011,7 +1011,6 @@ function gameLoop() {
                         
                         const bullet = new Bullet(startX, startY, actualAngle, player.id, 
                                                  bulletDamage, bulletSpeed, bulletSize, bulletHealth);
-                        bullet.knockback = gun.knockback || 0; // Store knockback on bullet
                         bullets.set(bullet.id, bullet);
                         
                         // Set gun recoil animation (10 pixels pushback)
@@ -1032,7 +1031,6 @@ function gameLoop() {
                         
                         if (playerTraps.length < maxTraps) {
                             const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize, shootDistance, friction);
-                            trap.knockback = gun.knockback || 0;
                             traps.set(trap.id, trap);
                             player.gunRecoils[gunKey] = 10; // Set recoil animation
                         } else {
@@ -1040,9 +1038,15 @@ function gameLoop() {
                             const oldest = playerTraps[0];
                             traps.delete(oldest.id);
                             const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize, shootDistance, friction);
-                            trap.knockback = gun.knockback || 0;
                             traps.set(trap.id, trap);
                             player.gunRecoils[gunKey] = 10; // Set recoil animation
+                        }
+                        
+                        // Recoil from shooting
+                        const recoil = gun.recoil || 0;
+                        if (recoil > 0) {
+                            player.vx -= Math.cos(gunAngle) * recoil;
+                            player.vy -= Math.sin(gunAngle) * recoil;
                         }
                     } else if (gun.type === 'minion') {
                         const count = gun.count || 4;
@@ -1057,9 +1061,15 @@ function gameLoop() {
                             const minion = new Minion(startX, startY, player.id, 
                                                      minionDamage, minionSpeed, minionSize, 
                                                      minionHealth, player.stats.bulletPenetration);
-                            minion.knockback = gun.knockback || 0;
                             minions.set(minion.id, minion);
                             player.gunRecoils[gunKey] = 10; // Set recoil animation
+                        }
+                        
+                        // Recoil from shooting
+                        const recoil = gun.recoil || 0;
+                        if (recoil > 0) {
+                            player.vx -= Math.cos(gunAngle) * recoil;
+                            player.vy -= Math.sin(gunAngle) * recoil;
                         }
                     }
                     
@@ -1245,12 +1255,6 @@ function gameLoop() {
                     });
                     bullet.health -= 1;
                     
-                    // Apply knockback
-                    if (bullet.knockback && bullet.knockback > 0) {
-                        player.vx += Math.cos(bullet.angle) * bullet.knockback;
-                        player.vy += Math.sin(bullet.angle) * bullet.knockback;
-                    }
-                    
                     if (destroyed) {
                         // Send death info to killed player
                         const killedBy = [];
@@ -1354,17 +1358,6 @@ function gameLoop() {
                         tankType: owner ? owner.tankType : 'BASIC'
                     });
                     trap.takeDamage(10);
-                    
-                    // Apply knockback
-                    if (trap.knockback && trap.knockback > 0) {
-                        const dx = player.x - trap.x;
-                        const dy = player.y - trap.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist > 0) {
-                            player.vx += (dx / dist) * trap.knockback;
-                            player.vy += (dy / dist) * trap.knockback;
-                        }
-                    }
                 }
             }
         });
@@ -1462,17 +1455,6 @@ function gameLoop() {
                             tankType: owner ? owner.tankType : 'BASIC'
                         });
                         minion.health -= 10;
-                        
-                        // Apply knockback
-                        if (minion.knockback && minion.knockback > 0) {
-                            const dx = player.x - minion.x;
-                            const dy = player.y - minion.y;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-                            if (dist > 0) {
-                                player.vx += (dx / dist) * minion.knockback;
-                                player.vy += (dy / dist) * minion.knockback;
-                            }
-                        }
                         
                         if (minion.health <= 0) {
                             minion.startDeath();

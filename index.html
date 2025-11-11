@@ -624,6 +624,10 @@
                 <!-- Blade Settings -->
                 <div style="border-top: 2px solid #444; margin-top: 15px; padding-top: 15px;">
                     <h3 style="color: #fff; margin-top: 0; margin-bottom: 10px; font-size: 14px;">Blades:</h3>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; color: #aaa; font-size: 12px; margin-bottom: 5px;">Blade Damage Multiplier:</label>
+                        <input id="bladeDamageMultiplier" type="number" step="0.1" value="1" min="0" style="width: 100%; padding: 6px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box;">
+                    </div>
                     <div id="bladesList" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
                         <div style="color: #888; font-size: 12px; font-style: italic;">No blades added</div>
                     </div>
@@ -637,6 +641,7 @@
             <div style="background: #2a2a2a; padding: 15px; border-bottom: 2px solid #444; display: flex; justify-content: space-between; align-items: center;">
                 <h1 style="color: #fff; margin: 0;">Tank Editor</h1>
                 <div style="display: flex; gap: 10px;">
+                    <button id="editorExportJSONBtn" style="padding: 10px 20px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">📋 Export JSON</button>
                     <button id="editorTestBtn" style="padding: 10px 20px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Test</button>
                     <button id="editorCancelBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancel</button>
                     <button id="editorSaveBtn" style="padding: 10px 20px; background: #44ff44; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Save</button>
@@ -2949,9 +2954,8 @@
                     length: 1,
                     size: 1,
                     spread: 0,
-                    recoil: 0, // Existing recoil (pushback when shooting)
-                    knockback: 0, // NEW: Knockback applied to hit targets
-                    bulletHealth: 0, // NEW: Override bullet health (0 = use penetration stat)
+                    recoil: 0, // Recoil (pushback when shooting)
+                    bulletHealth: 0, // Override bullet health (0 = use penetration stat)
                     layer: 0,
                     color: '#999999'
                 }
@@ -2971,10 +2975,9 @@
                     reload: 1.2,
                     maxTraps: 15,
                     trapSize: 1,
-                    shootDistance: 8, // NEW: How far trap shoots out
-                    friction: 0.92, // NEW: Friction/deceleration (lower = more friction)
-                    recoil: 0,
-                    knockback: 0, // NEW: Knockback for traps
+                    shootDistance: 8, // How far trap shoots out
+                    friction: 0.92, // Friction/deceleration (lower = more friction)
+                    recoil: 0, // Recoil (pushback when shooting)
                     layer: 0,
                     color: '#999999'
                 }
@@ -2992,7 +2995,7 @@
                     speed: 1.2,
                     minionSize: 1,
                     reload: 1,
-                    knockback: 0, // NEW: Knockback for minions
+                    recoil: 0, // Recoil (pushback when shooting)
                     layer: 0,
                     color: '#999999'
                 }
@@ -3243,7 +3246,7 @@
                         input = document.createElement('input');
                         input.type = 'number';
                         input.value = value;
-                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') || key.includes('knockback') || key.includes('bulletHealth') || key.includes('friction') || key.includes('shootDistance') ? '0.1' : '1';
+                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') || key.includes('bulletHealth') || key.includes('friction') || key.includes('shootDistance') ? '0.1' : '1';
                         input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
                     }
 
@@ -3474,31 +3477,39 @@
             }
         }
 
-        // Calculate base radius at angle for editor preview
-        function getEditorBaseRadius(angle) {
+        // Calculate base radius and face angle at angle for editor preview
+        // Returns { radius, faceAngle } where faceAngle is perpendicular to the face
+        function getEditorBaseRadiusAndFace(angle) {
             const tankSize = 20; // Match in-game base tank size
             
             if (editorState.baseMode === 'none') {
-                // Circle - constant radius
-                return tankSize;
+                // Circle - constant radius, face perpendicular to radius
+                return { radius: tankSize, faceAngle: angle };
             } else if (editorState.baseMode === 'simple') {
                 // Regular polygon centered at origin
                 const sides = editorState.baseSides;
                 const anglePerSide = (Math.PI * 2) / sides;
-                const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
                 
+                // Find which side this angle points to
+                const normalizedAngle = angle + Math.PI / 2; // Offset for polygon orientation
+                const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+                const sideAngle = sideIndex * anglePerSide;
+                
+                // Calculate distance to that side
                 const angleToEdge = angle - sideAngle + Math.PI / 2;
                 const cosAngle = Math.cos(angleToEdge);
                 
-                if (Math.abs(cosAngle) < 0.001) {
-                    return tankSize;
-                }
+                const radius = Math.abs(cosAngle) > 0.001 ? tankSize / cosAngle : tankSize;
                 
-                return tankSize / cosAngle;
+                // Face angle is perpendicular to the side (same for all points on a flat face)
+                const faceAngle = sideAngle - Math.PI / 2;
+                
+                return { radius, faceAngle };
             } else if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
                 // Advanced mode with custom positioned/rotated base blocks
                 // Cast a ray from origin at 'angle' and find furthest intersection
                 let maxRadius = 0;
+                let maxFaceAngle = angle; // Default to pointing outward
                 
                 // For each base block, calculate distance to edge along the ray
                 for (const baseBlock of editorState.baseBlocks) {
@@ -3510,9 +3521,6 @@
                     const width = baseBlock.width || 0;
                     const height = baseBlock.height || 0;
                     
-                    // Transform angle to baseBlock's local space
-                    const localAngle = angle - bRot;
-                    
                     if (shape === 0) {
                         // Circle - distance from origin to furthest point of circle
                         const centerDist = Math.sqrt(bx * bx + by * by);
@@ -3521,81 +3529,140 @@
                         const angleDiff = angle - angleToCenter;
                         
                         // Distance along ray to circle edge
-                        const distToEdge = centerDist * Math.cos(angleDiff) + Math.sqrt(
-                            radius * radius - (centerDist * Math.sin(angleDiff)) ** 2
-                        );
-                        if (!isNaN(distToEdge) && distToEdge > 0) {
-                            maxRadius = Math.max(maxRadius, distToEdge);
+                        const a = centerDist * centerDist * Math.sin(angleDiff) * Math.sin(angleDiff);
+                        const discriminant = radius * radius - a;
+                        
+                        if (discriminant >= 0) {
+                            const distToEdge = centerDist * Math.cos(angleDiff) + Math.sqrt(discriminant);
+                            if (!isNaN(distToEdge) && distToEdge > maxRadius) {
+                                maxRadius = distToEdge;
+                                // For circle, face is perpendicular to radius at that point
+                                maxFaceAngle = angle;
+                            }
                         }
                     } else if (shape === 4 && (width || height)) {
-                        // Rectangle - check intersection with rotated rectangle
+                        // Rectangle - check intersection with rotated rectangle edges
                         const totalWidth = size + width;
                         const totalHeight = size + height;
                         
+                        // Ray direction in world space
+                        const rayDx = Math.cos(angle);
+                        const rayDy = Math.sin(angle);
+                        
                         // Transform ray to rectangle's local space
-                        const dx = Math.cos(angle);
-                        const dy = Math.sin(angle);
+                        const localRayDx = rayDx * Math.cos(-bRot) - rayDy * Math.sin(-bRot);
+                        const localRayDy = rayDx * Math.sin(-bRot) + rayDy * Math.cos(-bRot);
                         
-                        // Rotate ray direction to local space
-                        const localDx = dx * Math.cos(-bRot) - dy * Math.sin(-bRot);
-                        const localDy = dx * Math.sin(-bRot) + dy * Math.cos(-bRot);
+                        // Ray starts from origin, but rectangle is at (bx, by)
+                        // Transform origin to local space
+                        const localOriginX = -bx * Math.cos(-bRot) + by * Math.sin(-bRot);
+                        const localOriginY = -bx * Math.sin(-bRot) - by * Math.cos(-bRot);
                         
-                        // Rotate position offset to local space
-                        const localX = bx * Math.cos(-bRot) - by * Math.sin(-bRot);
-                        const localY = bx * Math.sin(-bRot) + by * Math.cos(-bRot);
-                        
-                        // Calculate intersection with local rectangle
+                        // Check intersection with each of the 4 edges
                         const halfW = totalWidth / 2;
                         const halfH = totalHeight / 2;
                         
-                        let tMax = Infinity;
-                        if (Math.abs(localDx) > 0.001) {
-                            const t1 = (halfW - localX) / localDx;
-                            const t2 = (-halfW - localX) / localDx;
-                            tMax = Math.min(tMax, Math.max(t1, t2));
-                        }
-                        if (Math.abs(localDy) > 0.001) {
-                            const t1 = (halfH - localY) / localDy;
-                            const t2 = (-halfH - localY) / localDy;
-                            tMax = Math.min(tMax, Math.max(t1, t2));
+                        let bestT = -1;
+                        let bestFace = 0; // 0=right, 1=top, 2=left, 3=bottom
+                        
+                        // Right edge (x = halfW)
+                        if (Math.abs(localRayDx) > 0.001) {
+                            const t = (halfW - localOriginX) / localRayDx;
+                            const y = localOriginY + t * localRayDy;
+                            if (t > 0 && Math.abs(y) <= halfH && (bestT < 0 || t > bestT)) {
+                                bestT = t;
+                                bestFace = 0;
+                            }
                         }
                         
-                        if (tMax > 0 && tMax < Infinity) {
-                            maxRadius = Math.max(maxRadius, tMax);
+                        // Left edge (x = -halfW)
+                        if (Math.abs(localRayDx) > 0.001) {
+                            const t = (-halfW - localOriginX) / localRayDx;
+                            const y = localOriginY + t * localRayDy;
+                            if (t > 0 && Math.abs(y) <= halfH && (bestT < 0 || t > bestT)) {
+                                bestT = t;
+                                bestFace = 2;
+                            }
+                        }
+                        
+                        // Top edge (y = halfH)
+                        if (Math.abs(localRayDy) > 0.001) {
+                            const t = (halfH - localOriginY) / localRayDy;
+                            const x = localOriginX + t * localRayDx;
+                            if (t > 0 && Math.abs(x) <= halfW && (bestT < 0 || t > bestT)) {
+                                bestT = t;
+                                bestFace = 1;
+                            }
+                        }
+                        
+                        // Bottom edge (y = -halfH)
+                        if (Math.abs(localRayDy) > 0.001) {
+                            const t = (-halfH - localOriginY) / localRayDy;
+                            const x = localOriginX + t * localRayDx;
+                            if (t > 0 && Math.abs(x) <= halfW && (bestT < 0 || t > bestT)) {
+                                bestT = t;
+                                bestFace = 3;
+                            }
+                        }
+                        
+                        if (bestT > 0 && bestT > maxRadius) {
+                            maxRadius = bestT;
+                            // Face angle in local space: 0=right (0°), 1=top (90°), 2=left (180°), 3=bottom (270°)
+                            const localFaceAngle = bestFace * Math.PI / 2;
+                            // Transform face angle back to world space
+                            maxFaceAngle = localFaceAngle + bRot;
                         }
                     } else if (shape > 0) {
                         // Regular polygon
                         const sides = shape;
                         const anglePerSide = (Math.PI * 2) / sides;
-                        const sideAngle = Math.floor((localAngle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
                         
+                        // Transform angle to baseBlock's local space
+                        const localAngle = angle - bRot;
+                        
+                        // Find which side this angle points to
+                        const normalizedAngle = localAngle + Math.PI / 2;
+                        const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+                        const sideAngle = sideIndex * anglePerSide;
+                        
+                        // Calculate distance to that side in local space
                         const angleToEdge = localAngle - sideAngle + Math.PI / 2;
                         const cosAngle = Math.cos(angleToEdge);
                         
-                        let radiusAtAngle;
+                        let localRadius;
                         if (Math.abs(cosAngle) > 0.001) {
-                            radiusAtAngle = (size + width) / cosAngle;
+                            localRadius = (size + width) / cosAngle;
                         } else {
-                            radiusAtAngle = size + width;
+                            localRadius = size + width;
                         }
                         
-                        // Transform back to world space
+                        // Transform from block center to world origin
                         const centerDist = Math.sqrt(bx * bx + by * by);
                         const angleToCenter = Math.atan2(by, bx);
                         const angleDiff = angle - angleToCenter;
                         
-                        const distToEdge = centerDist * Math.cos(angleDiff) + radiusAtAngle;
-                        if (distToEdge > 0) {
-                            maxRadius = Math.max(maxRadius, distToEdge);
+                        // Project the local radius along the ray
+                        const distToEdge = centerDist * Math.cos(angleDiff) + localRadius;
+                        
+                        if (distToEdge > maxRadius) {
+                            maxRadius = distToEdge;
+                            // Face angle in local space, transformed to world space
+                            const localFaceAngle = sideAngle - Math.PI / 2;
+                            maxFaceAngle = localFaceAngle + bRot;
                         }
                     }
                 }
                 
-                return maxRadius > 0 ? maxRadius : tankSize;
+                return maxRadius > 0 ? { radius: maxRadius, faceAngle: maxFaceAngle } : { radius: tankSize, faceAngle: angle };
             }
             
             // Default to circle
-            return tankSize;
+            return { radius: tankSize, faceAngle: angle };
+        }
+
+        // Legacy function for backward compatibility
+        function getEditorBaseRadius(angle) {
+            return getEditorBaseRadiusAndFace(angle).radius;
         }
 
         function renderEditorCanvas() {
@@ -3763,10 +3830,17 @@
                     const blockRotation = (block.props.blockRotation || 0) * Math.PI / 180;
                     const selfAngle = (block.props.selfAngle || 0) * Math.PI / 180;
                     
+                    // Get radius and face angle at this position
+                    const { radius: baseRadius, faceAngle } = getEditorBaseRadiusAndFace(angle);
+                    
                     // Position gun on perimeter at 'angle'
                     ctx.rotate(angle);
-                    const baseRadius = getEditorBaseRadius(angle);
                     ctx.translate(baseRadius, 0);
+                    
+                    // Rotate to align with face (perpendicular to surface)
+                    ctx.rotate(faceAngle - angle);
+                    
+                    // Apply additional rotations
                     ctx.rotate(blockRotation + selfAngle);
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
@@ -4298,6 +4372,83 @@
                 dragging: false,
                 lastMousePos: { x: 0, y: 0 }
             };
+        });
+
+        // Export to JSON button - Copy tank config to clipboard
+        document.getElementById('editorExportJSONBtn').addEventListener('click', () => {
+            // Determine baseShape from baseMode
+            let baseShape = 'circle';
+            if (editorState.baseMode === 'simple') {
+                baseShape = editorState.baseSides; // Use number directly
+            } else if (editorState.baseMode === 'advanced') {
+                baseShape = 'advanced'; // Special marker for custom base
+            }
+            
+            const tankConfig = {
+                name: "Custom Tank",
+                level: editorState.level || 1,
+                baseShape: baseShape,
+                guns: editorState.blocks.map(block => {
+                    const gun = { ...block.props };
+                    // Remove knockback property
+                    delete gun.knockback;
+                    return gun;
+                }),
+                fov: editorState.fov || 1,
+                upgrades: []
+            };
+            
+            // Add advanced base blocks if in advanced mode
+            if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
+                tankConfig.baseBlocks = editorState.baseBlocks.map(block => ({
+                    shape: block.shape,
+                    size: block.size,
+                    x: block.x,
+                    y: block.y,
+                    width: block.width || 0,
+                    height: block.height || 0,
+                    rotation: block.rotation || 0,
+                    layer: block.layer || 0,
+                    color: block.color
+                }));
+            }
+            
+            // Add blades if any
+            if (editorState.blades.length > 0) {
+                const bladeDamage = parseFloat(document.getElementById('bladeDamageMultiplier').value) || 1;
+                tankConfig.blades = editorState.blades.map(blade => ({
+                    shape: blade.shape,
+                    size: blade.size,
+                    x: blade.x || 0,
+                    y: blade.y || 0,
+                    rotation: blade.rotation || 0,
+                    layer: blade.layer || 0,
+                    color: blade.color
+                }));
+                if (bladeDamage !== 1) {
+                    tankConfig.bladeDamageMultiplier = bladeDamage;
+                }
+            }
+            
+            // Format JSON nicely
+            const jsonString = JSON.stringify(tankConfig, null, 2);
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(jsonString).then(() => {
+                // Show success feedback
+                const btn = document.getElementById('editorExportJSONBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.background = '#44ff44';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#ff9500';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy to clipboard:', err);
+                alert('Failed to copy to clipboard. Check console for JSON output.');
+                console.log('Tank JSON:', jsonString);
+            });
         });
 
         // Test Area - Spawn into game with temporary tank
