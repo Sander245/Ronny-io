@@ -3659,7 +3659,7 @@
                         // Polygon base
                         const sides = editorState.baseSides;
                         ctx.beginPath();
-                        for (let i = 0; i <= sides; i++) {
+                        for (let i = 0; i < sides; i++) {
                             const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
                             const x = Math.cos(angle) * tankSize;
                             const y = Math.sin(angle) * tankSize;
@@ -3713,7 +3713,7 @@
                         const sides = baseBlock.shape;
                         const radiusX = baseBlock.size + (baseBlock.width || 0);
                         const radiusY = baseBlock.size + (baseBlock.height || 0);
-                        for (let i = 0; i <= sides; i++) {
+                        for (let i = 0; i < sides; i++) {
                             const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
                             const x = Math.cos(angle) * radiusX;
                             const y = Math.sin(angle) * radiusY;
@@ -3738,7 +3738,7 @@
                     
                     ctx.fillStyle = blade.color || '#999999';
                     ctx.beginPath();
-                    for (let j = 0; j <= sides; j++) {
+                    for (let j = 0; j < sides; j++) {
                         const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
                         const x = Math.cos(angle) * bladeSize;
                         const y = Math.sin(angle) * bladeSize;
@@ -3773,7 +3773,7 @@
                 
                     const gunColor = block.props.color || '#999';
                     ctx.fillStyle = gunColor;
-                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#404040';
+                    ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : darkenColor(gunColor, 0.3);
                     ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
                     
                     if (block.type === 'normal') {
