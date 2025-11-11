@@ -2205,10 +2205,10 @@
                         ctx.strokeStyle = '#404040'; // Dark grey outline
                         ctx.lineWidth = 2 * camera.zoom;
                         
-                        // Apply recoil offset (pushes gun back)
-                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        ctx.fillRect(recoilX - gunWidth / 2, -5 * camera.zoom, gunWidth, gunLength);
-                        ctx.strokeRect(recoilX - gunWidth / 2, -5 * camera.zoom, gunWidth, gunLength);
+                        // Apply recoil offset (pushes gun back along the barrel)
+                        const recoilY = -recoilOffset * camera.zoom * sizeMultiplier;
+                        ctx.fillRect(-gunWidth / 2, -5 * camera.zoom + recoilY, gunWidth, gunLength);
+                        ctx.strokeRect(-gunWidth / 2, -5 * camera.zoom + recoilY, gunWidth, gunLength);
 
                         ctx.restore();
                     } else if (gun.type === 'trap') {
@@ -2239,16 +2239,16 @@
                         const flatRectWidth = 30 * camera.zoom * sizeMultiplier;
                         const flatRectHeight = 8 * camera.zoom * sizeMultiplier;
                         
-                        // Apply recoil offset (pushes gun back)
-                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
+                        // Apply recoil offset (pushes gun back along the barrel)
+                        const recoilY = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         // Base rectangle (vertical part of T)
-                        ctx.fillRect(recoilX - baseHeight / 2, -5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
-                        ctx.strokeRect(recoilX - baseHeight / 2, -5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
+                        ctx.fillRect(-baseHeight / 2, -5 * camera.zoom * sizeMultiplier + recoilY, baseHeight, baseLength);
+                        ctx.strokeRect(-baseHeight / 2, -5 * camera.zoom * sizeMultiplier + recoilY, baseHeight, baseLength);
                         
                         // Front flat rectangle (horizontal part of T)
-                        ctx.fillRect(recoilX - flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
-                        ctx.strokeRect(recoilX - flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
+                        ctx.fillRect(-flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength + recoilY, flatRectWidth, flatRectHeight);
+                        ctx.strokeRect(-flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength + recoilY, flatRectWidth, flatRectHeight);
 
                         ctx.restore();
                     } else if (gun.type === 'minion') {
@@ -2279,14 +2279,14 @@
                         const baseWidth = 8 * camera.zoom * sizeMultiplier; // Width at narrow end (at tank)
                         const tipWidth = 18 * camera.zoom * sizeMultiplier; // Width at wide end (facing out)
                         
-                        // Apply recoil offset (pushes gun back)
-                        const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
+                        // Apply recoil offset (pushes gun back along the barrel)
+                        const recoilY = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         ctx.beginPath();
-                        ctx.moveTo(-baseWidth / 2, -5 * camera.zoom + recoilX); // Back left (narrow base)
-                        ctx.lineTo(-tipWidth / 2, -5 * camera.zoom + length + recoilX); // Front left (wide tip)
-                        ctx.lineTo(tipWidth / 2, -5 * camera.zoom + length + recoilX); // Front right (wide tip)
-                        ctx.moveTo(baseWidth / 2, -5 * camera.zoom + recoilX); // Back right (narrow base)
+                        ctx.moveTo(-baseWidth / 2, -5 * camera.zoom + recoilY); // Back left (narrow base)
+                        ctx.lineTo(-tipWidth / 2, -5 * camera.zoom + length + recoilY); // Front left (wide tip)
+                        ctx.lineTo(tipWidth / 2, -5 * camera.zoom + length + recoilY); // Front right (wide tip)
+                        ctx.lineTo(baseWidth / 2, -5 * camera.zoom + recoilY); // Back right (narrow base)
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
