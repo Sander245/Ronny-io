@@ -2284,7 +2284,6 @@
             const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
             const gunDistance = baseRadius * camera.zoom;
             ctx.translate(gunDistance, 0);
-            ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
             ctx.rotate(blockRotation + selfAngle);
             ctx.translate(offsetX, offsetY);
 
@@ -2293,37 +2292,37 @@
             ctx.strokeStyle = '#404040';
             ctx.lineWidth = 2 * camera.zoom;
             
-            const recoilY = -recoilOffset * camera.zoom * sizeMultiplier;
+            const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
             
             if (gun.type === 'normal') {
                 const gunLength = (gun.length || 1) * 20 * camera.zoom * sizeMultiplier;
                 const gunWidth = (gun.size || 1) * 20 * camera.zoom * sizeMultiplier;
                 
-                ctx.fillRect(-gunWidth / 2, -5 * camera.zoom + recoilY, gunWidth, gunLength);
-                ctx.strokeRect(-gunWidth / 2, -5 * camera.zoom + recoilY, gunWidth, gunLength);
+                ctx.fillRect(-5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                ctx.strokeRect(-5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
             } else if (gun.type === 'trap') {
                 const baseLength = 20 * camera.zoom * sizeMultiplier;
                 const baseHeight = 20 * camera.zoom * sizeMultiplier;
                 const flatRectWidth = 30 * camera.zoom * sizeMultiplier;
                 const flatRectHeight = 8 * camera.zoom * sizeMultiplier;
                 
-                // Base rectangle (vertical part of T)
-                ctx.fillRect(-baseHeight / 2, -5 * camera.zoom * sizeMultiplier + recoilY, baseHeight, baseLength);
-                ctx.strokeRect(-baseHeight / 2, -5 * camera.zoom * sizeMultiplier + recoilY, baseHeight, baseLength);
+                // Base rectangle (horizontal part of rotated T)
+                ctx.fillRect(-5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
+                ctx.strokeRect(-5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
                 
-                // Front flat rectangle (horizontal part of T)
-                ctx.fillRect(-flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength + recoilY, flatRectWidth, flatRectHeight);
-                ctx.strokeRect(-flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength + recoilY, flatRectWidth, flatRectHeight);
+                // Front flat rectangle (vertical part of rotated T)
+                ctx.fillRect(-5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+                ctx.strokeRect(-5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
             } else if (gun.type === 'minion') {
                 const length = 25 * camera.zoom * sizeMultiplier;
                 const baseWidth = 8 * camera.zoom * sizeMultiplier;
                 const tipWidth = 18 * camera.zoom * sizeMultiplier;
                 
                 ctx.beginPath();
-                ctx.moveTo(-baseWidth / 2, -5 * camera.zoom + recoilY);
-                ctx.lineTo(-tipWidth / 2, -5 * camera.zoom + length + recoilY);
-                ctx.lineTo(tipWidth / 2, -5 * camera.zoom + length + recoilY);
-                ctx.lineTo(baseWidth / 2, -5 * camera.zoom + recoilY);
+                ctx.moveTo(-5 * camera.zoom + recoilX, -baseWidth / 2);
+                ctx.lineTo(-5 * camera.zoom + length + recoilX, -tipWidth / 2);
+                ctx.lineTo(-5 * camera.zoom + length + recoilX, tipWidth / 2);
+                ctx.lineTo(-5 * camera.zoom + recoilX, baseWidth / 2);
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
@@ -3769,7 +3768,6 @@
                     ctx.rotate(angle);
                     const baseRadius = getEditorBaseRadius(angle);
                     ctx.translate(baseRadius, 0);
-                    ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                     ctx.rotate(blockRotation + selfAngle);
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
@@ -3782,31 +3780,31 @@
                         const gunLength = (block.props.length || 1) * 20;
                         const gunWidth = (block.props.size || 1) * 20;
                         
-                        ctx.fillRect(-gunWidth / 2, -5, gunWidth, gunLength);
-                        ctx.strokeRect(-gunWidth / 2, -5, gunWidth, gunLength);
+                        ctx.fillRect(-5, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.strokeRect(-5, -gunWidth / 2, gunLength, gunWidth);
                     } else if (block.type === 'trap') {
                         const baseLength = 20;
                         const baseHeight = 20;
                         const flatRectWidth = 30;
                         const flatRectHeight = 8;
                         
-                        // Base rectangle (vertical part of T)
-                        ctx.fillRect(-baseHeight / 2, -5, baseHeight, baseLength);
-                        ctx.strokeRect(-baseHeight / 2, -5, baseHeight, baseLength);
+                        // Base rectangle (horizontal part of rotated T)
+                        ctx.fillRect(-5, -baseHeight / 2, baseLength, baseHeight);
+                        ctx.strokeRect(-5, -baseHeight / 2, baseLength, baseHeight);
                         
-                        // Front flat rectangle (horizontal part of T)
-                        ctx.fillRect(-flatRectWidth / 2, -5 + baseLength, flatRectWidth, flatRectHeight);
-                        ctx.strokeRect(-flatRectWidth / 2, -5 + baseLength, flatRectWidth, flatRectHeight);
+                        // Front flat rectangle (vertical part of rotated T)
+                        ctx.fillRect(-5 + baseLength, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+                        ctx.strokeRect(-5 + baseLength, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
                     } else if (block.type === 'minion') {
                         const length = 25;
                         const baseWidth = 8;
                         const tipWidth = 18;
                         
                         ctx.beginPath();
-                        ctx.moveTo(-baseWidth / 2, -5);
-                        ctx.lineTo(-tipWidth / 2, -5 + length);
-                        ctx.lineTo(tipWidth / 2, -5 + length);
-                        ctx.lineTo(baseWidth / 2, -5);
+                        ctx.moveTo(-5, -baseWidth / 2);
+                        ctx.lineTo(-5 + length, -tipWidth / 2);
+                        ctx.lineTo(-5 + length, tipWidth / 2);
+                        ctx.lineTo(-5, baseWidth / 2);
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
