@@ -645,6 +645,10 @@
                         <input type="checkbox" id="debugPerimeterToggle" style="cursor: pointer;">
                         Show Perimeter Debug
                     </label>
+                    <label style="color: #aaa; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="checkbox" id="freezeDebugToggle" style="cursor: pointer;">
+                        Freeze Debug
+                    </label>
                     <button id="editorExportJSONBtn" style="padding: 10px 20px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">📋 Export JSON</button>
                     <button id="editorTestBtn" style="padding: 10px 20px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Test</button>
                     <button id="editorCancelBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancel</button>
@@ -2977,7 +2981,9 @@
             baseBlocks: [], // for advanced mode: {id, shape, size, x, y, width, height, rotation, layer}
             blades: [], // list of blades: {id, shape (sides), size, x, y, rotation, layer}
             debugPerimeter: null, // {angle, timestamp} for showing perimeter debug
-            showPerimeterDebug: false // toggle for always showing debug
+            showPerimeterDebug: false, // toggle for always showing debug
+            freezeDebug: false, // toggle to freeze debug visualization
+            frozenDebugData: null // stores frozen state of base/blocks/guns for debug
         };
 
         const blockTypes = {
@@ -3999,10 +4005,41 @@
             
             // Debug: Show perimeter calculation when toggle is enabled
             if (editorState.showPerimeterDebug) {
+                // Store current state if freeze is enabled and not already frozen
+                if (editorState.freezeDebug && !editorState.frozenDebugData) {
+                    editorState.frozenDebugData = {
+                        baseMode: editorState.baseMode,
+                        baseSides: editorState.baseSides,
+                        baseBlocks: JSON.parse(JSON.stringify(editorState.baseBlocks)),
+                        selectedBlock: editorState.selectedBlock ? {
+                            props: { ...editorState.selectedBlock.props }
+                        } : null
+                    };
+                } else if (!editorState.freezeDebug) {
+                    // Clear frozen data when not frozen
+                    editorState.frozenDebugData = null;
+                }
+                
+                // Use frozen data if available, otherwise use current state
+                const debugData = editorState.frozenDebugData || {
+                    baseMode: editorState.baseMode,
+                    baseSides: editorState.baseSides,
+                    baseBlocks: editorState.baseBlocks,
+                    selectedBlock: editorState.selectedBlock
+                };
+                
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.scale(editorState.zoom, editorState.zoom);
                 ctx.rotate(editorState.rotation);
+                
+                // Temporarily override editorState for getEditorBaseRadiusAndFace
+                const originalBaseMode = editorState.baseMode;
+                const originalBaseSides = editorState.baseSides;
+                const originalBaseBlocks = editorState.baseBlocks;
+                editorState.baseMode = debugData.baseMode;
+                editorState.baseSides = debugData.baseSides;
+                editorState.baseBlocks = debugData.baseBlocks;
                 
                 // Draw red circles at various angles around the perimeter
                 const numPoints = 72; // Every 5 degrees
@@ -4022,8 +4059,8 @@
                 }
                 
                 // Highlight the specific angle if a gun is selected
-                if (editorState.selectedBlock && editorState.selectedBlock.props.angle !== undefined) {
-                    const angle = editorState.selectedBlock.props.angle * Math.PI / 180;
+                if (debugData.selectedBlock && debugData.selectedBlock.props && debugData.selectedBlock.props.angle !== undefined) {
+                    const angle = debugData.selectedBlock.props.angle * Math.PI / 180;
                     const { radius, faceAngle } = getEditorBaseRadiusAndFace(angle);
                     const x = Math.cos(angle) * radius;
                     const y = Math.sin(angle) * radius;
@@ -4046,6 +4083,11 @@
                     ctx.lineWidth = 3;
                     ctx.stroke();
                 }
+                
+                // Restore original state
+                editorState.baseMode = originalBaseMode;
+                editorState.baseSides = originalBaseSides;
+                editorState.baseBlocks = originalBaseBlocks;
                 
                 ctx.restore();
             }
@@ -4329,6 +4371,15 @@
         // Debug perimeter toggle
         document.getElementById('debugPerimeterToggle').addEventListener('change', (e) => {
             editorState.showPerimeterDebug = e.target.checked;
+            renderEditorCanvas();
+        });
+
+        // Freeze debug toggle
+        document.getElementById('freezeDebugToggle').addEventListener('change', (e) => {
+            editorState.freezeDebug = e.target.checked;
+            if (!e.target.checked) {
+                editorState.frozenDebugData = null; // Clear frozen data when disabled
+            }
             renderEditorCanvas();
         });
 
