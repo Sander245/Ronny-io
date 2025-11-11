@@ -943,17 +943,12 @@ function gameLoop() {
                 if (now >= lastGunShot + gunReloadTime) {
                     // Calculate gun angle: start with base angle + self rotation
                     let gunBaseAngle = (gun.angle || 0) * Math.PI / 180;
+                    const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
                     const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                     
-                    // If angleMode is 'relative' (default), add player rotation
-                    // If 'fixed', gun points in absolute direction
-                    let gunAngle;
-                    if (gun.angleMode === 'fixed') {
-                        gunAngle = gunBaseAngle + selfAngle;
-                    } else {
-                        // Default 'relative' behavior - gun follows tank rotation
-                        gunAngle = player.rotation + gunBaseAngle + selfAngle;
-                    }
+                    // Gun is always positioned on perimeter at 'angle'
+                    // blockRotation and selfAngle control barrel direction
+                    let gunAngle = player.rotation + gunBaseAngle + blockRotation + selfAngle;
                     
                     const offsetX = gun.offsetX || 0;
                     const offsetY = gun.offsetY || 0;

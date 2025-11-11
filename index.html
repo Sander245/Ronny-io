@@ -2151,6 +2151,7 @@
                     
                     if (gun.type === 'normal') {
                         const gunAngle = gun.angle * Math.PI / 180;
+                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
                         const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const gunLength = (gun.length || 1) * 20 * camera.zoom * sizeMultiplier;
                         const gunWidth = (gun.size || 1) * 20 * camera.zoom * sizeMultiplier;
@@ -2158,11 +2159,10 @@
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        // If angleMode is 'fixed', undo player rotation first
-                        if (gun.angleMode === 'fixed') {
-                            ctx.rotate(-player.rotation); // Undo player rotation
-                        }
-                        ctx.rotate(gunAngle + selfAngle); // Apply gun's base angle + self rotation
+                        // Position gun on perimeter at 'angle'
+                        ctx.rotate(gunAngle); // Rotate to position on perimeter
+                        ctx.translate(size, 0); // Move to perimeter
+                        ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = gun.color || '#999';
@@ -2172,22 +2172,22 @@
                         
                         // Apply recoil offset (pushes gun back)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        ctx.fillRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
-                        ctx.strokeRect(size - 5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.fillRect(-5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.strokeRect(-5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
 
                         ctx.restore();
                     } else if (gun.type === 'trap') {
                         const gunAngle = gun.angle * Math.PI / 180;
+                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
                         const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        // If angleMode is 'fixed', undo player rotation first
-                        if (gun.angleMode === 'fixed') {
-                            ctx.rotate(-player.rotation); // Undo player rotation
-                        }
-                        ctx.rotate(gunAngle + selfAngle); // Apply gun's base angle + self rotation
+                        // Position gun on perimeter at 'angle'
+                        ctx.rotate(gunAngle); // Rotate to position on perimeter
+                        ctx.translate(size, 0); // Move to perimeter
+                        ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = gun.color || '#999';
@@ -2205,27 +2205,27 @@
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         // Base rectangle (vertical part of T)
-                        ctx.fillRect(size - 5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
-                        ctx.strokeRect(size - 5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
+                        ctx.fillRect(-5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
+                        ctx.strokeRect(-5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
                         
                         // Front flat rectangle (horizontal part of T)
-                        ctx.fillRect(size - 5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
-                        ctx.strokeRect(size - 5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+                        ctx.fillRect(-5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+                        ctx.strokeRect(-5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
 
                         ctx.restore();
                     } else if (gun.type === 'minion') {
                         // Draw spawner/drone barrel as thin trapezoid - wide side facing out
                         const gunAngle = gun.angle * Math.PI / 180;
+                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
                         const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
                         const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
                         ctx.save();
-                        // If angleMode is 'fixed', undo player rotation first
-                        if (gun.angleMode === 'fixed') {
-                            ctx.rotate(-player.rotation); // Undo player rotation
-                        }
-                        ctx.rotate(gunAngle + selfAngle); // Apply gun's base angle + self rotation
+                        // Position gun on perimeter at 'angle'
+                        ctx.rotate(gunAngle); // Rotate to position on perimeter
+                        ctx.translate(size, 0); // Move to perimeter
+                        ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
                         const gunColor = gun.color || '#ff9500';
@@ -2237,7 +2237,7 @@
                         const length = 25 * camera.zoom * sizeMultiplier; // Length of trapezoid
                         const baseWidth = 8 * camera.zoom * sizeMultiplier; // Width at narrow end (at tank)
                         const tipWidth = 18 * camera.zoom * sizeMultiplier; // Width at wide end (facing out)
-                        const baseX = size - 5 * camera.zoom;
+                        const baseX = -5 * camera.zoom;
                         
                         // Apply recoil offset (pushes gun back)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
@@ -2961,7 +2961,7 @@
                 defaultProps: {
                     type: 'normal',
                     angle: 0,
-                    angleMode: 'relative', // 'relative' or 'fixed'
+                    blockRotation: 0, // NEW: Block itself's rotation
                     selfAngle: 0, // Current self-rotation angle (updated each frame)
                     selfAngleSpeed: 0, // Degrees per second to spin
                     offsetX: 0,
@@ -2984,7 +2984,7 @@
                 defaultProps: {
                     type: 'trap',
                     angle: 0,
-                    angleMode: 'relative',
+                    blockRotation: 0, // NEW: Block itself's rotation
                     selfAngle: 0,
                     selfAngleSpeed: 0,
                     offsetX: 0,
@@ -3005,7 +3005,7 @@
                 defaultProps: {
                     type: 'minion',
                     angle: 0,
-                    angleMode: 'relative',
+                    blockRotation: 0, // NEW: Block itself's rotation
                     selfAngle: 0,
                     selfAngleSpeed: 0,
                     count: 4,
@@ -3254,11 +3254,6 @@
                         input.type = 'color';
                         input.value = value;
                         input.style.cssText = 'width: 100%; height: 35px; border: none; border-radius: 4px; cursor: pointer;';
-                    } else if (key === 'angleMode') {
-                        input = document.createElement('select');
-                        input.innerHTML = '<option value="relative">Relative (follows tank)</option><option value="fixed">Fixed (absolute angle)</option>';
-                        input.value = value;
-                        input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; cursor: pointer;';
                     } else if (typeof value === 'boolean') {
                         input = document.createElement('input');
                         input.type = 'checkbox';
