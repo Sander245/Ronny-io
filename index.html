@@ -2972,6 +2972,9 @@
                     length: 1,
                     size: 1,
                     spread: 0,
+                    recoil: 0, // Existing recoil (pushback when shooting)
+                    knockback: 0, // NEW: Knockback applied to hit targets
+                    bulletHealth: 0, // NEW: Override bullet health (0 = use penetration stat)
                     layer: 0,
                     color: '#999999'
                 }
@@ -2991,6 +2994,8 @@
                     reload: 1.2,
                     maxTraps: 15,
                     trapSize: 1,
+                    recoil: 0,
+                    knockback: 0, // NEW: Knockback for traps
                     layer: 0,
                     color: '#999999'
                 }
@@ -3008,6 +3013,7 @@
                     speed: 1.2,
                     minionSize: 1,
                     reload: 1,
+                    knockback: 0, // NEW: Knockback for minions
                     layer: 0,
                     color: '#ff9500'
                 }
@@ -3262,7 +3268,7 @@
                         input = document.createElement('input');
                         input.type = 'number';
                         input.value = value;
-                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') ? '0.1' : '1';
+                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') || key.includes('knockback') || key.includes('bulletHealth') ? '0.1' : '1';
                         input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
                     }
 
