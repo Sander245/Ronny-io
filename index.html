@@ -4414,22 +4414,33 @@
                     // For advanced bases, "bake" the gun position based on editor preview
                     if (editorState.baseMode === 'advanced' && gun.angle !== undefined) {
                         const angleRad = gun.angle * Math.PI / 180;
+                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const { radius, faceAngle } = getEditorBaseRadiusAndFace(angleRad);
                         
-                        // Calculate the actual position where this gun should be
-                        const gunX = Math.cos(angleRad) * radius;
-                        const gunY = Math.sin(angleRad) * radius;
+                        // Calculate position: rotate by angle, move out by radius
+                        const baseX = Math.cos(angleRad) * radius;
+                        const baseY = Math.sin(angleRad) * radius;
                         
-                        // Calculate the rotation needed (face angle relative to angle)
-                        const faceDiff = faceAngle - angleRad;
+                        // Apply existing offsets rotated by face angle
+                        const existingOffsetX = gun.offsetX || 0;
+                        const existingOffsetY = gun.offsetY || 0;
+                        const totalRotation = faceAngle + blockRotation + selfAngle;
                         
-                        // Store as offsetX, offsetY, and rotation instead of angle
-                        gun.offsetX = (gun.offsetX || 0) + gunX;
-                        gun.offsetY = (gun.offsetY || 0) + gunY;
-                        gun.rotation = (gun.rotation || 0) + (faceDiff * 180 / Math.PI);
+                        const rotatedOffsetX = existingOffsetX * Math.cos(totalRotation) - existingOffsetY * Math.sin(totalRotation);
+                        const rotatedOffsetY = existingOffsetX * Math.sin(totalRotation) + existingOffsetY * Math.cos(totalRotation);
                         
-                        // Remove the angle property since we've converted it to position
+                        // Final baked position
+                        gun.offsetX = baseX + rotatedOffsetX;
+                        gun.offsetY = baseY + rotatedOffsetY;
+                        
+                        // Baked rotation: faceAngle + blockRotation + selfAngle (converted to degrees)
+                        gun.rotation = totalRotation * 180 / Math.PI;
+                        
+                        // Remove properties that are now baked
                         delete gun.angle;
+                        delete gun.blockRotation;
+                        delete gun.selfAngle;
                     }
                     
                     return gun;
@@ -4516,22 +4527,33 @@
                     // For advanced bases, "bake" the gun position based on editor preview
                     if (editorState.baseMode === 'advanced' && gun.angle !== undefined) {
                         const angleRad = gun.angle * Math.PI / 180;
+                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const { radius, faceAngle } = getEditorBaseRadiusAndFace(angleRad);
                         
-                        // Calculate the actual position where this gun should be
-                        const gunX = Math.cos(angleRad) * radius;
-                        const gunY = Math.sin(angleRad) * radius;
+                        // Calculate position: rotate by angle, move out by radius
+                        const baseX = Math.cos(angleRad) * radius;
+                        const baseY = Math.sin(angleRad) * radius;
                         
-                        // Calculate the rotation needed (face angle relative to angle)
-                        const faceDiff = faceAngle - angleRad;
+                        // Apply existing offsets rotated by face angle
+                        const existingOffsetX = gun.offsetX || 0;
+                        const existingOffsetY = gun.offsetY || 0;
+                        const totalRotation = faceAngle + blockRotation + selfAngle;
                         
-                        // Store as offsetX, offsetY, and rotation instead of angle
-                        gun.offsetX = (gun.offsetX || 0) + gunX;
-                        gun.offsetY = (gun.offsetY || 0) + gunY;
-                        gun.rotation = (gun.rotation || 0) + (faceDiff * 180 / Math.PI);
+                        const rotatedOffsetX = existingOffsetX * Math.cos(totalRotation) - existingOffsetY * Math.sin(totalRotation);
+                        const rotatedOffsetY = existingOffsetX * Math.sin(totalRotation) + existingOffsetY * Math.cos(totalRotation);
                         
-                        // Remove the angle property since we've converted it to position
+                        // Final baked position
+                        gun.offsetX = baseX + rotatedOffsetX;
+                        gun.offsetY = baseY + rotatedOffsetY;
+                        
+                        // Baked rotation: faceAngle + blockRotation + selfAngle (converted to degrees)
+                        gun.rotation = totalRotation * 180 / Math.PI;
+                        
+                        // Remove properties that are now baked
                         delete gun.angle;
+                        delete gun.blockRotation;
+                        delete gun.selfAngle;
                     }
                     
                     return gun;
