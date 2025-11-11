@@ -2580,13 +2580,6 @@
             ctx.lineWidth = 1;
             ctx.strokeRect(screen.x - barWidth / 2, screen.y - size - 10 * camera.zoom, barWidth, barHeight);
         }
-                // Fallback: draw a simple gun if tank config not loaded yet
-                ctx.save();
-                ctx.rotate(player.rotation);
-                const gunColor = '#999';
-                ctx.fillStyle = gunColor;
-                ctx.strokeStyle = '#404040'; // Dark grey outline
-                ctx.lineWidth = 2 * camera.zoom;
 
         function drawBullet(bullet) {
             const screen = worldToScreen(bullet.x, bullet.y);
