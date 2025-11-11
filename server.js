@@ -985,18 +985,16 @@ function gameLoop() {
                     let gunAngle, startX, startY;
                     
                     if (gun.rotation !== undefined && gun.blockRotation === undefined && gun.selfAngle === undefined) {
-                        // Baked gun: rotation is final, position is in offsets
+                        // Baked gun: offsetX/offsetY are in tank's local space, rotation is relative to tank
                         const rotation = (gun.rotation || 0) * Math.PI / 180;
                         gunAngle = player.rotation + rotation;
                         
                         const offsetX = gun.offsetX || 0;
                         const offsetY = gun.offsetY || 0;
                         
-                        // Spawn position: tank center + rotated offsets
-                        startX = player.x + Math.cos(player.rotation + rotation) * offsetX - 
-                                Math.sin(player.rotation + rotation) * offsetY;
-                        startY = player.y + Math.sin(player.rotation + rotation) * offsetX + 
-                                Math.cos(player.rotation + rotation) * offsetY;
+                        // Spawn position: tank center + offsets rotated by player rotation
+                        startX = player.x + Math.cos(player.rotation) * offsetX - Math.sin(player.rotation) * offsetY;
+                        startY = player.y + Math.sin(player.rotation) * offsetX + Math.cos(player.rotation) * offsetY;
                     } else {
                         // Normal gun: calculate position and rotation from angle
                         let gunBaseAngle = (gun.angle || 0) * Math.PI / 180;

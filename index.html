@@ -2295,10 +2295,12 @@
             
             // Check if gun has baked rotation (from advanced base export) or needs calculation
             if (gun.rotation !== undefined && gun.blockRotation === undefined && gun.selfAngle === undefined) {
-                // Baked gun: angle=0, position in offsets, rotation is final
+                // Baked gun: offsetX/offsetY are in world space, rotation is absolute
                 const rotation = gun.rotation * Math.PI / 180;
-                ctx.rotate(rotation);
+                // First translate to the baked position (in world space)
                 ctx.translate(offsetX, offsetY);
+                // Then rotate to the baked rotation
+                ctx.rotate(rotation);
             } else {
                 // Normal gun: calculate position and rotation from angle
                 const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
