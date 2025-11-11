@@ -2239,8 +2239,8 @@
                         
                         // Apply recoil offset (pushes gun back along the barrel)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        ctx.fillRect(recoilX - gunWidth / 2, -5 * camera.zoom, gunWidth, gunLength);
-                        ctx.strokeRect(recoilX - gunWidth / 2, -5 * camera.zoom, gunWidth, gunLength);
+                        ctx.fillRect(-gunWidth / 2, recoilX - 5 * camera.zoom, gunWidth, gunLength);
+                        ctx.strokeRect(-gunWidth / 2, recoilX - 5 * camera.zoom, gunWidth, gunLength);
 
                         ctx.restore();
                     } else if (gun.type === 'trap') {
@@ -2274,12 +2274,12 @@
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         // Base rectangle (vertical part of T)
-                        ctx.fillRect(recoilX - baseHeight / 2, -5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
-                        ctx.strokeRect(recoilX - baseHeight / 2, -5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
+                        ctx.fillRect(-baseHeight / 2, recoilX - 5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
+                        ctx.strokeRect(-baseHeight / 2, recoilX - 5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
                         
                         // Front flat rectangle (horizontal part of T)
-                        ctx.fillRect(recoilX - flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
-                        ctx.strokeRect(recoilX - flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
+                        ctx.fillRect(-flatRectWidth / 2, recoilX - 5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
+                        ctx.strokeRect(-flatRectWidth / 2, recoilX - 5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
 
                         ctx.restore();
                     } else if (gun.type === 'minion') {
@@ -2313,10 +2313,10 @@
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         ctx.beginPath();
-                        ctx.moveTo(recoilX - baseWidth / 2, -5 * camera.zoom); // Back left (narrow base)
-                        ctx.lineTo(recoilX - tipWidth / 2, -5 * camera.zoom + length); // Front left (wide tip)
-                        ctx.lineTo(recoilX + tipWidth / 2, -5 * camera.zoom + length); // Front right (wide tip)
-                        ctx.lineTo(recoilX + baseWidth / 2, -5 * camera.zoom); // Back right (narrow base)
+                        ctx.moveTo(-baseWidth / 2, recoilX - 5 * camera.zoom); // Back left (narrow base)
+                        ctx.lineTo(-tipWidth / 2, recoilX - 5 * camera.zoom + length); // Front left (wide tip)
+                        ctx.lineTo(tipWidth / 2, recoilX - 5 * camera.zoom + length); // Front right (wide tip)
+                        ctx.lineTo(baseWidth / 2, recoilX - 5 * camera.zoom); // Back right (narrow base)
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
@@ -3797,31 +3797,34 @@
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
                     if (block.type === 'normal' || block.type === 'trap') {
-                        // Normal gun or trap launcher - both render the same way in editor
-                        const gunLength = (block.props.length || 1) * 40;
-                        const gunWidth = (block.props.size || 1) * 15;
+                        // Normal gun or trap launcher - render same as game
+                        const sizeMultiplier = 1; // Editor doesn't use camera zoom, so use 1
+                        const gunLength = (block.props.length || 1) * 20 * sizeMultiplier;
+                        const gunWidth = (block.props.size || 1) * 20 * sizeMultiplier;
                         
                         const gunColor = block.props.color || '#999999';
                         ctx.fillStyle = gunColor;
-                        ctx.fillRect(-gunWidth / 2, 0, gunWidth, gunLength);
+                        ctx.fillRect(-gunWidth / 2, -5 * sizeMultiplier, gunWidth, gunLength);
                         
                         ctx.strokeStyle = editorState.selectedBlock?.id === block.id ? '#ffff00' : '#404040';
                         ctx.lineWidth = editorState.selectedBlock?.id === block.id ? 3 : 2;
-                        ctx.strokeRect(-gunWidth / 2, 0, gunWidth, gunLength);
+                        ctx.strokeRect(-gunWidth / 2, -5 * sizeMultiplier, gunWidth, gunLength);
                         
                     } else if (block.type === 'minion') {
-                        // Minion spawner - show as gun with number (not circle)
-                        const gunLength = 30;
-                        const gunWidth = 15;
+                        // Minion spawner - render same as game
+                        const sizeMultiplier = 1;
+                        const length = 25 * sizeMultiplier;
+                        const baseWidth = 8 * sizeMultiplier;
+                        const tipWidth = 18 * sizeMultiplier;
                         
-                        const gunColor = block.props.color || '#999999';
+                        const gunColor = block.props.color || '#ff9500';
                         ctx.fillStyle = gunColor;
-                        // Draw trapezoid gun barrel
+                        
                         ctx.beginPath();
-                        ctx.moveTo(-gunWidth / 3, 0);
-                        ctx.lineTo(-gunWidth / 2, gunLength);
-                        ctx.lineTo(gunWidth / 2, gunLength);
-                        ctx.lineTo(gunWidth / 3, 0);
+                        ctx.moveTo(-baseWidth / 2, -5); // Back left (narrow base)
+                        ctx.lineTo(-tipWidth / 2, -5 + length); // Front left (wide tip)
+                        ctx.lineTo(tipWidth / 2, -5 + length); // Front right (wide tip)
+                        ctx.lineTo(baseWidth / 2, -5); // Back right (narrow base)
                         ctx.closePath();
                         ctx.fill();
                         
