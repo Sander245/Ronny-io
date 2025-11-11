@@ -811,34 +811,44 @@
 
         // Calculate distance from center to edge of base at given angle
         function getBaseRadiusAtAngle(player, angle) {
+            return getBaseRadiusAndFaceAtAngle(player, angle).radius;
+        }
+
+        // Get both radius and face angle at a specific angle
+        function getBaseRadiusAndFaceAtAngle(player, angle) {
             const tankConfig = tankTypes[player.tankType];
-            if (!tankConfig) return player.size;
+            if (!tankConfig) return { radius: player.size, faceAngle: angle };
             
             // For circle or simple polygon base
             if (typeof tankConfig.baseShape === 'number') {
                 const sides = tankConfig.baseShape;
                 if (sides === 0) {
-                    // Circle - constant radius
-                    return player.size;
+                    // Circle - constant radius, face perpendicular to radius
+                    return { radius: player.size, faceAngle: angle };
                 } else {
                     // Regular polygon - calculate distance to edge at this angle
                     const anglePerSide = (Math.PI * 2) / sides;
-                    const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+                    
+                    // Find which side this angle points to
+                    const normalizedAngle = angle + Math.PI / 2;
+                    const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+                    const sideAngle = sideIndex * anglePerSide;
                     
                     // Distance from center to edge of regular polygon at given angle
                     const angleToEdge = angle - sideAngle + Math.PI / 2;
                     const cosAngle = Math.cos(angleToEdge);
                     
-                    if (Math.abs(cosAngle) < 0.001) {
-                        return player.size;
-                    }
+                    const radius = Math.abs(cosAngle) > 0.001 ? player.size / cosAngle : player.size;
                     
-                    return player.size / cosAngle;
+                    // Face angle is perpendicular to the side
+                    const faceAngle = sideAngle - Math.PI / 2;
+                    
+                    return { radius, faceAngle };
                 }
             }
             
             // For advanced base, use conservative estimate (circle)
-            return player.size;
+            return { radius: player.size, faceAngle: angle };
         }
 
         // Event listeners
@@ -2284,11 +2294,19 @@
             const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
             ctx.save();
+            
+            // Get radius and face angle at this position
+            const { radius: baseRadius, faceAngle } = getBaseRadiusAndFaceAtAngle(player, gunAngle);
+            const gunDistance = baseRadius * camera.zoom;
+            
             // Position gun on perimeter at 'angle'
             ctx.rotate(gunAngle);
-            const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
-            const gunDistance = baseRadius * camera.zoom;
             ctx.translate(gunDistance, 0);
+            
+            // Rotate to align with face (perpendicular to surface)
+            ctx.rotate(faceAngle - gunAngle);
+            
+            // Apply additional rotations
             ctx.rotate(blockRotation + selfAngle);
             ctx.translate(offsetX, offsetY);
 

@@ -852,36 +852,42 @@ function checkCollision(obj1, obj2, size1, size2) {
 
 // Calculate distance from center to edge of base at given angle
 function getBaseRadiusAtAngle(player, angle) {
+    return getBaseRadiusAndFaceAtAngle(player, angle).radius;
+}
+
+function getBaseRadiusAndFaceAtAngle(player, angle) {
     const tankConfig = TANK_TYPES[player.tankType];
     
     // For circle or simple polygon base
     if (typeof tankConfig.baseShape === 'number') {
         const sides = tankConfig.baseShape;
         if (sides === 0) {
-            // Circle - constant radius
-            return player.size;
+            // Circle - constant radius, face perpendicular to radius
+            return { radius: player.size, faceAngle: angle };
         } else {
             // Regular polygon - calculate distance to edge at this angle
-            // Find which edge the angle points toward
             const anglePerSide = (Math.PI * 2) / sides;
-            const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+            
+            // Find which side this angle points to
+            const normalizedAngle = angle + Math.PI / 2;
+            const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+            const sideAngle = sideIndex * anglePerSide;
             
             // Distance from center to edge of regular polygon at given angle
-            // Formula: radius / cos(angle_to_nearest_edge)
             const angleToEdge = angle - sideAngle + Math.PI / 2;
             const cosAngle = Math.cos(angleToEdge);
             
-            if (Math.abs(cosAngle) < 0.001) {
-                return player.size; // Avoid division by zero
-            }
+            const radius = Math.abs(cosAngle) > 0.001 ? player.size / cosAngle : player.size;
             
-            return player.size / cosAngle;
+            // Face angle is perpendicular to the side
+            const faceAngle = sideAngle - Math.PI / 2;
+            
+            return { radius, faceAngle };
         }
     }
     
     // For advanced base with custom blocks, use conservative estimate (circle)
-    // TODO: Could calculate actual outline from baseBlocks if needed
-    return player.size;
+    return { radius: player.size, faceAngle: angle };
 }
 
 function findSafeSpawnPosition() {
@@ -980,23 +986,24 @@ function gameLoop() {
                     const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
                     const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                     
-                    // Gun is always positioned on perimeter at 'angle'
-                    // blockRotation and selfAngle control barrel direction
-                    let gunAngle = player.rotation + gunBaseAngle + blockRotation + selfAngle;
+                    // Get base radius and face angle at this position
+                    const { radius: baseRadius, faceAngle } = getBaseRadiusAndFaceAtAngle(player, gunBaseAngle);
+                    
+                    // Calculate shooting angle: player rotation + gun position angle + face angle adjustment + additional rotations
+                    const relativeAngle = player.rotation + gunBaseAngle;
+                    const faceDiff = faceAngle - gunBaseAngle;
+                    let gunAngle = player.rotation + gunBaseAngle + faceDiff + blockRotation + selfAngle;
                     
                     const offsetX = gun.offsetX || 0;
                     const offsetY = gun.offsetY || 0;
                     
                     // Calculate bullet spawn position relative to tank
-                    // Get base radius at this angle to position gun on perimeter
-                    const relativeAngle = player.rotation + gunBaseAngle; // For positioning, always use tank-relative
-                    const baseRadius = getBaseRadiusAtAngle(player, gunBaseAngle);
                     const startX = player.x + Math.cos(relativeAngle) * (baseRadius + 10) + 
-                                   Math.cos(relativeAngle + Math.PI/2) * offsetY +
-                                   Math.cos(relativeAngle) * offsetX;
+                                   Math.cos(relativeAngle + faceDiff) * offsetX +
+                                   Math.cos(relativeAngle + faceDiff + Math.PI/2) * offsetY;
                     const startY = player.y + Math.sin(relativeAngle) * (baseRadius + 10) + 
-                                   Math.sin(relativeAngle + Math.PI/2) * offsetY +
-                                   Math.sin(relativeAngle) * offsetX;
+                                   Math.sin(relativeAngle + faceDiff) * offsetX +
+                                   Math.sin(relativeAngle + faceDiff + Math.PI/2) * offsetY;
                     
                     if (gun.type === 'normal') {
                         const spread = gun.spread || 0;
