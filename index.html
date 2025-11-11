@@ -4410,6 +4410,28 @@
                     const gun = { ...block.props };
                     // Remove knockback property
                     delete gun.knockback;
+                    
+                    // For advanced bases, "bake" the gun position based on editor preview
+                    if (editorState.baseMode === 'advanced' && gun.angle !== undefined) {
+                        const angleRad = gun.angle * Math.PI / 180;
+                        const { radius, faceAngle } = getEditorBaseRadiusAndFace(angleRad);
+                        
+                        // Calculate the actual position where this gun should be
+                        const gunX = Math.cos(angleRad) * radius;
+                        const gunY = Math.sin(angleRad) * radius;
+                        
+                        // Calculate the rotation needed (face angle relative to angle)
+                        const faceDiff = faceAngle - angleRad;
+                        
+                        // Store as offsetX, offsetY, and rotation instead of angle
+                        gun.offsetX = (gun.offsetX || 0) + gunX;
+                        gun.offsetY = (gun.offsetY || 0) + gunY;
+                        gun.rotation = (gun.rotation || 0) + (faceDiff * 180 / Math.PI);
+                        
+                        // Remove the angle property since we've converted it to position
+                        delete gun.angle;
+                    }
+                    
                     return gun;
                 }),
                 fov: editorState.fov || 1,
@@ -4488,7 +4510,32 @@
                 name: 'Test Tank',
                 level: editorState.level || 1,
                 baseShape: baseShape,
-                guns: editorState.blocks.map(block => block.props),
+                guns: editorState.blocks.map(block => {
+                    const gun = { ...block.props };
+                    
+                    // For advanced bases, "bake" the gun position based on editor preview
+                    if (editorState.baseMode === 'advanced' && gun.angle !== undefined) {
+                        const angleRad = gun.angle * Math.PI / 180;
+                        const { radius, faceAngle } = getEditorBaseRadiusAndFace(angleRad);
+                        
+                        // Calculate the actual position where this gun should be
+                        const gunX = Math.cos(angleRad) * radius;
+                        const gunY = Math.sin(angleRad) * radius;
+                        
+                        // Calculate the rotation needed (face angle relative to angle)
+                        const faceDiff = faceAngle - angleRad;
+                        
+                        // Store as offsetX, offsetY, and rotation instead of angle
+                        gun.offsetX = (gun.offsetX || 0) + gunX;
+                        gun.offsetY = (gun.offsetY || 0) + gunY;
+                        gun.rotation = (gun.rotation || 0) + (faceDiff * 180 / Math.PI);
+                        
+                        // Remove the angle property since we've converted it to position
+                        delete gun.angle;
+                    }
+                    
+                    return gun;
+                }),
                 fov: editorState.fov || 1,
                 hideFromTree: true
             };
