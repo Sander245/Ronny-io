@@ -2229,7 +2229,6 @@
                         const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
                         const gunDistance = baseRadius * camera.zoom;
                         ctx.translate(gunDistance, 0); // Move to actual perimeter
-                        ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2257,7 +2256,6 @@
                         const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
                         const gunDistance = baseRadius * camera.zoom;
                         ctx.translate(gunDistance, 0); // Move to actual perimeter
-                        ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2298,7 +2296,6 @@
                         const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
                         const gunDistance = baseRadius * camera.zoom;
                         ctx.translate(gunDistance, 0); // Move to actual perimeter
-                        ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -3796,7 +3793,6 @@
                     ctx.rotate(angle);
                     const baseRadius = getEditorBaseRadius(angle);
                     ctx.translate(baseRadius, 0); // Move to actual perimeter
-                    ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                     ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
