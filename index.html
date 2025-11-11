@@ -2196,6 +2196,7 @@
                         const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
                         const gunDistance = baseRadius * camera.zoom;
                         ctx.translate(gunDistance, 0); // Move to actual perimeter
+                        ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2206,8 +2207,8 @@
                         
                         // Apply recoil offset (pushes gun back)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
-                        ctx.fillRect(-5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
-                        ctx.strokeRect(-5 * camera.zoom + recoilX, -gunWidth / 2, gunLength, gunWidth);
+                        ctx.fillRect(recoilX - gunWidth / 2, -5 * camera.zoom, gunWidth, gunLength);
+                        ctx.strokeRect(recoilX - gunWidth / 2, -5 * camera.zoom, gunWidth, gunLength);
 
                         ctx.restore();
                     } else if (gun.type === 'trap') {
@@ -2223,6 +2224,7 @@
                         const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
                         const gunDistance = baseRadius * camera.zoom;
                         ctx.translate(gunDistance, 0); // Move to actual perimeter
+                        ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2241,12 +2243,12 @@
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         // Base rectangle (vertical part of T)
-                        ctx.fillRect(-5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
-                        ctx.strokeRect(-5 * camera.zoom * sizeMultiplier + recoilX, -baseHeight / 2, baseLength, baseHeight);
+                        ctx.fillRect(recoilX - baseHeight / 2, -5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
+                        ctx.strokeRect(recoilX - baseHeight / 2, -5 * camera.zoom * sizeMultiplier, baseHeight, baseLength);
                         
                         // Front flat rectangle (horizontal part of T)
-                        ctx.fillRect(-5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
-                        ctx.strokeRect(-5 * camera.zoom * sizeMultiplier + baseLength + recoilX, -flatRectWidth / 2, flatRectHeight, flatRectWidth);
+                        ctx.fillRect(recoilX - flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
+                        ctx.strokeRect(recoilX - flatRectWidth / 2, -5 * camera.zoom * sizeMultiplier + baseLength, flatRectWidth, flatRectHeight);
 
                         ctx.restore();
                     } else if (gun.type === 'minion') {
@@ -2263,6 +2265,7 @@
                         const baseRadius = getBaseRadiusAtAngle(player, gunAngle);
                         const gunDistance = baseRadius * camera.zoom;
                         ctx.translate(gunDistance, 0); // Move to actual perimeter
+                        ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                         ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                         ctx.translate(offsetX, offsetY);
 
@@ -2275,16 +2278,15 @@
                         const length = 25 * camera.zoom * sizeMultiplier; // Length of trapezoid
                         const baseWidth = 8 * camera.zoom * sizeMultiplier; // Width at narrow end (at tank)
                         const tipWidth = 18 * camera.zoom * sizeMultiplier; // Width at wide end (facing out)
-                        const baseX = -5 * camera.zoom;
                         
                         // Apply recoil offset (pushes gun back)
                         const recoilX = -recoilOffset * camera.zoom * sizeMultiplier;
                         
                         ctx.beginPath();
-                        ctx.moveTo(baseX + recoilX, -baseWidth / 2); // Back top corner (narrow base)
-                        ctx.lineTo(baseX + length + recoilX, -tipWidth / 2); // Front top corner (wide tip)
-                        ctx.lineTo(baseX + length + recoilX, tipWidth / 2); // Front bottom corner (wide tip)
-                        ctx.lineTo(baseX + recoilX, baseWidth / 2); // Back bottom corner (narrow base)
+                        ctx.moveTo(-baseWidth / 2, -5 * camera.zoom + recoilX); // Back left (narrow base)
+                        ctx.lineTo(-tipWidth / 2, -5 * camera.zoom + length + recoilX); // Front left (wide tip)
+                        ctx.lineTo(tipWidth / 2, -5 * camera.zoom + length + recoilX); // Front right (wide tip)
+                        ctx.moveTo(baseWidth / 2, -5 * camera.zoom + recoilX); // Back right (narrow base)
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
@@ -3032,6 +3034,8 @@
                     reload: 1.2,
                     maxTraps: 15,
                     trapSize: 1,
+                    shootDistance: 8, // NEW: How far trap shoots out
+                    friction: 0.92, // NEW: Friction/deceleration (lower = more friction)
                     recoil: 0,
                     knockback: 0, // NEW: Knockback for traps
                     layer: 0,
@@ -3269,6 +3273,7 @@
                 panel.innerHTML = `
                     <div style="margin-bottom: 15px;">
                         <strong style="color: #4a9eff;">${blockTypes[block.type].name}</strong>
+                        <button id="duplicateBlockBtn" style="float: right; padding: 5px 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">Duplicate</button>
                         <button id="deleteBlockBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
                     </div>
                 `;
@@ -3301,7 +3306,7 @@
                         input = document.createElement('input');
                         input.type = 'number';
                         input.value = value;
-                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') || key.includes('knockback') || key.includes('bulletHealth') ? '0.1' : '1';
+                        input.step = key.includes('reload') || key.includes('damage') || key.includes('speed') || key.includes('recoil') || key.includes('penetration') || key.includes('health') || key.includes('Speed') || key.includes('knockback') || key.includes('bulletHealth') || key.includes('friction') || key.includes('shootDistance') ? '0.1' : '1';
                         input.style.cssText = 'width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px;';
                     }
 
@@ -3320,6 +3325,19 @@
                     panel.appendChild(propDiv);
                 }
 
+                document.getElementById('duplicateBlockBtn').addEventListener('click', () => {
+                    const duplicate = {
+                        id: Date.now(),
+                        type: block.type,
+                        props: { ...block.props }
+                    };
+                    editorState.blocks.push(duplicate);
+                    editorState.selectedBlock = duplicate;
+                    updateCurrentBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+
                 document.getElementById('deleteBlockBtn').addEventListener('click', () => {
                     editorState.blocks = editorState.blocks.filter(b => b.id !== block.id);
                     editorState.selectedBlock = null;
@@ -3336,6 +3354,7 @@
                 panel.innerHTML = `
                     <div style="margin-bottom: 15px;">
                         <strong style="color: #4a9eff;">Blade</strong>
+                        <button id="duplicateBladeBtn" style="float: right; padding: 5px 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">Duplicate</button>
                         <button id="deleteBladeBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
                     </div>
                 `;
@@ -3387,6 +3406,24 @@
                     panel.appendChild(propDiv);
                 }
 
+                document.getElementById('duplicateBladeBtn').addEventListener('click', () => {
+                    const duplicate = {
+                        id: Date.now(),
+                        shape: blade.shape,
+                        size: blade.size,
+                        x: blade.x,
+                        y: blade.y,
+                        rotation: blade.rotation,
+                        layer: blade.layer,
+                        color: blade.color
+                    };
+                    editorState.blades.push(duplicate);
+                    editorState.selectedBlade = duplicate;
+                    updateBladesList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+
                 document.getElementById('deleteBladeBtn').addEventListener('click', () => {
                     editorState.blades = editorState.blades.filter(b => b.id !== blade.id);
                     editorState.selectedBlade = null;
@@ -3403,6 +3440,7 @@
                 panel.innerHTML = `
                     <div style="margin-bottom: 15px;">
                         <strong style="color: #4a9eff;">Base Block</strong>
+                        <button id="duplicateBaseBlockBtn" style="float: right; padding: 5px 10px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">Duplicate</button>
                         <button id="deleteBaseBlockBtn" style="float: right; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
                     </div>
                 `;
@@ -3464,6 +3502,26 @@
                     panel.appendChild(propDiv);
                 }
 
+                document.getElementById('duplicateBaseBlockBtn').addEventListener('click', () => {
+                    const duplicate = {
+                        id: Date.now(),
+                        shape: baseBlock.shape,
+                        size: baseBlock.size,
+                        x: baseBlock.x,
+                        y: baseBlock.y,
+                        width: baseBlock.width,
+                        height: baseBlock.height,
+                        rotation: baseBlock.rotation,
+                        layer: baseBlock.layer,
+                        color: baseBlock.color
+                    };
+                    editorState.baseBlocks.push(duplicate);
+                    editorState.selectedBaseBlock = duplicate;
+                    updateBaseBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                });
+
                 document.getElementById('deleteBaseBlockBtn').addEventListener('click', () => {
                     editorState.baseBlocks = editorState.baseBlocks.filter(b => b.id !== baseBlock.id);
                     editorState.selectedBaseBlock = null;
@@ -3500,9 +3558,58 @@
                 }
                 
                 return tankSize / cosAngle;
+            } else if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
+                // Advanced mode with custom base blocks
+                // Find the largest radius at this angle from all base blocks
+                let maxRadius = tankSize;
+                
+                for (const baseBlock of editorState.baseBlocks) {
+                    const shape = baseBlock.shape || 0;
+                    const size = baseBlock.size || tankSize;
+                    const width = baseBlock.width || 0;
+                    const height = baseBlock.height || 0;
+                    
+                    if (shape === 0) {
+                        // Circle
+                        maxRadius = Math.max(maxRadius, size + width);
+                    } else if (shape === 4 && (width || height)) {
+                        // Rectangle - calculate distance to edge at angle
+                        const totalWidth = size + width;
+                        const totalHeight = size + height;
+                        const absAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                        const cos = Math.cos(absAngle);
+                        const sin = Math.sin(absAngle);
+                        
+                        // Find intersection with rectangle
+                        let dist;
+                        if (Math.abs(cos) > Math.abs(sin)) {
+                            dist = Math.abs((totalWidth / 2) / cos);
+                        } else {
+                            dist = Math.abs((totalHeight / 2) / sin);
+                        }
+                        maxRadius = Math.max(maxRadius, dist);
+                    } else {
+                        // Polygon
+                        const sides = shape;
+                        const anglePerSide = (Math.PI * 2) / sides;
+                        const sideAngle = Math.floor((angle + Math.PI / 2 + anglePerSide / 2) / anglePerSide) * anglePerSide;
+                        
+                        const angleToEdge = angle - sideAngle + Math.PI / 2;
+                        const cosAngle = Math.cos(angleToEdge);
+                        
+                        if (Math.abs(cosAngle) > 0.001) {
+                            const radiusX = size + width;
+                            maxRadius = Math.max(maxRadius, radiusX / cosAngle);
+                        } else {
+                            maxRadius = Math.max(maxRadius, size + width);
+                        }
+                    }
+                }
+                
+                return maxRadius;
             }
             
-            // For advanced mode, use conservative estimate
+            // Default to circle
             return tankSize;
         }
 
@@ -3674,6 +3781,7 @@
                     ctx.rotate(angle);
                     const baseRadius = getEditorBaseRadius(angle);
                     ctx.translate(baseRadius, 0); // Move to actual perimeter
+                    ctx.rotate(-Math.PI / 2); // Default offset: -90 degrees so 0 = pointing outward
                     ctx.rotate(blockRotation + selfAngle); // Apply block rotation + self rotation
                     ctx.translate(block.props.offsetX || 0, block.props.offsetY || 0);
                 
@@ -3790,7 +3898,8 @@
                 const worldX = relX * cos - relY * sin;
                 const worldY = relX * sin + relY * cos;
                 
-                let clickedBlock = null;
+                let clickedItem = null;
+                let clickedType = null;
                 
                 // Check guns (in reverse order to prioritize top-most)
                 for (let i = editorState.blocks.length - 1; i >= 0; i--) {
@@ -3802,16 +3911,65 @@
                     
                     // Simple hit detection - 40 pixel radius
                     if (blockDist < 40) {
-                        clickedBlock = block;
+                        clickedItem = block;
+                        clickedType = 'gun';
                         break;
                     }
                 }
                 
-                if (clickedBlock) {
-                    editorState.selectedBlock = clickedBlock;
+                // Check blades if no gun was clicked
+                if (!clickedItem) {
+                    for (let i = editorState.blades.length - 1; i >= 0; i--) {
+                        const blade = editorState.blades[i];
+                        const bladeDist = Math.sqrt(
+                            (worldX - blade.x) ** 2 + 
+                            (worldY - blade.y) ** 2
+                        );
+                        
+                        // Hit detection based on blade size
+                        if (bladeDist < blade.size * 20) {
+                            clickedItem = blade;
+                            clickedType = 'blade';
+                            break;
+                        }
+                    }
+                }
+                
+                // Check base blocks if no gun or blade was clicked
+                if (!clickedItem) {
+                    for (let i = editorState.baseBlocks.length - 1; i >= 0; i--) {
+                        const baseBlock = editorState.baseBlocks[i];
+                        const baseBlockDist = Math.sqrt(worldX ** 2 + worldY ** 2);
+                        
+                        // Hit detection based on base block size
+                        const totalSize = baseBlock.size + Math.max(baseBlock.width || 0, baseBlock.height || 0);
+                        if (baseBlockDist < totalSize) {
+                            clickedItem = baseBlock;
+                            clickedType = 'baseBlock';
+                            break;
+                        }
+                    }
+                }
+                
+                if (clickedItem) {
+                    if (clickedType === 'gun') {
+                        editorState.selectedBlock = clickedItem;
+                        editorState.selectedBlade = null;
+                        editorState.selectedBaseBlock = null;
+                    } else if (clickedType === 'blade') {
+                        editorState.selectedBlade = clickedItem;
+                        editorState.selectedBlock = null;
+                        editorState.selectedBaseBlock = null;
+                    } else if (clickedType === 'baseBlock') {
+                        editorState.selectedBaseBlock = clickedItem;
+                        editorState.selectedBlock = null;
+                        editorState.selectedBlade = null;
+                    }
                 } else {
-                    // Clicked on empty space - deselect
+                    // Clicked on empty space - deselect all
                     editorState.selectedBlock = null;
+                    editorState.selectedBlade = null;
+                    editorState.selectedBaseBlock = null;
                 }
                 
                 updateCurrentBlocksList();

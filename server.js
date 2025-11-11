@@ -306,7 +306,7 @@ class Bullet extends GameObject {
 }
 
 class Trap extends GameObject {
-    constructor(x, y, angle, owner, damage, size = 15) {
+    constructor(x, y, angle, owner, damage, size = 15, shootDistance = 8, friction = 0.92) {
         super(x, y);
         this.angle = angle;
         this.owner = owner;
@@ -318,10 +318,10 @@ class Trap extends GameObject {
         this.rotation = 0;
         this.rotationSpeed = 0.05;
         
-        // Initial movement - shoot out faster
-        this.vx = Math.cos(angle) * 8; // Increased from 3 to 8
-        this.vy = Math.sin(angle) * 8;
-        this.friction = 0.92; // Slower deceleration (was 0.9)
+        // Initial movement - configurable shoot distance
+        this.vx = Math.cos(angle) * shootDistance;
+        this.vy = Math.sin(angle) * shootDistance;
+        this.friction = friction; // Configurable friction
         
         // Death animation
         this.dying = false;
@@ -982,7 +982,8 @@ function gameLoop() {
                     
                     // Gun is always positioned on perimeter at 'angle'
                     // blockRotation and selfAngle control barrel direction
-                    let gunAngle = player.rotation + gunBaseAngle + blockRotation + selfAngle;
+                    // Add -90 degree offset so 0 = pointing outward
+                    let gunAngle = player.rotation + gunBaseAngle - Math.PI / 2 + blockRotation + selfAngle;
                     
                     const offsetX = gun.offsetX || 0;
                     const offsetY = gun.offsetY || 0;
@@ -1029,9 +1030,11 @@ function gameLoop() {
                         const maxTraps = gun.maxTraps || 10;
                         const playerTraps = Array.from(traps.values()).filter(t => t.owner === player.id);
                         const trapSize = (gun.trapSize || 1) * 15; // Base size 15, multiplied by trapSize
+                        const shootDistance = gun.shootDistance || 8; // How far trap shoots out
+                        const friction = gun.friction || 0.92; // Friction/deceleration
                         
                         if (playerTraps.length < maxTraps) {
-                            const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
+                            const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize, shootDistance, friction);
                             trap.knockback = gun.knockback || 0;
                             traps.set(trap.id, trap);
                             player.gunRecoils[gunKey] = 10; // Set recoil animation
@@ -1039,7 +1042,7 @@ function gameLoop() {
                             // Remove oldest trap
                             const oldest = playerTraps[0];
                             traps.delete(oldest.id);
-                            const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize);
+                            const trap = new Trap(startX, startY, gunAngle, player.id, player.getBulletDamage() * (gun.damage || 1), trapSize, shootDistance, friction);
                             trap.knockback = gun.knockback || 0;
                             traps.set(trap.id, trap);
                             player.gunRecoils[gunKey] = 10; // Set recoil animation
