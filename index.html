@@ -640,7 +640,11 @@
         <div id="editorCenterPanel" style="position: absolute; left: 250px; top: 0; right: 300px; height: 100%; background: #1a1a1a; display: flex; flex-direction: column;">
             <div style="background: #2a2a2a; padding: 15px; border-bottom: 2px solid #444; display: flex; justify-content: space-between; align-items: center;">
                 <h1 style="color: #fff; margin: 0;">Tank Editor</h1>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="color: #aaa; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="checkbox" id="debugPerimeterToggle" style="cursor: pointer;">
+                        Show Perimeter Debug
+                    </label>
                     <button id="editorExportJSONBtn" style="padding: 10px 20px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">📋 Export JSON</button>
                     <button id="editorTestBtn" style="padding: 10px 20px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Test</button>
                     <button id="editorCancelBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancel</button>
@@ -827,21 +831,28 @@
                     return { radius: player.size, faceAngle: angle };
                 } else {
                     // Regular polygon - calculate distance to edge at this angle
+                    // The polygon has vertices at distance player.size from center (inscribed in circle)
                     const anglePerSide = (Math.PI * 2) / sides;
                     
                     // Find which side this angle points to
                     const normalizedAngle = angle + Math.PI / 2;
-                    const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+                    const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide) % sides;
                     const sideAngle = sideIndex * anglePerSide;
                     
-                    // Distance from center to edge of regular polygon at given angle
-                    const angleToEdge = angle - sideAngle + Math.PI / 2;
-                    const cosAngle = Math.cos(angleToEdge);
+                    // For an inscribed polygon, the perpendicular distance from center to an edge
+                    const apothem = player.size * Math.cos(anglePerSide / 2);
                     
-                    const radius = Math.abs(cosAngle) > 0.001 ? player.size / cosAngle : player.size;
+                    // The angle from center perpendicular to this side
+                    const sideCenterAngle = sideAngle - Math.PI / 2;
+                    
+                    // Calculate actual distance along the ray at 'angle' to hit the side
+                    const angleDiff = angle - sideCenterAngle;
+                    const cosAngleDiff = Math.cos(angleDiff);
+                    
+                    const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
                     
                     // Face angle is perpendicular to the side
-                    const faceAngle = sideAngle - Math.PI / 2;
+                    const faceAngle = sideCenterAngle;
                     
                     return { radius, faceAngle };
                 }
@@ -2965,7 +2976,8 @@
             baseSides: 4, // for simple mode
             baseBlocks: [], // for advanced mode: {id, shape, size, x, y, width, height, rotation, layer}
             blades: [], // list of blades: {id, shape (sides), size, x, y, rotation, layer}
-            debugPerimeter: null // {angle, timestamp} for showing perimeter debug
+            debugPerimeter: null, // {angle, timestamp} for showing perimeter debug
+            showPerimeterDebug: false // toggle for always showing debug
         };
 
         const blockTypes = {
@@ -3572,22 +3584,33 @@
                 return { radius: tankSize, faceAngle: angle };
             } else if (editorState.baseMode === 'simple') {
                 // Regular polygon centered at origin
+                // The polygon has vertices at distance tankSize from center (inscribed in circle)
                 const sides = editorState.baseSides;
                 const anglePerSide = (Math.PI * 2) / sides;
                 
                 // Find which side this angle points to
-                const normalizedAngle = angle + Math.PI / 2; // Offset for polygon orientation
-                const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+                // Polygon is drawn with first vertex at -PI/2, so offset accordingly
+                const normalizedAngle = angle + Math.PI / 2;
+                const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide) % sides;
                 const sideAngle = sideIndex * anglePerSide;
                 
-                // Calculate distance to that side
-                const angleToEdge = angle - sideAngle + Math.PI / 2;
-                const cosAngle = Math.cos(angleToEdge);
+                // For an inscribed polygon, the perpendicular distance from center to an edge is:
+                // apothem = R * cos(anglePerSide / 2)
+                const apothem = tankSize * Math.cos(anglePerSide / 2);
                 
-                const radius = Math.abs(cosAngle) > 0.001 ? tankSize / cosAngle : tankSize;
+                // The angle from center perpendicular to this side
+                const sideCenterAngle = sideAngle - Math.PI / 2;
                 
-                // Face angle is perpendicular to the side (same for all points on a flat face)
-                const faceAngle = sideAngle - Math.PI / 2;
+                // Calculate actual distance along the ray at 'angle' to hit the side
+                // The side is at perpendicular distance 'apothem' from center at angle 'sideCenterAngle'
+                const angleDiff = angle - sideCenterAngle;
+                const cosAngleDiff = Math.cos(angleDiff);
+                
+                // Distance along ray = apothem / cos(angle difference)
+                const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
+                
+                // Face angle is perpendicular to the side
+                const faceAngle = sideCenterAngle;
                 
                 return { radius, faceAngle };
             } else if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
@@ -3974,8 +3997,8 @@
 
             ctx.restore();
             
-            // Debug: Show perimeter calculation for selected gun or when angle changes
-            if (editorState.debugPerimeter && Date.now() - editorState.debugPerimeter.timestamp < 3000) {
+            // Debug: Show perimeter calculation when toggle is enabled
+            if (editorState.showPerimeterDebug) {
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.scale(editorState.zoom, editorState.zoom);
@@ -3998,9 +4021,9 @@
                     ctx.fill();
                 }
                 
-                // Highlight the specific angle that was changed
-                if (editorState.debugPerimeter.angle !== undefined) {
-                    const angle = editorState.debugPerimeter.angle;
+                // Highlight the specific angle if a gun is selected
+                if (editorState.selectedBlock && editorState.selectedBlock.props.angle !== undefined) {
+                    const angle = editorState.selectedBlock.props.angle * Math.PI / 180;
                     const { radius, faceAngle } = getEditorBaseRadiusAndFace(angle);
                     const x = Math.cos(angle) * radius;
                     const y = Math.sin(angle) * radius;
@@ -4300,6 +4323,12 @@
             editorState.selectedType = 'baseBlock';
             updateBaseBlocksList();
             updatePropertiesPanel();
+            renderEditorCanvas();
+        });
+
+        // Debug perimeter toggle
+        document.getElementById('debugPerimeterToggle').addEventListener('change', (e) => {
+            editorState.showPerimeterDebug = e.target.checked;
             renderEditorCanvas();
         });
 

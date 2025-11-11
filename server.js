@@ -866,21 +866,28 @@ function getBaseRadiusAndFaceAtAngle(player, angle) {
             return { radius: player.size, faceAngle: angle };
         } else {
             // Regular polygon - calculate distance to edge at this angle
+            // The polygon has vertices at distance player.size from center (inscribed in circle)
             const anglePerSide = (Math.PI * 2) / sides;
             
             // Find which side this angle points to
             const normalizedAngle = angle + Math.PI / 2;
-            const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+            const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide) % sides;
             const sideAngle = sideIndex * anglePerSide;
             
-            // Distance from center to edge of regular polygon at given angle
-            const angleToEdge = angle - sideAngle + Math.PI / 2;
-            const cosAngle = Math.cos(angleToEdge);
+            // For an inscribed polygon, the perpendicular distance from center to an edge
+            const apothem = player.size * Math.cos(anglePerSide / 2);
             
-            const radius = Math.abs(cosAngle) > 0.001 ? player.size / cosAngle : player.size;
+            // The angle from center perpendicular to this side
+            const sideCenterAngle = sideAngle - Math.PI / 2;
+            
+            // Calculate actual distance along the ray at 'angle' to hit the side
+            const angleDiff = angle - sideCenterAngle;
+            const cosAngleDiff = Math.cos(angleDiff);
+            
+            const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
             
             // Face angle is perpendicular to the side
-            const faceAngle = sideAngle - Math.PI / 2;
+            const faceAngle = sideCenterAngle;
             
             return { radius, faceAngle };
         }
