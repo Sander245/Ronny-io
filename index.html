@@ -838,30 +838,33 @@
                     // The polygon has vertices at distance player.size from center (circumscribed)
                     const anglePerSide = (Math.PI * 2) / sides;
                     
-                    // Polygon is drawn with first vertex at -PI/2 (straight up)
-                    // Find which edge the ray intersects
-                    const normalizedAngle = angle + Math.PI / 2; // Normalize to start from 0
-                    const sideIndex = Math.floor(normalizedAngle / anglePerSide) % sides;
+                    // Polygon is drawn with first vertex at -PI/2 (straight up in negative Y direction)
+                    // Normalize angle to [0, 2π)
+                    let normalizedAngle = angle % (Math.PI * 2);
+                    if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
                     
-                    // Get the two vertices of this edge
-                    const vertex1Angle = (sideIndex / sides) * Math.PI * 2 - Math.PI / 2;
-                    const vertex2Angle = ((sideIndex + 1) / sides) * Math.PI * 2 - Math.PI / 2;
+                    // Adjust for the -PI/2 rotation offset
+                    let adjustedAngle = normalizedAngle + Math.PI / 2;
+                    if (adjustedAngle >= Math.PI * 2) adjustedAngle -= Math.PI * 2;
+                    
+                    // Find which edge (edges are numbered by their first vertex)
+                    const sideIndex = Math.floor(adjustedAngle / anglePerSide) % sides;
+                    
+                    // Angle of the center of this edge (perpendicular from origin hits edge here)
+                    const edgeCenterAngle = (sideIndex + 0.5) * anglePerSide - Math.PI / 2;
                     
                     // Calculate the perpendicular distance from origin to the edge (apothem)
                     const apothem = player.size * Math.cos(anglePerSide / 2);
                     
-                    // The normal to the edge points outward at the midpoint angle
-                    const edgeNormalAngle = vertex1Angle + anglePerSide / 2;
-                    
-                    // Calculate intersection distance
-                    const angleDiff = angle - edgeNormalAngle;
+                    // Calculate intersection distance along the ray
+                    const angleDiff = angle - edgeCenterAngle;
                     const cosAngleDiff = Math.cos(angleDiff);
                     
-                    // Distance along ray = apothem / cos(angle difference from normal)
+                    // Distance along ray = apothem / cos(angle difference from perpendicular)
                     const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
                     
                     // Face angle is the outward normal to the edge
-                    const faceAngle = edgeNormalAngle;
+                    const faceAngle = edgeCenterAngle;
                     
                     return { radius, faceAngle };
                 }
@@ -3599,30 +3602,36 @@
                 const sides = editorState.baseSides;
                 const anglePerSide = (Math.PI * 2) / sides;
                 
-                // Polygon is drawn with first vertex at -PI/2 (straight up)
-                // Find which edge the ray intersects
-                const normalizedAngle = angle + Math.PI / 2; // Normalize to start from 0
-                const sideIndex = Math.floor(normalizedAngle / anglePerSide) % sides;
+                // Polygon is drawn with first vertex at -PI/2 (straight up in negative Y direction)
+                // For a triangle: vertices at -90°, 30°, 150°
+                // Find which edge the ray at 'angle' intersects
                 
-                // Get the two vertices of this edge
-                const vertex1Angle = (sideIndex / sides) * Math.PI * 2 - Math.PI / 2;
-                const vertex2Angle = ((sideIndex + 1) / sides) * Math.PI * 2 - Math.PI / 2;
+                // Normalize angle to [0, 2π)
+                let normalizedAngle = angle % (Math.PI * 2);
+                if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
                 
-                // Calculate the perpendicular distance from origin to the edge (apothem for this polygon)
+                // Adjust for the -PI/2 rotation offset
+                let adjustedAngle = normalizedAngle + Math.PI / 2;
+                if (adjustedAngle >= Math.PI * 2) adjustedAngle -= Math.PI * 2;
+                
+                // Find which edge (edges are numbered by their first vertex)
+                const sideIndex = Math.floor(adjustedAngle / anglePerSide) % sides;
+                
+                // Angle of the center of this edge (perpendicular from origin hits edge here)
+                const edgeCenterAngle = (sideIndex + 0.5) * anglePerSide - Math.PI / 2;
+                
+                // Calculate the perpendicular distance from origin to the edge (apothem)
                 const apothem = tankSize * Math.cos(anglePerSide / 2);
                 
-                // The normal to the edge points outward at the midpoint angle
-                const edgeNormalAngle = vertex1Angle + anglePerSide / 2;
-                
-                // Calculate intersection distance
-                const angleDiff = angle - edgeNormalAngle;
+                // Calculate intersection distance along the ray
+                const angleDiff = angle - edgeCenterAngle;
                 const cosAngleDiff = Math.cos(angleDiff);
                 
-                // Distance along ray = apothem / cos(angle difference from normal)
+                // Distance along ray = apothem / cos(angle difference from perpendicular)
                 const radius = Math.abs(cosAngleDiff) > 0.001 ? apothem / cosAngleDiff : apothem * 1000;
                 
                 // Face angle is the outward normal to the edge
-                const faceAngle = edgeNormalAngle;
+                const faceAngle = edgeCenterAngle;
                 
                 return { radius, faceAngle };
             } else if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
