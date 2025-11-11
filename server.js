@@ -870,15 +870,17 @@ function getBaseRadiusAndFaceAtAngle(player, angle) {
             const anglePerSide = (Math.PI * 2) / sides;
             
             // Find which side this angle points to
-            const normalizedAngle = angle + Math.PI / 2;
+            // Polygon is drawn with first vertex at -PI/2, so we need to account for this rotation
+            const normalizedAngle = angle - (-Math.PI / 2); // Remove the -PI/2 offset
             const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide) % sides;
-            const sideAngle = sideIndex * anglePerSide;
+            const sideAngle = sideIndex * anglePerSide - Math.PI / 2; // Add the offset back
             
             // For an inscribed polygon, the perpendicular distance from center to an edge
             const apothem = player.size * Math.cos(anglePerSide / 2);
             
             // The angle from center perpendicular to this side
-            const sideCenterAngle = sideAngle - Math.PI / 2;
+            // Each side's normal points outward at sideAngle + anglePerSide/2
+            const sideCenterAngle = sideAngle + anglePerSide / 2;
             
             // Calculate actual distance along the ray at 'angle' to hit the side
             const angleDiff = angle - sideCenterAngle;
