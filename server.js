@@ -981,29 +981,47 @@ function gameLoop() {
                 
                 // Check if this gun's reload time has passed
                 if (now >= lastGunShot + gunReloadTime) {
-                    // Calculate gun angle: start with base angle + self rotation
-                    let gunBaseAngle = (gun.angle || 0) * Math.PI / 180;
-                    const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
-                    const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
+                    // Check if gun has baked rotation (from advanced base export) or needs calculation
+                    let gunAngle, startX, startY;
                     
-                    // Get base radius and face angle at this position
-                    const { radius: baseRadius, faceAngle } = getBaseRadiusAndFaceAtAngle(player, gunBaseAngle);
-                    
-                    // Calculate shooting angle: player rotation + gun position angle + face angle adjustment + additional rotations
-                    const relativeAngle = player.rotation + gunBaseAngle;
-                    const faceDiff = faceAngle - gunBaseAngle;
-                    let gunAngle = player.rotation + gunBaseAngle + faceDiff + blockRotation + selfAngle;
-                    
-                    const offsetX = gun.offsetX || 0;
-                    const offsetY = gun.offsetY || 0;
-                    
-                    // Calculate bullet spawn position relative to tank
-                    const startX = player.x + Math.cos(relativeAngle) * (baseRadius + 10) + 
-                                   Math.cos(relativeAngle + faceDiff) * offsetX +
-                                   Math.cos(relativeAngle + faceDiff + Math.PI/2) * offsetY;
-                    const startY = player.y + Math.sin(relativeAngle) * (baseRadius + 10) + 
-                                   Math.sin(relativeAngle + faceDiff) * offsetX +
-                                   Math.sin(relativeAngle + faceDiff + Math.PI/2) * offsetY;
+                    if (gun.rotation !== undefined && gun.blockRotation === undefined && gun.selfAngle === undefined) {
+                        // Baked gun: rotation is final, position is in offsets
+                        const rotation = (gun.rotation || 0) * Math.PI / 180;
+                        gunAngle = player.rotation + rotation;
+                        
+                        const offsetX = gun.offsetX || 0;
+                        const offsetY = gun.offsetY || 0;
+                        
+                        // Spawn position: tank center + rotated offsets
+                        startX = player.x + Math.cos(player.rotation + rotation) * offsetX - 
+                                Math.sin(player.rotation + rotation) * offsetY;
+                        startY = player.y + Math.sin(player.rotation + rotation) * offsetX + 
+                                Math.cos(player.rotation + rotation) * offsetY;
+                    } else {
+                        // Normal gun: calculate position and rotation from angle
+                        let gunBaseAngle = (gun.angle || 0) * Math.PI / 180;
+                        const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
+                        
+                        // Get base radius and face angle at this position
+                        const { radius: baseRadius, faceAngle } = getBaseRadiusAndFaceAtAngle(player, gunBaseAngle);
+                        
+                        // Calculate shooting angle: player rotation + gun position angle + face angle adjustment + additional rotations
+                        const relativeAngle = player.rotation + gunBaseAngle;
+                        const faceDiff = faceAngle - gunBaseAngle;
+                        gunAngle = player.rotation + gunBaseAngle + faceDiff + blockRotation + selfAngle;
+                        
+                        const offsetX = gun.offsetX || 0;
+                        const offsetY = gun.offsetY || 0;
+                        
+                        // Calculate bullet spawn position relative to tank
+                        startX = player.x + Math.cos(relativeAngle) * (baseRadius + 10) + 
+                                       Math.cos(relativeAngle + faceDiff) * offsetX +
+                                       Math.cos(relativeAngle + faceDiff + Math.PI/2) * offsetY;
+                        startY = player.y + Math.sin(relativeAngle) * (baseRadius + 10) + 
+                                       Math.sin(relativeAngle + faceDiff) * offsetX +
+                                       Math.sin(relativeAngle + faceDiff + Math.PI/2) * offsetY;
+                    }
                     
                     if (gun.type === 'normal') {
                         const spread = gun.spread || 0;

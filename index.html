@@ -2287,28 +2287,38 @@
         function renderGun(gun, gunIndex, player, size, sizeMultiplier) {
             const recoilOffset = (player.gunRecoils && player.gunRecoils[`gun_${gunIndex}`]) || 0;
             
-            const gunAngle = gun.angle * Math.PI / 180;
-            const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
-            const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
+            const gunAngle = (gun.angle || 0) * Math.PI / 180;
             const offsetY = (gun.offsetY || 0) * camera.zoom * sizeMultiplier;
             const offsetX = (gun.offsetX || 0) * camera.zoom * sizeMultiplier;
 
             ctx.save();
             
-            // Get radius and face angle at this position
-            const { radius: baseRadius, faceAngle } = getBaseRadiusAndFaceAtAngle(player, gunAngle);
-            const gunDistance = baseRadius * camera.zoom;
-            
-            // Position gun on perimeter at 'angle'
-            ctx.rotate(gunAngle);
-            ctx.translate(gunDistance, 0);
-            
-            // Rotate to align with face (perpendicular to surface)
-            ctx.rotate(faceAngle - gunAngle);
-            
-            // Apply additional rotations
-            ctx.rotate(blockRotation + selfAngle);
-            ctx.translate(offsetX, offsetY);
+            // Check if gun has baked rotation (from advanced base export) or needs calculation
+            if (gun.rotation !== undefined && gun.blockRotation === undefined && gun.selfAngle === undefined) {
+                // Baked gun: angle=0, position in offsets, rotation is final
+                const rotation = gun.rotation * Math.PI / 180;
+                ctx.rotate(rotation);
+                ctx.translate(offsetX, offsetY);
+            } else {
+                // Normal gun: calculate position and rotation from angle
+                const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+                const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
+                
+                // Get radius and face angle at this position
+                const { radius: baseRadius, faceAngle } = getBaseRadiusAndFaceAtAngle(player, gunAngle);
+                const gunDistance = baseRadius * camera.zoom;
+                
+                // Position gun on perimeter at 'angle'
+                ctx.rotate(gunAngle);
+                ctx.translate(gunDistance, 0);
+                
+                // Rotate to align with face (perpendicular to surface)
+                ctx.rotate(faceAngle - gunAngle);
+                
+                // Apply additional rotations
+                ctx.rotate(blockRotation + selfAngle);
+                ctx.translate(offsetX, offsetY);
+            }
 
             const gunColor = gun.color || '#999';
             ctx.fillStyle = gunColor;
@@ -4436,11 +4446,13 @@
                         gun.offsetX = baseX + rotatedOffsetX;
                         gun.offsetY = baseY + rotatedOffsetY;
                         
+                        // Set angle to 0 since position is now in offsets
+                        gun.angle = 0;
+                        
                         // Baked rotation is the actual angle the gun points in the editor
                         gun.rotation = actualRotation * 180 / Math.PI;
                         
-                        // Remove properties that are now baked
-                        delete gun.angle;
+                        // Remove blockRotation and selfAngle since they're baked into rotation
                         delete gun.blockRotation;
                         delete gun.selfAngle;
                     }
@@ -4551,11 +4563,13 @@
                         gun.offsetX = baseX + rotatedOffsetX;
                         gun.offsetY = baseY + rotatedOffsetY;
                         
+                        // Set angle to 0 since position is now in offsets
+                        gun.angle = 0;
+                        
                         // Baked rotation is the actual angle the gun points in the editor
                         gun.rotation = actualRotation * 180 / Math.PI;
                         
-                        // Remove properties that are now baked
-                        delete gun.angle;
+                        // Remove blockRotation and selfAngle since they're baked into rotation
                         delete gun.blockRotation;
                         delete gun.selfAngle;
                     }
