@@ -4411,35 +4411,38 @@
                     // Remove knockback property
                     delete gun.knockback;
                     
-                    // For advanced bases, "bake" the gun position based on editor preview
+                    // For advanced bases, "bake" the gun position and rotation based on editor preview
                     if (editorState.baseMode === 'advanced' && gun.angle !== undefined) {
                         const angleRad = gun.angle * Math.PI / 180;
                         const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const { radius, faceAngle } = getEditorBaseRadiusAndFace(angleRad);
                         
-                        // Calculate position: rotate by angle, move out by radius
+                        // The actual rotation in the editor is: faceAngle + blockRotation + selfAngle
+                        const actualRotation = faceAngle + blockRotation + selfAngle;
+                        
+                        // Calculate base position (after rotating by angle and moving by radius)
                         const baseX = Math.cos(angleRad) * radius;
                         const baseY = Math.sin(angleRad) * radius;
                         
-                        // Apply existing offsets rotated by (faceAngle + blockRotation)
+                        // Apply existing offsets, rotated by the actual rotation
                         const existingOffsetX = gun.offsetX || 0;
                         const existingOffsetY = gun.offsetY || 0;
-                        const baseRotation = faceAngle + blockRotation;
                         
-                        const rotatedOffsetX = existingOffsetX * Math.cos(baseRotation) - existingOffsetY * Math.sin(baseRotation);
-                        const rotatedOffsetY = existingOffsetX * Math.sin(baseRotation) + existingOffsetY * Math.cos(baseRotation);
+                        const rotatedOffsetX = existingOffsetX * Math.cos(actualRotation) - existingOffsetY * Math.sin(actualRotation);
+                        const rotatedOffsetY = existingOffsetX * Math.sin(actualRotation) + existingOffsetY * Math.cos(actualRotation);
                         
                         // Final baked position
                         gun.offsetX = baseX + rotatedOffsetX;
                         gun.offsetY = baseY + rotatedOffsetY;
                         
-                        // Baked rotation: faceAngle + blockRotation (converted to degrees)
-                        // Keep selfAngle separate as it can be dynamic
-                        gun.rotation = baseRotation * 180 / Math.PI;
+                        // Baked rotation is the actual angle the gun points in the editor
+                        gun.rotation = actualRotation * 180 / Math.PI;
                         
-                        // Remove properties that are now baked (keep selfAngle as it may be dynamic)
+                        // Remove properties that are now baked
                         delete gun.angle;
                         delete gun.blockRotation;
+                        delete gun.selfAngle;
                     }
                     
                     return gun;
@@ -4523,35 +4526,38 @@
                 guns: editorState.blocks.map(block => {
                     const gun = { ...block.props };
                     
-                    // For advanced bases, "bake" the gun position based on editor preview
+                    // For advanced bases, "bake" the gun position and rotation based on editor preview
                     if (editorState.baseMode === 'advanced' && gun.angle !== undefined) {
                         const angleRad = gun.angle * Math.PI / 180;
                         const blockRotation = (gun.blockRotation || 0) * Math.PI / 180;
+                        const selfAngle = (gun.selfAngle || 0) * Math.PI / 180;
                         const { radius, faceAngle } = getEditorBaseRadiusAndFace(angleRad);
                         
-                        // Calculate position: rotate by angle, move out by radius
+                        // The actual rotation in the editor is: faceAngle + blockRotation + selfAngle
+                        const actualRotation = faceAngle + blockRotation + selfAngle;
+                        
+                        // Calculate base position (after rotating by angle and moving by radius)
                         const baseX = Math.cos(angleRad) * radius;
                         const baseY = Math.sin(angleRad) * radius;
                         
-                        // Apply existing offsets rotated by (faceAngle + blockRotation)
+                        // Apply existing offsets, rotated by the actual rotation
                         const existingOffsetX = gun.offsetX || 0;
                         const existingOffsetY = gun.offsetY || 0;
-                        const baseRotation = faceAngle + blockRotation;
                         
-                        const rotatedOffsetX = existingOffsetX * Math.cos(baseRotation) - existingOffsetY * Math.sin(baseRotation);
-                        const rotatedOffsetY = existingOffsetX * Math.sin(baseRotation) + existingOffsetY * Math.cos(baseRotation);
+                        const rotatedOffsetX = existingOffsetX * Math.cos(actualRotation) - existingOffsetY * Math.sin(actualRotation);
+                        const rotatedOffsetY = existingOffsetX * Math.sin(actualRotation) + existingOffsetY * Math.cos(actualRotation);
                         
                         // Final baked position
                         gun.offsetX = baseX + rotatedOffsetX;
                         gun.offsetY = baseY + rotatedOffsetY;
                         
-                        // Baked rotation: faceAngle + blockRotation (converted to degrees)
-                        // Keep selfAngle separate as it can be dynamic
-                        gun.rotation = baseRotation * 180 / Math.PI;
+                        // Baked rotation is the actual angle the gun points in the editor
+                        gun.rotation = actualRotation * 180 / Math.PI;
                         
-                        // Remove properties that are now baked (keep selfAngle as it may be dynamic)
+                        // Remove properties that are now baked
                         delete gun.angle;
                         delete gun.blockRotation;
+                        delete gun.selfAngle;
                     }
                     
                     return gun;
