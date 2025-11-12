@@ -637,8 +637,7 @@
                 <!-- Import/Export Section -->
                 <div style="border-top: 2px solid #444; margin-top: 15px; padding-top: 15px;">
                     <h3 style="color: #fff; margin-top: 0; margin-bottom: 10px; font-size: 14px;">Import/Export:</h3>
-                    <button id="importJsonBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 8px;">Import JSON</button>
-                    <input type="file" id="importJsonFile" accept=".json" style="display: none;">
+                    <button id="importJsonBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 8px;">Import from Clipboard</button>
                 </div>
             </div>
         </div>
@@ -4434,70 +4433,58 @@
         });
 
         // Import JSON Button
-        document.getElementById('importJsonBtn').addEventListener('click', () => {
-            document.getElementById('importJsonFile').click();
-        });
-
-        // Import JSON File Handler
-        document.getElementById('importJsonFile').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const importedData = JSON.parse(event.target.result);
-                    
-                    // Load all the data into editorState
-                    editorState.blocks = importedData.guns || [];
-                    editorState.blades = importedData.blades || [];
-                    editorState.baseBlocks = importedData.baseBlocks || [];
-                    editorState.level = importedData.level || 1;
-                    editorState.fov = importedData.fov || 1;
-                    editorState.baseMode = importedData.baseShape === 'advanced' ? 'advanced' : 
-                                           (typeof importedData.baseShape === 'number' && importedData.baseShape >= 3) ? 'simple' : 'none';
-                    editorState.baseSides = typeof importedData.baseShape === 'number' ? importedData.baseShape : 4;
-                    
-                    // Set blade damage multiplier if present
-                    if (importedData.bladeDamageMultiplier !== undefined) {
-                        document.getElementById('bladeDamageMultiplier').value = importedData.bladeDamageMultiplier;
-                    }
-                    
-                    // Update UI
-                    document.getElementById('tankLevelInput').value = editorState.level;
-                    document.getElementById('tankFovInput').value = editorState.fov;
-                    document.getElementById('baseModeSelect').value = editorState.baseMode;
-                    document.getElementById('baseSidesInput').value = editorState.baseSides;
-                    
-                    // Update base mode visibility
-                    if (editorState.baseMode === 'simple') {
-                        document.getElementById('simpleBaseSettings').style.display = 'block';
-                        document.getElementById('advancedBaseSettings').style.display = 'none';
-                    } else if (editorState.baseMode === 'advanced') {
-                        document.getElementById('simpleBaseSettings').style.display = 'none';
-                        document.getElementById('advancedBaseSettings').style.display = 'block';
-                    } else {
-                        document.getElementById('simpleBaseSettings').style.display = 'none';
-                        document.getElementById('advancedBaseSettings').style.display = 'none';
-                    }
-                    
-                    editorState.selectedBlock = null;
-                    editorState.selectedBlade = null;
-                    editorState.selectedBaseBlock = null;
-                    
-                    updateGunsList();
-                    updateBladesList();
-                    updateBaseBlocksList();
-                    updatePropertiesPanel();
-                    renderEditorCanvas();
-                    
-                    alert('Tank imported successfully!');
-                } catch (error) {
-                    alert('Error importing JSON: ' + error.message);
+        document.getElementById('importJsonBtn').addEventListener('click', async () => {
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                const importedData = JSON.parse(clipboardText);
+                
+                // Load all the data into editorState
+                editorState.blocks = importedData.guns || [];
+                editorState.blades = importedData.blades || [];
+                editorState.baseBlocks = importedData.baseBlocks || [];
+                editorState.level = importedData.level || 1;
+                editorState.fov = importedData.fov || 1;
+                editorState.baseMode = importedData.baseShape === 'advanced' ? 'advanced' : 
+                                       (typeof importedData.baseShape === 'number' && importedData.baseShape >= 3) ? 'simple' : 'none';
+                editorState.baseSides = typeof importedData.baseShape === 'number' ? importedData.baseShape : 4;
+                
+                // Set blade damage multiplier if present
+                if (importedData.bladeDamageMultiplier !== undefined) {
+                    document.getElementById('bladeDamageMultiplier').value = importedData.bladeDamageMultiplier;
                 }
-            };
-            reader.readAsText(file);
-            e.target.value = ''; // Reset file input
+                
+                // Update UI
+                document.getElementById('tankLevelInput').value = editorState.level;
+                document.getElementById('tankFovInput').value = editorState.fov;
+                document.getElementById('baseModeSelect').value = editorState.baseMode;
+                document.getElementById('baseSidesInput').value = editorState.baseSides;
+                
+                // Update base mode visibility
+                if (editorState.baseMode === 'simple') {
+                    document.getElementById('simpleBaseSettings').style.display = 'block';
+                    document.getElementById('advancedBaseSettings').style.display = 'none';
+                } else if (editorState.baseMode === 'advanced') {
+                    document.getElementById('simpleBaseSettings').style.display = 'none';
+                    document.getElementById('advancedBaseSettings').style.display = 'block';
+                } else {
+                    document.getElementById('simpleBaseSettings').style.display = 'none';
+                    document.getElementById('advancedBaseSettings').style.display = 'none';
+                }
+                
+                editorState.selectedBlock = null;
+                editorState.selectedBlade = null;
+                editorState.selectedBaseBlock = null;
+                
+                updateGunsList();
+                updateBladesList();
+                updateBaseBlocksList();
+                updatePropertiesPanel();
+                renderEditorCanvas();
+                
+                alert('Tank imported successfully from clipboard!');
+            } catch (error) {
+                alert('Error importing from clipboard: ' + error.message + '\n\nMake sure you have valid JSON in your clipboard.');
+            }
         });
 
 
