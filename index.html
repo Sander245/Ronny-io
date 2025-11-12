@@ -649,6 +649,11 @@
                         <input type="checkbox" id="freezeDebugToggle" style="cursor: pointer;">
                         Freeze Debug
                     </label>
+                    <label style="color: #aaa; font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                        Scale Divisor:
+                        <input type="number" id="debugScaleDivisor" value="2" min="0.1" step="0.1" style="width: 60px; padding: 2px 5px; background: #2a2a2a; color: white; border: 1px solid #555; border-radius: 3px;">
+                    </label>
+                    </label>
                     <button id="editorExportJSONBtn" style="padding: 10px 20px; background: #ff9500; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">📋 Export JSON</button>
                     <button id="editorTestBtn" style="padding: 10px 20px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Test</button>
                     <button id="editorCancelBtn" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancel</button>
@@ -3004,7 +3009,8 @@
             debugPerimeter: null, // {angle, timestamp} for showing perimeter debug
             showPerimeterDebug: false, // toggle for always showing debug
             freezeDebug: false, // toggle to freeze debug visualization
-            frozenDebugData: null // stores frozen state of base/blocks/guns for debug
+            frozenDebugData: null, // stores frozen state of base/blocks/guns for debug
+            debugScaleDivisor: 2 // scale divisor for advanced mode debug visualization
         };
 
         const blockTypes = {
@@ -4113,7 +4119,7 @@
                     let adjustedRadius = radius;
                     let adjustedAngle = angle;
                     if (debugData.baseMode === 'advanced') {
-                        adjustedRadius = radius / 2; // Scale down by 2x
+                        adjustedRadius = radius / editorState.debugScaleDivisor; // Use adjustable scale divisor
                         adjustedAngle = -angle; // Flip Y by negating angle
                     }
                     
@@ -4453,6 +4459,15 @@
                 editorState.frozenDebugData = null; // Clear frozen data when disabled
             }
             renderEditorCanvas();
+        });
+
+        // Debug scale divisor input
+        document.getElementById('debugScaleDivisor').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            if (!isNaN(value) && value > 0) {
+                editorState.debugScaleDivisor = value;
+                renderEditorCanvas();
+            }
         });
 
         document.getElementById('editorCancelBtn').addEventListener('click', () => {
