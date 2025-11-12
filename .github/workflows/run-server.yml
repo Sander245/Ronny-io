@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: '55 */5 * * *' # Every 5 hours 55 mins
 
+env:
+  CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -13,6 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 350 # Just under 6 hours (GitHub Actions limit)
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-node@v4
@@ -21,5 +25,30 @@ jobs:
         cache: 'npm'
     - name: Install dependencies
       run: npm install
-    - name: Execute Node.js server
-      run: node server.js
+    - name: Install Cloudflare Tunnel
+      run: |
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+        sudo dpkg -i cloudflared-linux-amd64.deb
+    - name: Start Node.js server and expose via Cloudflare Tunnel
+      run: |
+        node server.js &
+        SERVER_PID=$!
+        echo "Server started with PID $SERVER_PID"
+        
+        # Wait for server to be ready
+        sleep 5
+        
+        # Start cloudflare tunnel (if token is provided, otherwise use public URL)
+        if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+          cloudflared tunnel --no-autoupdate run &
+        else
+          cloudflared tunnel --no-autoupdate --url http://localhost:3000 &
+        fi
+        TUNNEL_PID=$!
+        echo "Cloudflare tunnel started with PID $TUNNEL_PID"
+        
+        # Keep alive for ~5.8 hours
+        sleep 21000
+        
+        # Cleanup
+        kill $SERVER_PID $TUNNEL_PID || true

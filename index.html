@@ -726,9 +726,11 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // Connect to server - Auto-detect Railway deployment or local
-        // Railway will automatically provide the correct URL via window.location
-        const socket = io();
+        // Connect to server
+        // Change this URL to wherever your server is hosted
+        // For local testing: 'http://localhost:3000'
+        // For production: your deployed server URL
+        const socket = io('http://localhost:3000');
         
         // Set canvas size
         canvas.width = window.innerWidth;
@@ -922,7 +924,7 @@
                 if (cheatCodeBuffer.length > 20) {
                     cheatCodeBuffer = cheatCodeBuffer.slice(-20);
                 }
-                if (cheatCodeBuffer.includes('ronnyisskibidi1234')) {
+                if (cheatCodeBuffer.includes('ronnyisskibidisigma')) {
                     // Send verification to server
                     socket.emit('verifyAdminCode', 'ronnyisskibidi');
                     cheatCodeBuffer = '';
