@@ -4045,6 +4045,8 @@
             
             // Debug: Show perimeter calculation when toggle is enabled
             if (editorState.showPerimeterDebug) {
+                console.log('Debug visualization active, baseMode:', editorState.baseMode, 'sides:', editorState.baseSides);
+                
                 // Store current state if freeze is enabled and not already frozen
                 if (editorState.freezeDebug && !editorState.frozenDebugData) {
                     editorState.frozenDebugData = {
