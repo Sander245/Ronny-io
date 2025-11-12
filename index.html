@@ -3780,14 +3780,14 @@
                     } else if (shape > 0) {
                         // Regular polygon - use ray-edge intersection
                         const sides = shape;
-                        const blockRadius = size + width;
+                        const polygonRadius = size + width;
                         
                         // Ray direction in world space
                         const rayDx = Math.cos(angle);
                         const rayDy = Math.sin(angle);
                         
                         let minT = Infinity;
-                        let bestFaceAngle = angle;
+                        let intersectEdgeIndex = 0;
                         
                         // Check all edges of the polygon
                         for (let i = 0; i < sides; i++) {
@@ -3796,22 +3796,16 @@
                             const a2 = ((i + 1) / sides) * Math.PI * 2 - Math.PI / 2;
                             
                             // Vertices in local space
-                            let v1x = Math.cos(a1) * blockRadius;
-                            let v1y = Math.sin(a1) * blockRadius;
-                            let v2x = Math.cos(a2) * blockRadius;
-                            let v2y = Math.sin(a2) * blockRadius;
+                            let v1x_local = Math.cos(a1) * polygonRadius;
+                            let v1y_local = Math.sin(a1) * polygonRadius;
+                            let v2x_local = Math.cos(a2) * polygonRadius;
+                            let v2y_local = Math.sin(a2) * polygonRadius;
                             
-                            // Rotate vertices by block rotation
-                            const rotatedV1x = v1x * Math.cos(bRot) - v1y * Math.sin(bRot);
-                            const rotatedV1y = v1x * Math.sin(bRot) + v1y * Math.cos(bRot);
-                            const rotatedV2x = v2x * Math.cos(bRot) - v2y * Math.sin(bRot);
-                            const rotatedV2y = v2x * Math.sin(bRot) + v2y * Math.cos(bRot);
-                            
-                            // Translate to block position
-                            v1x = rotatedV1x + bx;
-                            v1y = rotatedV1y + by;
-                            v2x = rotatedV2x + bx;
-                            v2y = rotatedV2y + by;
+                            // Rotate vertices to world space
+                            const v1x = v1x_local * Math.cos(bRot) - v1y_local * Math.sin(bRot) + bx;
+                            const v1y = v1x_local * Math.sin(bRot) + v1y_local * Math.cos(bRot) + by;
+                            const v2x = v2x_local * Math.cos(bRot) - v2y_local * Math.sin(bRot) + bx;
+                            const v2y = v2x_local * Math.sin(bRot) + v2y_local * Math.cos(bRot) + by;
                             
                             // Edge direction
                             const edgeDx = v2x - v1x;
@@ -3824,18 +3818,18 @@
                             const s = (rayDx * v1y - rayDy * v1x) / denom;
                             const t = (v1x * edgeDy - v1y * edgeDx) / denom;
                             
-                            // Check if intersection is on the edge and in front
+                            // Check if intersection is on the edge (0 <= s <= 1) and in front (t > 0)
                             if (s >= 0 && s <= 1 && t > 0 && t < minT) {
                                 minT = t;
-                                // Calculate face angle (perpendicular to edge)
-                                const edgeMidAngle = (i + 0.5) / sides * Math.PI * 2 - Math.PI / 2;
-                                bestFaceAngle = edgeMidAngle + bRot;
+                                intersectEdgeIndex = i;
                             }
                         }
                         
                         if (minT < Infinity && minT > maxRadius) {
                             maxRadius = minT;
-                            maxFaceAngle = bestFaceAngle;
+                            // Calculate face angle (perpendicular to the edge)
+                            const edgeMidAngle = (intersectEdgeIndex + 0.5) / sides * Math.PI * 2 - Math.PI / 2;
+                            maxFaceAngle = edgeMidAngle + bRot;
                         }
                     }
                 }
