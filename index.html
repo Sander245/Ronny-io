@@ -633,6 +633,13 @@
                     </div>
                     <button id="addBladeBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">+ Add Blade</button>
                 </div>
+                
+                <!-- Import/Export Section -->
+                <div style="border-top: 2px solid #444; margin-top: 15px; padding-top: 15px;">
+                    <h3 style="color: #fff; margin-top: 0; margin-bottom: 10px; font-size: 14px;">Import/Export:</h3>
+                    <button id="importJsonBtn" style="width: 100%; padding: 8px; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 8px;">Import JSON</button>
+                    <input type="file" id="importJsonFile" accept=".json" style="display: none;">
+                </div>
             </div>
         </div>
 
@@ -3778,58 +3785,42 @@
                             maxFaceAngle = localFaceAngle + bRot;
                         }
                     } else if (shape > 0) {
-                        // Regular polygon - use ray-edge intersection
+                        // Regular polygon
                         const sides = shape;
-                        const polygonRadius = size + width;
+                        const anglePerSide = (Math.PI * 2) / sides;
                         
-                        // Ray direction in world space
-                        const rayDx = Math.cos(angle);
-                        const rayDy = Math.sin(angle);
+                        // Transform angle to baseBlock's local space
+                        const localAngle = angle - bRot;
                         
-                        let minT = Infinity;
-                        let intersectEdgeIndex = 0;
+                        // Find which side this angle points to
+                        const normalizedAngle = localAngle + Math.PI / 2;
+                        const sideIndex = Math.floor((normalizedAngle + anglePerSide / 2) / anglePerSide);
+                        const sideAngle = sideIndex * anglePerSide;
                         
-                        // Check all edges of the polygon
-                        for (let i = 0; i < sides; i++) {
-                            // Get the two vertices of this edge in local space
-                            const a1 = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                            const a2 = ((i + 1) / sides) * Math.PI * 2 - Math.PI / 2;
-                            
-                            // Vertices in local space
-                            let v1x_local = Math.cos(a1) * polygonRadius;
-                            let v1y_local = Math.sin(a1) * polygonRadius;
-                            let v2x_local = Math.cos(a2) * polygonRadius;
-                            let v2y_local = Math.sin(a2) * polygonRadius;
-                            
-                            // Rotate vertices to world space
-                            const v1x = v1x_local * Math.cos(bRot) - v1y_local * Math.sin(bRot) + bx;
-                            const v1y = v1x_local * Math.sin(bRot) + v1y_local * Math.cos(bRot) + by;
-                            const v2x = v2x_local * Math.cos(bRot) - v2y_local * Math.sin(bRot) + bx;
-                            const v2y = v2x_local * Math.sin(bRot) + v2y_local * Math.cos(bRot) + by;
-                            
-                            // Edge direction
-                            const edgeDx = v2x - v1x;
-                            const edgeDy = v2y - v1y;
-                            
-                            // Solve: origin + t * ray = v1 + s * edge
-                            const denom = rayDx * edgeDy - rayDy * edgeDx;
-                            if (Math.abs(denom) < 0.0001) continue; // Parallel
-                            
-                            const s = (rayDx * v1y - rayDy * v1x) / denom;
-                            const t = (v1x * edgeDy - v1y * edgeDx) / denom;
-                            
-                            // Check if intersection is on the edge (0 <= s <= 1) and in front (t > 0)
-                            if (s >= 0 && s <= 1 && t > 0 && t < minT) {
-                                minT = t;
-                                intersectEdgeIndex = i;
-                            }
+                        // Calculate distance to that side in local space
+                        const angleToEdge = localAngle - sideAngle + Math.PI / 2;
+                        const cosAngle = Math.cos(angleToEdge);
+                        
+                        let localRadius;
+                        if (Math.abs(cosAngle) > 0.001) {
+                            localRadius = (size + width) / cosAngle;
+                        } else {
+                            localRadius = size + width;
                         }
                         
-                        if (minT < Infinity && minT > maxRadius) {
-                            maxRadius = minT;
-                            // Calculate face angle (perpendicular to the edge)
-                            const edgeMidAngle = (intersectEdgeIndex + 0.5) / sides * Math.PI * 2 - Math.PI / 2;
-                            maxFaceAngle = edgeMidAngle + bRot;
+                        // Transform from block center to world origin
+                        const centerDist = Math.sqrt(bx * bx + by * by);
+                        const angleToCenter = Math.atan2(by, bx);
+                        const angleDiff = angle - angleToCenter;
+                        
+                        // Project the local radius along the ray
+                        const distToEdge = centerDist * Math.cos(angleDiff) + localRadius;
+                        
+                        if (distToEdge > maxRadius) {
+                            maxRadius = distToEdge;
+                            // Face angle in local space, transformed to world space
+                            const localFaceAngle = sideAngle - Math.PI / 2;
+                            maxFaceAngle = localFaceAngle + bRot;
                         }
                     }
                 }
@@ -3932,6 +3923,8 @@
                     }
                 } else if (drawable.type === 'baseBlock') {
                     const baseBlock = drawable.data;
+                    const isSelected = editorState.selectedBaseBlock && editorState.selectedBaseBlock.id === baseBlock.id;
+                    
                     ctx.save();
                     ctx.translate(baseBlock.x, baseBlock.y);
                     ctx.rotate(baseBlock.rotation * Math.PI / 180);
@@ -3942,8 +3935,8 @@
                         ctx.beginPath();
                         ctx.arc(0, 0, baseBlock.size + (baseBlock.width || 0), 0, Math.PI * 2);
                         ctx.fill();
-                        ctx.strokeStyle = darkenColor(baseBlock.color || '#00b2e1', 0.3);
-                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = isSelected ? '#ffff00' : darkenColor(baseBlock.color || '#00b2e1', 0.3);
+                        ctx.lineWidth = isSelected ? 4 : 3;
                         ctx.stroke();
                     } else if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
                         // Rectangle (when shape is 4 and width/height are set)
@@ -3952,8 +3945,8 @@
                         ctx.beginPath();
                         ctx.rect(-totalWidth/2, -totalHeight/2, totalWidth, totalHeight);
                         ctx.fill();
-                        ctx.strokeStyle = darkenColor(baseBlock.color || '#00b2e1', 0.3);
-                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = isSelected ? '#ffff00' : darkenColor(baseBlock.color || '#00b2e1', 0.3);
+                        ctx.lineWidth = isSelected ? 4 : 3;
                         ctx.stroke();
                     } else {
                         // Polygon
@@ -3970,8 +3963,8 @@
                         }
                         ctx.closePath();
                         ctx.fill();
-                        ctx.strokeStyle = darkenColor(baseBlock.color || '#00b2e1', 0.3);
-                        ctx.lineWidth = 3;
+                        ctx.strokeStyle = isSelected ? '#ffff00' : darkenColor(baseBlock.color || '#00b2e1', 0.3);
+                        ctx.lineWidth = isSelected ? 4 : 3;
                         ctx.stroke();
                     }
                     ctx.restore();
@@ -3996,8 +3989,10 @@
                     ctx.closePath();
                     ctx.fill();
                     
-                    ctx.strokeStyle = darkenColor(blade.color || '#999999', 0.3);
-                    ctx.lineWidth = 3;
+                    // Highlight if selected
+                    const isSelected = editorState.selectedBlade && editorState.selectedBlade.id === blade.id;
+                    ctx.strokeStyle = isSelected ? '#ffff00' : darkenColor(blade.color || '#999999', 0.3);
+                    ctx.lineWidth = isSelected ? 4 : 3;
                     ctx.stroke();
                     
                     ctx.restore();
@@ -4437,6 +4432,74 @@
             updatePropertiesPanel();
             renderEditorCanvas();
         });
+
+        // Import JSON Button
+        document.getElementById('importJsonBtn').addEventListener('click', () => {
+            document.getElementById('importJsonFile').click();
+        });
+
+        // Import JSON File Handler
+        document.getElementById('importJsonFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    
+                    // Load all the data into editorState
+                    editorState.blocks = importedData.guns || [];
+                    editorState.blades = importedData.blades || [];
+                    editorState.baseBlocks = importedData.baseBlocks || [];
+                    editorState.level = importedData.level || 1;
+                    editorState.fov = importedData.fov || 1;
+                    editorState.baseMode = importedData.baseShape === 'advanced' ? 'advanced' : 
+                                           (typeof importedData.baseShape === 'number' && importedData.baseShape >= 3) ? 'simple' : 'none';
+                    editorState.baseSides = typeof importedData.baseShape === 'number' ? importedData.baseShape : 4;
+                    
+                    // Set blade damage multiplier if present
+                    if (importedData.bladeDamageMultiplier !== undefined) {
+                        document.getElementById('bladeDamageMultiplier').value = importedData.bladeDamageMultiplier;
+                    }
+                    
+                    // Update UI
+                    document.getElementById('tankLevelInput').value = editorState.level;
+                    document.getElementById('tankFovInput').value = editorState.fov;
+                    document.getElementById('baseModeSelect').value = editorState.baseMode;
+                    document.getElementById('baseSidesInput').value = editorState.baseSides;
+                    
+                    // Update base mode visibility
+                    if (editorState.baseMode === 'simple') {
+                        document.getElementById('simpleBaseSettings').style.display = 'block';
+                        document.getElementById('advancedBaseSettings').style.display = 'none';
+                    } else if (editorState.baseMode === 'advanced') {
+                        document.getElementById('simpleBaseSettings').style.display = 'none';
+                        document.getElementById('advancedBaseSettings').style.display = 'block';
+                    } else {
+                        document.getElementById('simpleBaseSettings').style.display = 'none';
+                        document.getElementById('advancedBaseSettings').style.display = 'none';
+                    }
+                    
+                    editorState.selectedBlock = null;
+                    editorState.selectedBlade = null;
+                    editorState.selectedBaseBlock = null;
+                    
+                    updateGunsList();
+                    updateBladesList();
+                    updateBaseBlocksList();
+                    updatePropertiesPanel();
+                    renderEditorCanvas();
+                    
+                    alert('Tank imported successfully!');
+                } catch (error) {
+                    alert('Error importing JSON: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset file input
+        });
+
 
         // Add Base Block Button (for advanced mode)
         document.getElementById('addBaseBlockBtn').addEventListener('click', () => {
