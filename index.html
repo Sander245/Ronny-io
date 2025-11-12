@@ -4001,12 +4001,19 @@
                     
                     ctx.save();
                     
-                    const angle = (block.props.angle || 0) * Math.PI / 180;
+                    let angle = (block.props.angle || 0) * Math.PI / 180;
                     const blockRotation = (block.props.blockRotation || 0) * Math.PI / 180;
                     const selfAngle = (block.props.selfAngle || 0) * Math.PI / 180;
                     
                     // Get radius and face angle at this position
-                    const { radius: baseRadius, faceAngle } = getEditorBaseRadiusAndFace(angle);
+                    let { radius: baseRadius, faceAngle } = getEditorBaseRadiusAndFace(angle);
+                    
+                    // TEMPORARY FIX: Apply same adjustments as debug visualization for advanced mode
+                    if (editorState.baseMode === 'advanced') {
+                        baseRadius = baseRadius / editorState.debugScaleDivisor; // Scale down
+                        angle = -angle; // Flip Y
+                        faceAngle = -faceAngle; // Flip face angle too
+                    }
                     
                     // Position gun on perimeter at 'angle'
                     ctx.rotate(angle);
