@@ -4093,6 +4093,11 @@
                     const x = Math.cos(angle) * radius;
                     const y = Math.sin(angle) * radius;
                     
+                    // Debug: log first few points for triangle
+                    if (i < 3 && editorState.baseSides === 3) {
+                        console.log(`Angle ${i}: ${(angle * 180 / Math.PI).toFixed(1)}°, radius: ${radius.toFixed(2)}, pos: (${x.toFixed(2)}, ${y.toFixed(2)})`);
+                    }
+                    
                     ctx.beginPath();
                     ctx.arc(x, y, 2, 0, Math.PI * 2);
                     ctx.fill();
