@@ -4047,6 +4047,17 @@
             if (editorState.showPerimeterDebug) {
                 console.log('Debug visualization active, baseMode:', editorState.baseMode, 'sides:', editorState.baseSides);
                 
+                // Log polygon vertices for reference
+                if (editorState.baseMode === 'simple') {
+                    console.log('Polygon vertices (should be):');
+                    for (let i = 0; i < editorState.baseSides; i++) {
+                        const angle = (i / editorState.baseSides) * Math.PI * 2 - Math.PI / 2;
+                        const x = Math.cos(angle) * 20;
+                        const y = Math.sin(angle) * 20;
+                        console.log(`  Vertex ${i}: angle=${(angle * 180 / Math.PI).toFixed(1)}°, pos=(${x.toFixed(2)}, ${y.toFixed(2)})`);
+                    }
+                }
+                
                 // Store current state if freeze is enabled and not already frozen
                 if (editorState.freezeDebug && !editorState.frozenDebugData) {
                     editorState.frozenDebugData = {
@@ -4095,9 +4106,9 @@
                     const x = Math.cos(angle) * radius;
                     const y = Math.sin(angle) * radius;
                     
-                    // Debug: log first few points for triangle
-                    if (i < 3 && editorState.baseSides === 3) {
-                        console.log(`Angle ${i}: ${(angle * 180 / Math.PI).toFixed(1)}°, radius: ${radius.toFixed(2)}, pos: (${x.toFixed(2)}, ${y.toFixed(2)})`);
+                    // Debug: log first few points
+                    if (i < 3 && debugData.baseMode === 'simple') {
+                        console.log(`Point ${i}: angle=${(angle * 180 / Math.PI).toFixed(1)}°, radius=${radius.toFixed(2)}, pos=(${x.toFixed(2)}, ${y.toFixed(2)})`);
                     }
                     
                     ctx.beginPath();
