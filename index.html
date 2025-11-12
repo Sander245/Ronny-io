@@ -4108,8 +4108,17 @@
                 for (let i = 0; i < numPoints; i++) {
                     const angle = (i / numPoints) * Math.PI * 2;
                     const { radius } = getEditorBaseRadiusAndFace(angle);
-                    const x = Math.cos(angle) * radius;
-                    const y = Math.sin(angle) * radius;
+                    
+                    // TEMPORARY FIX: Scale down and flip Y for advanced mode
+                    let adjustedRadius = radius;
+                    let adjustedAngle = angle;
+                    if (debugData.baseMode === 'advanced') {
+                        adjustedRadius = radius / 3; // Scale down by 3x
+                        adjustedAngle = -angle; // Flip Y by negating angle
+                    }
+                    
+                    const x = Math.cos(adjustedAngle) * adjustedRadius;
+                    const y = Math.sin(adjustedAngle) * adjustedRadius;
                     
                     // Debug: log first few points
                     if (i < 3 && debugData.baseMode === 'simple') {
