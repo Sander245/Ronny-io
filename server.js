@@ -2198,7 +2198,7 @@ for (let i = 0; i < 50; i++) {
     spawnPolygon();
 }
 
-const PORT = process.env.PORT || 13126;
+const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
     console.log('=================================');
     console.log('   RONNY IO - Version 2.0');
