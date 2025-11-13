@@ -727,9 +727,11 @@
         const ctx = canvas.getContext('2d');
         
         // Connect to server
+        // IMPORTANT: Update this URL with the ngrok URL from GitHub Actions logs
+        // Check Actions → Workflow run → "Start Node.js server and expose via ngrok" step
+        // Look for "Server accessible at: https://xxxx.ngrok-free.app"
         // For local testing: 'http://localhost:3000'
-        // For GitHub Actions with localtunnel: 'https://ronnyio.loca.lt'
-        const socket = io('https://ronnyio.loca.lt');
+        const socket = io('https://ronnyio.loca.lt'); // UPDATE THIS WITH NGROK URL
         
         // Set canvas size
         canvas.width = window.innerWidth;
