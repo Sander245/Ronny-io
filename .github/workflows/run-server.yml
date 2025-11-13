@@ -26,7 +26,7 @@ jobs:
       run: npm install -g localtunnel
     - name: Start Node.js server and expose via localtunnel
       run: |
-        node server.js &
+        PORT=3000 node server.js &
         SERVER_PID=$!
         echo "Server started with PID $SERVER_PID"
         
