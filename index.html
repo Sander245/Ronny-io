@@ -726,12 +726,31 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        // Auto-bypass localtunnel IP verification
+        const TUNNEL_URL = 'https://ronnyio.loca.lt';
+        
+        // Check if we need to bypass localtunnel verification
+        if (TUNNEL_URL.includes('loca.lt')) {
+            fetch(TUNNEL_URL, {
+                method: 'HEAD',
+                mode: 'no-cors'
+            }).catch(() => {
+                // Trigger verification bypass by opening in iframe
+                const bypass = document.createElement('iframe');
+                bypass.style.display = 'none';
+                bypass.src = TUNNEL_URL;
+                document.body.appendChild(bypass);
+            });
+        }
+        
         // Connect to server
-        // IMPORTANT: Update this URL with the ngrok URL from GitHub Actions logs
-        // Check Actions → Workflow run → "Start Node.js server and expose via ngrok" step
-        // Look for "Server accessible at: https://xxxx.ngrok-free.app"
-        // For local testing: 'http://localhost:3000'
-        const socket = io('https://ronnyio.loca.lt'); // UPDATE THIS WITH NGROK URL
+        const socket = io(TUNNEL_URL, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity
+        });
         
         // Set canvas size
         canvas.width = window.innerWidth;

@@ -22,12 +22,9 @@ jobs:
         cache: 'npm'
     - name: Install dependencies
       run: npm install
-    - name: Install ngrok
-      run: |
-        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-        sudo apt update && sudo apt install ngrok
-    - name: Start Node.js server and expose via ngrok
+    - name: Install localtunnel
+      run: npm install -g localtunnel
+    - name: Start Node.js server and expose via localtunnel
       run: |
         PORT=3000 node server.js &
         SERVER_PID=$!
@@ -36,15 +33,11 @@ jobs:
         # Wait for server to be ready
         sleep 5
         
-        # Start ngrok (no auth required for basic use)
-        ngrok http 3000 --log=stdout > ngrok.log 2>&1 &
+        # Start localtunnel with fixed subdomain
+        lt --port 3000 --subdomain ronnyio &
         TUNNEL_PID=$!
-        echo "Ngrok started with PID $TUNNEL_PID"
-        
-        # Wait for ngrok to start and get URL
-        sleep 10
-        TUNNEL_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"https://[^"]*' | grep -o 'https://[^"]*' | head -n 1)
-        echo "Server accessible at: $TUNNEL_URL"
+        echo "Localtunnel started with PID $TUNNEL_PID"
+        echo "Server accessible at: https://ronnyio.loca.lt"
         
         # Keep alive for ~5.8 hours
         sleep 21000
