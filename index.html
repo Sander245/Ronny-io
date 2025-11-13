@@ -727,10 +727,9 @@
         const ctx = canvas.getContext('2d');
         
         // Connect to server
-        // Change this URL to wherever your server is hosted
         // For local testing: 'http://localhost:3000'
-        // For production: your deployed server URL
-        const socket = io('http://localhost:3000');
+        // For GitHub Actions with localtunnel: 'https://ronnyio.loca.lt'
+        const socket = io('https://ronnyio.loca.lt');
         
         // Set canvas size
         canvas.width = window.innerWidth;
