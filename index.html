@@ -466,8 +466,48 @@
             <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
             <br>
             <button id="playButton">PLAY</button>
+            <button id="teamsButton" style="margin-top: 10px; padding: 10px 30px; background: #4a9eff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;">👥 TEAMS</button>
             <button id="adminSpawnButton" style="display: none; margin-top: 10px; padding: 10px 30px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;">⚡ ADMIN SPAWN ⚡</button>
         </div>
+    </div>
+
+    <!-- Team Panel -->
+    <div id="teamPanel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 20, 0.95); border: 3px solid #4a9eff; border-radius: 15px; padding: 20px; z-index: 2000; min-width: 400px; max-width: 500px; color: white;">
+        <div style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 15px; color: #4a9eff;">TEAMS</div>
+        
+        <div id="teamStatus" style="margin-bottom: 15px; padding: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 5px;">
+            <div id="noTeamView">
+                <button id="createTeamBtn" style="width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-bottom: 10px;">Create Team</button>
+                <div id="createTeamForm" style="display: none;">
+                    <input type="text" id="teamNameInput" placeholder="Team Name" maxlength="20" style="width: calc(100% - 20px); padding: 8px; margin-bottom: 10px; border: none; border-radius: 5px;">
+                    <button id="confirmCreateTeam" style="width: 48%; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 4%;">Create</button>
+                    <button id="cancelCreateTeam" style="width: 48%; padding: 8px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
+                </div>
+            </div>
+            <div id="inTeamView" style="display: none;">
+                <div style="font-weight: bold; margin-bottom: 5px;">Team: <span id="currentTeamName"></span></div>
+                <div style="margin-bottom: 10px; padding: 5px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                    <div style="font-size: 14px; margin-bottom: 5px;">Members:</div>
+                    <div id="teamMembersList" style="font-size: 13px;"></div>
+                </div>
+                <button id="leaveTeamBtn" style="width: 100%; padding: 8px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Leave Team</button>
+            </div>
+        </div>
+        
+        <div id="inviteSection" style="display: none; margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">Invite Players:</div>
+            <button id="refreshPlayersBtn" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px;">Refresh Player List</button>
+            <div id="onlinePlayersList" style="max-height: 150px; overflow-y: auto; background: rgba(0, 0, 0, 0.3); border-radius: 5px; padding: 5px;"></div>
+        </div>
+        
+        <div id="invitesSection" style="margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">Team Invites:</div>
+            <div id="teamInvitesList" style="max-height: 150px; overflow-y: auto; background: rgba(0, 0, 0, 0.3); border-radius: 5px; padding: 5px; min-height: 40px;">
+                <div style="text-align: center; color: #888; font-size: 13px;">No invites</div>
+            </div>
+        </div>
+        
+        <button id="closeTeamPanel" style="width: 100%; padding: 10px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Close</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -1309,6 +1349,155 @@
                 console.log('Admin access denied - incorrect code');
             }
         });
+
+        // Team system variables
+        let currentTeam = null;
+        let pendingInvites = [];
+
+        // Team UI handlers
+        document.getElementById('teamsButton').addEventListener('click', () => {
+            document.getElementById('teamPanel').style.display = 'block';
+            if (currentTeam && currentTeam.isLeader) {
+                socket.emit('getOnlinePlayers');
+            }
+        });
+
+        document.getElementById('closeTeamPanel').addEventListener('click', () => {
+            document.getElementById('teamPanel').style.display = 'none';
+        });
+
+        document.getElementById('createTeamBtn').addEventListener('click', () => {
+            document.getElementById('createTeamForm').style.display = 'block';
+        });
+
+        document.getElementById('cancelCreateTeam').addEventListener('click', () => {
+            document.getElementById('createTeamForm').style.display = 'none';
+            document.getElementById('teamNameInput').value = '';
+        });
+
+        document.getElementById('confirmCreateTeam').addEventListener('click', () => {
+            const teamName = document.getElementById('teamNameInput').value.trim() || 'My Team';
+            socket.emit('createTeam', teamName);
+            document.getElementById('createTeamForm').style.display = 'none';
+            document.getElementById('teamNameInput').value = '';
+        });
+
+        document.getElementById('leaveTeamBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to leave the team?')) {
+                socket.emit('leaveTeam');
+            }
+        });
+
+        document.getElementById('refreshPlayersBtn').addEventListener('click', () => {
+            socket.emit('getOnlinePlayers');
+        });
+
+        // Team socket handlers
+        socket.on('teamCreated', (data) => {
+            currentTeam = data.team;
+            updateTeamUI();
+            console.log('Team created:', data.team.name);
+        });
+
+        socket.on('teamUpdate', (data) => {
+            currentTeam = data.team;
+            updateTeamUI();
+        });
+
+        socket.on('teamJoined', (data) => {
+            currentTeam = data.team;
+            updateTeamUI();
+            console.log('Joined team:', data.team.name);
+        });
+
+        socket.on('teamLeft', () => {
+            currentTeam = null;
+            updateTeamUI();
+            console.log('Left team');
+        });
+
+        socket.on('teamInvite', (data) => {
+            pendingInvites.push(data);
+            updateInvitesList();
+            console.log(`Team invite from ${data.inviterName} to join ${data.teamName}`);
+        });
+
+        socket.on('teamInviteSent', (data) => {
+            console.log(`Invite sent to ${data.targetName}`);
+        });
+
+        socket.on('teamError', (message) => {
+            alert(message);
+        });
+
+        socket.on('teamLeaderUpdate', (data) => {
+            if (currentTeam) {
+                currentTeam.isLeader = data.isLeader;
+                updateTeamUI();
+            }
+        });
+
+        socket.on('onlinePlayersList', (players) => {
+            const listDiv = document.getElementById('onlinePlayersList');
+            if (players.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; color: #888; font-size: 13px; padding: 5px;">No players available</div>';
+            } else {
+                listDiv.innerHTML = players.map(p => `
+                    <div style="padding: 5px; margin: 2px 0; background: rgba(255, 255, 255, 0.1); border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${p.name}</span>
+                        <button onclick="socket.emit('inviteToTeam', '${p.id}')" style="padding: 3px 10px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">Invite</button>
+                    </div>
+                `).join('');
+            }
+        });
+
+        function updateTeamUI() {
+            if (currentTeam) {
+                document.getElementById('noTeamView').style.display = 'none';
+                document.getElementById('inTeamView').style.display = 'block';
+                document.getElementById('currentTeamName').textContent = currentTeam.name;
+                document.getElementById('currentTeamName').style.color = currentTeam.color;
+                
+                const membersList = document.getElementById('teamMembersList');
+                membersList.innerHTML = currentTeam.members.map(m => 
+                    `<div style="padding: 2px 5px;">${m.name}${m.id === currentTeam.leader ? ' (Leader)' : ''}</div>`
+                ).join('');
+                
+                if (currentTeam.isLeader) {
+                    document.getElementById('inviteSection').style.display = 'block';
+                } else {
+                    document.getElementById('inviteSection').style.display = 'none';
+                }
+            } else {
+                document.getElementById('noTeamView').style.display = 'block';
+                document.getElementById('inTeamView').style.display = 'none';
+                document.getElementById('inviteSection').style.display = 'none';
+            }
+        }
+
+        function updateInvitesList() {
+            const listDiv = document.getElementById('teamInvitesList');
+            if (pendingInvites.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; color: #888; font-size: 13px;">No invites</div>';
+            } else {
+                listDiv.innerHTML = pendingInvites.map((invite, idx) => `
+                    <div style="padding: 8px; margin: 5px 0; background: rgba(255, 255, 255, 0.1); border-radius: 3px;">
+                        <div style="margin-bottom: 5px; font-size: 14px;">${invite.inviterName} invited you to <strong>${invite.teamName}</strong></div>
+                        <button onclick="respondToInvite(${idx}, true)" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px;">Accept</button>
+                        <button onclick="respondToInvite(${idx}, false)" style="padding: 5px 15px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer;">Decline</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        window.respondToInvite = function(inviteIdx, accept) {
+            const invite = pendingInvites[inviteIdx];
+            if (invite) {
+                socket.emit('respondToTeamInvite', { teamId: invite.teamId, accept });
+                pendingInvites.splice(inviteIdx, 1);
+                updateInvitesList();
+            }
+        };
 
         // Handle player death
         // Handle player death
@@ -2265,7 +2454,7 @@
             
             if (!tankConfig) {
                 // Fallback: draw simple tank if config not loaded
-                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                const baseColor = player.teamColor || (player.id === playerId ? '#00B2E1' : '#F14E54');
                 ctx.fillStyle = baseColor;
                 ctx.strokeStyle = darkenColor(baseColor, 0.3);
                 ctx.lineWidth = 3 * camera.zoom;
@@ -2482,9 +2671,11 @@
 
                 // Draw center circles
                 const baseLayers = tankConfig.baseLayers || 1;
-                const circleColors = player.id === playerId ? 
-                    ['#00B2E1', '#0099C9', '#0080B0'] : 
-                    ['#F14E54', '#D9444A', '#C03A40'];
+                const circleColors = player.teamColor ? 
+                    [player.teamColor, darkenColor(player.teamColor, 0.1), darkenColor(player.teamColor, 0.2)] :
+                    (player.id === playerId ? 
+                        ['#00B2E1', '#0099C9', '#0080B0'] : 
+                        ['#F14E54', '#D9444A', '#C03A40']);
                 
                 if (Array.isArray(baseLayers)) {
                     baseLayers.forEach((layer, i) => {
@@ -2556,7 +2747,7 @@
             } else if (typeof tankConfig.baseShape === 'number' && tankConfig.baseShape >= 3) {
                 // Polygon base
                 const sides = tankConfig.baseShape;
-                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                const baseColor = player.teamColor || (player.id === playerId ? '#00B2E1' : '#F14E54');
                 ctx.fillStyle = baseColor;
                 ctx.strokeStyle = darkenColor(baseColor, 0.3);
                 ctx.lineWidth = 3 * camera.zoom;
@@ -2573,7 +2764,7 @@
                 ctx.stroke();
             } else if (tankConfig.baseShape !== 'advanced') {
                 // Default circular base
-                const baseColor = player.id === playerId ? '#00B2E1' : '#F14E54';
+                const baseColor = player.teamColor || (player.id === playerId ? '#00B2E1' : '#F14E54');
                 ctx.fillStyle = baseColor;
                 ctx.strokeStyle = darkenColor(baseColor, 0.3);
                 ctx.lineWidth = 3 * camera.zoom;
@@ -2590,7 +2781,7 @@
             ctx.translate(baseBlock.x * camera.zoom * sizeMultiplier, baseBlock.y * camera.zoom * sizeMultiplier);
             ctx.rotate((baseBlock.rotation || 0) * Math.PI / 180);
             
-            const blockColor = baseBlock.color || (player.id === playerId ? '#00B2E1' : '#F14E54');
+            const blockColor = baseBlock.color || (player.teamColor || (player.id === playerId ? '#00B2E1' : '#F14E54'));
             ctx.fillStyle = blockColor;
             ctx.strokeStyle = darkenColor(blockColor, 0.3);
             ctx.lineWidth = 3 * camera.zoom;

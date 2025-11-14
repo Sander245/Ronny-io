@@ -32,7 +32,7 @@
     "baseShape": "circle",
     "guns": [{"type": "normal", "angle": 0, "damage": 0.7, "speed": 1.2, "reload": 1.5, "spread": 0.15}],
     "fov": 1,
-    "upgrades": ["DESTROYER", "GUNNER", "SCATTER_GUN", "SPRAY", "SMASHER", "ROCKETEER"]
+    "upgrades": ["DESTROYER", "GUNNER", "SPREADSHOT", "SPRAY", "SMASHER", "ROCKETEER"]
   },
   "FLANK_GUARD": {
     "name": "Flank Guard",
@@ -135,9 +135,21 @@
     "fov": 1,
     "upgrades": ["GUNNER_TRAPPER", "AUTO_GUNNER", "CROPDUSTER"]
   },
-  "SCATTER_GUN": {
-    "name": "Scatter Gun",
+  "SPREADSHOT": {
+    "name": "Spreadshot",
     "level": 30,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.2, "reload": 1.2},
+      {"type": "normal", "angle": -15, "damage": 0.9, "speed": 1.2, "reload": 1.2},
+      {"type": "normal", "angle": 15, "damage": 0.9, "speed": 1.2, "reload": 1.2}
+    ],
+    "fov": 1,
+    "upgrades": ["SHOTGUN", "SPREAD_SHOT"]
+  },
+  "SCATTER_GUN": {
+    "name": "Shotgun",
+    "level": 45,
     "baseShape": "circle",
     "guns": [
       {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.4, "reload": 1.8, "spread": 0.18, "offsetX": 0, "offsetY": 0},
@@ -145,7 +157,19 @@
       {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.4, "reload": 1.8, "spread": 0.18, "offsetX": -5, "offsetY": -8}
     ],
     "fov": 1,
-    "upgrades": ["ULTIMATE_SHOTGUN", "CROPDUSTER"]
+    "upgrades": []
+  },
+  "SHOTGUN": {
+    "name": "Shotgun",
+    "level": 45,
+    "baseShape": "circle",
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.4, "reload": 1.8, "spread": 0.18, "offsetX": 0, "offsetY": 0},
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.4, "reload": 1.8, "spread": 0.18, "offsetX": -5, "offsetY": 8},
+      {"type": "normal", "angle": 0, "damage": 0.8, "speed": 1.4, "reload": 1.8, "spread": 0.18, "offsetX": -5, "offsetY": -8}
+    ],
+    "fov": 1,
+    "upgrades": ["MEGA_SHOTGUN"]
   },
   "SPRAY": {
     "name": "Spray",
@@ -420,7 +444,7 @@
       {"type": "normal", "angle": 30, "damage": 0.7, "speed": 1, "reload": 1}
     ],
     "fov": 1,
-    "upgrades": []
+    "upgrades": ["HYPER_SPREAD"]
   },
   "TRIPLE_TWIN": {
     "name": "Triple Twin",
@@ -864,6 +888,47 @@
     "bodyDamageBonus": 5.5,
     "speedBonus": 1.8,
     "healthBonus": 1.2,
+    "upgrades": []
+  },
+  "MEGA_SHOTGUN": {
+    "name": "Mega Shotgun",
+    "level": 60,
+    "baseShape": "circle",
+    "baseLayers": [
+      {"size": 1.1, "sides": 0},
+      {"size": 0.85, "sides": 0}
+    ],
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.5, "reload": 2, "spread": 0.2, "offsetX": 0, "offsetY": 0},
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.5, "reload": 2, "spread": 0.2, "offsetX": -5, "offsetY": 10},
+      {"type": "normal", "angle": 0, "damage": 1, "speed": 1.5, "reload": 2, "spread": 0.2, "offsetX": -5, "offsetY": -10},
+      {"type": "normal", "angle": 0, "damage": 0.9, "speed": 1.5, "reload": 2, "spread": 0.2, "offsetX": -8, "offsetY": 5},
+      {"type": "normal", "angle": 0, "damage": 0.9, "speed": 1.5, "reload": 2, "spread": 0.2, "offsetX": -8, "offsetY": -5}
+    ],
+    "fov": 1,
+    "upgrades": []
+  },
+  "HYPER_SPREAD": {
+    "name": "Hyper Spread",
+    "level": 60,
+    "baseShape": "circle",
+    "baseLayers": [
+      {"size": 1.15, "sides": 0},
+      {"size": 0.9, "sides": 8},
+      {"size": 0.65, "sides": 0}
+    ],
+    "guns": [
+      {"type": "normal", "angle": 0, "damage": 1.1, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": -8, "damage": 1, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": 8, "damage": 1, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": -16, "damage": 0.9, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": 16, "damage": 0.9, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": -24, "damage": 0.8, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": 24, "damage": 0.8, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": -32, "damage": 0.7, "speed": 1.1, "reload": 1.1},
+      {"type": "normal", "angle": 32, "damage": 0.7, "speed": 1.1, "reload": 1.1}
+    ],
+    "fov": 1.1,
     "upgrades": []
   },
   "ADMIN": {
