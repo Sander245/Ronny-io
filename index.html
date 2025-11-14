@@ -10,6 +10,58 @@
             padding: 0;
             box-sizing: border-box;
             user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: #e0e0e0;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #d8d8d8;
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+        }
+
+        #startMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #startMenu.hidden {
+            display: none;
+        }
+
+        .menu-content {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-title {
+            font-size: 72px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
         }
 
         #nameInput {
@@ -775,77 +827,6 @@
         let activeInviteToasts = [];
         let nextTeamPanelUpdate = 0;
 
-        const uiState = {
-            screen: 'menu', // 'menu', 'game', 'editor'
-            focusInput: 'menuName',
-            menuName: '',
-            teamNameInput: '',
-            chatInput: '',
-            chatActive: false,
-            chatMessages: [],
-            notifications: [],
-            adminPanelOpen: false,
-            showControlsHelp: false,
-            upgradeMenuVisible: false,
-            deathScreen: { visible: false, killedBy: [] },
-            pointer: { x: 0, y: 0 },
-            lastPointerDown: 0,
-            inputBlink: 0,
-            menuError: ''
-        };
-
-        const uiManager = {
-            hitRegions: [],
-            hovered: null,
-            register(region) {
-                this.hitRegions.push(region);
-            },
-            reset() {
-                this.hitRegions.length = 0;
-                this.hovered = null;
-            },
-            findRegion(x, y) {
-                for (let i = this.hitRegions.length - 1; i >= 0; i--) {
-                    const region = this.hitRegions[i];
-                    if (x >= region.x && x <= region.x + region.width &&
-                        y >= region.y && y <= region.y + region.height) {
-                        return region;
-                    }
-                }
-                return null;
-            },
-            handlePointer(type, x, y, originalEvent) {
-                const region = this.findRegion(x, y);
-                if (!region) {
-                    if (type === 'move') {
-                        this.hovered = null;
-                    }
-                    return false;
-                }
-
-                if (type === 'down' && typeof region.onDown === 'function') {
-                    region.onDown(originalEvent);
-                    return true;
-                }
-
-                if (type === 'up' && typeof region.onClick === 'function') {
-                    region.onClick(originalEvent);
-                    return true;
-                }
-
-                if (type === 'move' && typeof region.onHover === 'function') {
-                    region.onHover(originalEvent);
-                    this.hovered = region;
-                    return true;
-                }
-
-                if (type === 'move') {
-                    this.hovered = region;
-                }
-                return false;
-            }
-        };
-
         function updateAdminAutoInvincButton() {
             if (!adminAutoInvincBtn) return;
             adminAutoInvincBtn.textContent = `Auto Invincibility: ${adminAutoInvincibility ? 'ON' : 'OFF'}`;
@@ -1080,22 +1061,6 @@
         }
 
         renderTeamPanel();
-
-        function getCanvasPoint(event) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            return {
-                x: (event.clientX - rect.left) * scaleX,
-                y: (event.clientY - rect.top) * scaleY
-            };
-        }
-
-        function handleEditorPointer(eventType, point, originalEvent) {
-            if (uiState.screen !== 'editor') return false;
-            // Placeholder: actual editor interaction handling will be wired later
-            return false;
-        }
         
         // Cheat code tracking
         let cheatCodeBuffer = '';
@@ -1237,8 +1202,8 @@
 
         function startGameFromMenu(options = {}) {
             const nameInput = document.getElementById('nameInput');
-            const playerName = (nameInput.value || 'Tank').trim() || 'Tank';
-            const payload = { name: playerName };
+            const playerName = String(nameInput.value || 'Tank').trim() || 'Tank';
+            const payload = { name: String(playerName) };
 
             if (adminUnlocked) {
                 const adminOptions = {};
@@ -1466,19 +1431,66 @@
             }
         });
 
-        // Canvas-driven chat system
-        const chatLog = [];
-        const maxChatMessages = 40;
+        // Chat system
+        let chatFocused = false;
+        const chatInputBox = document.getElementById('chatInputBox');
+        const chatMessages = document.getElementById('chatMessages');
+        const maxChatMessages = 20;
 
-        function pushChatMessage(name, message) {
-            chatLog.push({ name, message, timestamp: Date.now() });
-            if (chatLog.length > maxChatMessages) {
-                chatLog.shift();
+        // Focus chat on Enter or click
+        chatInputBox.addEventListener('click', () => {
+            chatFocused = true;
+        });
+
+        chatInputBox.addEventListener('focus', () => {
+            chatFocused = true;
+        });
+
+        chatInputBox.addEventListener('blur', () => {
+            chatFocused = false;
+        });
+
+        // Handle Enter key for chat
+        chatInputBox.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const message = chatInputBox.value.trim();
+                if (message.length > 0) {
+                    // Send chat message to server
+                    socket.emit('chatMessage', message);
+                    chatInputBox.value = '';
+                }
+                chatInputBox.blur();
+                chatFocused = false;
+            } else if (e.key === 'Escape') {
+                chatInputBox.blur();
+                chatFocused = false;
             }
-        }
+        });
 
+        // Listen for Enter key to focus chat (when not already focused)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !chatFocused && playerId) {
+                e.preventDefault();
+                chatInputBox.focus();
+                chatFocused = true;
+            }
+        });
+
+        // Receive chat messages from server
         socket.on('chatMessage', (data) => {
-            pushChatMessage(data.name, data.message);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.textContent = `${data.name}: ${data.message}`;
+            chatMessages.appendChild(messageDiv);
+            
+            // Remove old messages
+            while (chatMessages.children.length > maxChatMessages) {
+                chatMessages.removeChild(chatMessages.firstChild);
+            }
+            
+            // Auto-scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
         let mouseDownOnCanvas = false;
@@ -2632,7 +2644,9 @@
 
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
-            const safe = typeof str === 'string' ? str : String(str);
+            // Convert to string first, handling objects/arrays/etc
+            const safe = typeof str === 'string' ? str : (str.toString ? str.toString() : String(str));
+            if (typeof safe !== 'string') return '';
             return safe
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
@@ -4691,58 +4705,151 @@
         // Editor canvas mouse interactions
         const editorCanvas = document.getElementById('editorCanvas');
         
-
-        canvas.addEventListener('mousedown', (e) => {
-            const point = getCanvasPoint(e);
-            uiState.pointer = point;
-            if (uiState.screen === 'editor' && handleEditorPointer('down', point, e)) return;
-            if (uiManager.handlePointer('down', point.x, point.y, e)) return;
-            mouseDownOnCanvas = true;
-            mouseDown = true;
-            input.shooting = true;
-            hasMovedOrShot = true;
-            hideHelpIfTimeout();
-            updateControlHighlights();
+        editorCanvas.addEventListener('mousedown', (e) => {
+            const rect = editorCanvas.getBoundingClientRect();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            
+            editorState.mouseDownPos = { x: startX, y: startY };
+            editorState.isDragging = false;
+            editorState.dragging = true;
+            editorState.lastMousePos = { x: startX, y: startY };
         });
 
-        canvas.addEventListener('mouseup', (e) => {
-            const point = getCanvasPoint(e);
-            uiState.pointer = point;
-            if (uiState.screen === 'editor' && handleEditorPointer('up', point, e)) return;
-            if (uiManager.handlePointer('up', point.x, point.y, e)) return;
-            if (mouseDownOnCanvas) {
-                mouseDown = false;
-                input.shooting = autoFire;
+        editorCanvas.addEventListener('mousemove', (e) => {
+            if (editorState.dragging) {
+                const dx = e.clientX - editorState.lastMousePos.x;
+                const dy = e.clientY - editorState.lastMousePos.y;
+                
+                // Check if moved enough to be considered a drag
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                    editorState.isDragging = true;
+                    editorCanvas.style.cursor = 'grabbing';
+                }
+                
+                // Horizontal drag rotates, vertical drag zooms
+                editorState.rotation += dx * 0.01;
+                editorState.zoom = Math.max(0.5, Math.min(3, editorState.zoom + dy * 0.005));
+                
+                editorState.lastMousePos = { x: e.clientX, y: e.clientY };
+                renderEditorCanvas();
             }
-            mouseDownOnCanvas = false;
-            updateControlHighlights();
         });
 
-        document.addEventListener('mouseup', (e) => {
-            const point = getCanvasPoint(e);
-            uiState.pointer = point;
-            if (uiState.screen === 'editor' && handleEditorPointer('up', point, e)) return;
-            if (mouseDownOnCanvas) {
-                mouseDown = false;
-                input.shooting = autoFire;
-                mouseDownOnCanvas = false;
+        editorCanvas.addEventListener('mouseup', (e) => {
+            if (!editorState.isDragging) {
+                // It's a click, not a drag
+                const rect = editorCanvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const centerX = editorCanvas.width / 2;
+                const centerY = editorCanvas.height / 2;
+                
+                // Transform mouse coordinates to account for zoom and rotation
+                const relX = (mouseX - centerX) / editorState.zoom;
+                const relY = (mouseY - centerY) / editorState.zoom;
+                
+                // Rotate back by negative rotation to get world coordinates
+                const cos = Math.cos(-editorState.rotation);
+                const sin = Math.sin(-editorState.rotation);
+                const worldX = relX * cos - relY * sin;
+                const worldY = relX * sin + relY * cos;
+                
+                let clickedItem = null;
+                let clickedType = null;
+                
+                // Check guns (in reverse order to prioritize top-most)
+                for (let i = editorState.blocks.length - 1; i >= 0; i--) {
+                    const block = editorState.blocks[i];
+                    const angle = (block.props.angle || 0) * Math.PI / 180;
+                    const blockRotation = (block.props.blockRotation || 0) * Math.PI / 180;
+                    const selfAngle = (block.props.selfAngle || 0) * Math.PI / 180;
+                    
+                    // Calculate gun position on perimeter
+                    const baseRadius = getEditorBaseRadius(angle);
+                    const gunX = Math.cos(angle) * baseRadius + (block.props.offsetX || 0);
+                    const gunY = Math.sin(angle) * baseRadius + (block.props.offsetY || 0);
+                    
+                    const blockDist = Math.sqrt(
+                        (worldX - gunX) ** 2 + 
+                        (worldY - gunY) ** 2
+                    );
+                    
+                    // Simple hit detection - 40 pixel radius
+                    if (blockDist < 40) {
+                        clickedItem = block;
+                        clickedType = 'gun';
+                        break;
+                    }
+                }
+                
+                // Check blades if no gun was clicked
+                if (!clickedItem) {
+                    for (let i = editorState.blades.length - 1; i >= 0; i--) {
+                        const blade = editorState.blades[i];
+                        const bladeDist = Math.sqrt(
+                            (worldX - blade.x) ** 2 + 
+                            (worldY - blade.y) ** 2
+                        );
+                        
+                        // Hit detection based on blade size
+                        if (bladeDist < blade.size * 20) {
+                            clickedItem = blade;
+                            clickedType = 'blade';
+                            break;
+                        }
+                    }
+                }
+                
+                // Check base blocks if no gun or blade was clicked
+                if (!clickedItem) {
+                    for (let i = editorState.baseBlocks.length - 1; i >= 0; i--) {
+                        const baseBlock = editorState.baseBlocks[i];
+                        if (isPointInBaseBlock(baseBlock, worldX, worldY)) {
+                            clickedItem = baseBlock;
+                            clickedType = 'baseBlock';
+                            break;
+                        }
+                    }
+                }
+                
+                if (clickedItem) {
+                    if (clickedType === 'gun') {
+                        editorState.selectedBlock = clickedItem;
+                        editorState.selectedBlade = null;
+                        editorState.selectedBaseBlock = null;
+                    } else if (clickedType === 'blade') {
+                        editorState.selectedBlade = clickedItem;
+                        editorState.selectedBlock = null;
+                        editorState.selectedBaseBlock = null;
+                    } else if (clickedType === 'baseBlock') {
+                        editorState.selectedBaseBlock = clickedItem;
+                        editorState.selectedBlock = null;
+                        editorState.selectedBlade = null;
+                    }
+                } else {
+                    // Clicked on empty space - deselect all
+                    editorState.selectedBlock = null;
+                    editorState.selectedBlade = null;
+                    editorState.selectedBaseBlock = null;
+                }
+                
+                updateCurrentBlocksList();
+                updatePropertiesPanel();
+                renderEditorCanvas();
             }
-            updateControlHighlights();
+            
+            editorState.dragging = false;
+            editorState.isDragging = false;
+            editorCanvas.style.cursor = 'grab';
         });
 
-        canvas.addEventListener('mousemove', (e) => {
-            const point = getCanvasPoint(e);
-            uiState.pointer = point;
-            if (uiState.screen === 'editor' && handleEditorPointer('move', point, e)) return;
-            uiManager.handlePointer('move', point.x, point.y, e);
-            lastMouseScreenX = e.clientX;
-            lastMouseScreenY = e.clientY;
-            const world = screenToWorld(e.clientX, e.clientY);
-            mouseWorldX = world.x;
-            mouseWorldY = world.y;
+        editorCanvas.addEventListener('mouseleave', () => {
+            editorState.dragging = false;
+            editorState.isDragging = false;
+            editorCanvas.style.cursor = 'grab';
         });
-
-        // Legacy editor canvas interactions are handled via the new canvas UI layer
 
         // Open/Close Tank Editor
         document.getElementById('openTankEditorBtn').addEventListener('click', () => {
