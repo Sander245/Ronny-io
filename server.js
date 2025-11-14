@@ -824,6 +824,14 @@ function sanitizeTeamName(name) {
     return name.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 16);
 }
 
+function sanitizePlayerName(name) {
+    if (name === null || name === undefined) return 'Tank';
+    const raw = String(name).trim();
+    if (!raw) return 'Tank';
+    const cleaned = raw.replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 20);
+    return cleaned || 'Tank';
+}
+
 function generateTeamColor() {
     return TEAM_COLOR_POOL[Math.floor(Math.random() * TEAM_COLOR_POOL.length)];
 }
@@ -1904,6 +1912,8 @@ io.on('connection', (socket) => {
                 adminOptions = payload.adminOptions;
             }
         }
+
+        joinName = sanitizePlayerName(joinName);
 
         const spawnPos = findSafeSpawnPosition();
         const player = new Player(spawnPos.x, spawnPos.y, joinName);
