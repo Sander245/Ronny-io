@@ -2065,15 +2065,18 @@ io.on('connection', (socket) => {
         if (!adminPlayers.has(socket.id)) return;
         const player = players.get(socket.id);
         if (player) {
-            // Clear all blocks in a radius around the player
+            // Clear all polygons in a radius around the player
             const clearRadius = 500;
-            blocks = blocks.filter(block => {
-                const dx = block.x - player.x;
-                const dy = block.y - player.y;
+            const before = polygons.size;
+            polygons.forEach((polygon, id) => {
+                const dx = polygon.x - player.x;
+                const dy = polygon.y - player.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                return distance > clearRadius;
+                if (distance <= clearRadius) {
+                    polygons.delete(id);
+                }
             });
-            console.log(`Cleared blocks around ${player.name}`);
+            console.log(`Cleared ${before - polygons.size} polygons around ${player.name}`);
         }
     });
 
@@ -2164,6 +2167,7 @@ io.on('connection', (socket) => {
             id: team.id,
             name: team.name,
             color: team.color,
+            leader: team.leader,
             members: Array.from(team.members).map(id => {
                 const p = players.get(id);
                 return { id, name: p ? p.name : 'Unknown' };
@@ -2198,7 +2202,7 @@ io.on('connection', (socket) => {
         
         socket.emit('teamCreated', { team: serializeTeam(team) });
         socket.emit('teamUpdate', { team: serializeTeam(team) });
-        console.log(`Team created: ${team.name} by ${player.name}`);
+        console.log(`✅ Team created: "${team.name}" by ${player.name} (Team ID: ${teamId})`);
     });
 
     socket.on('inviteToTeam', (targetSocketId) => {
@@ -2291,6 +2295,7 @@ io.on('connection', (socket) => {
         
         if (team.members.size === 0) {
             teams.delete(teamId);
+            console.log(`🗑️ Team auto-deleted: "${team.name}" (all members left)`);
         } else {
             if (team.leader === socket.id) {
                 team.leader = Array.from(team.members)[0];
@@ -2330,6 +2335,7 @@ io.on('connection', (socket) => {
                 team.members.delete(socket.id);
                 if (team.members.size === 0) {
                     teams.delete(teamId); // Delete empty team
+                    console.log(`🗑️ Team auto-deleted: "${team.name}" (all members disconnected)`);
                 } else if (team.leader === socket.id) {
                     // Transfer leadership to another member
                     team.leader = Array.from(team.members)[0];
