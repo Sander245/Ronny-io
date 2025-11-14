@@ -463,9 +463,8 @@ class Minion extends GameObject {
 }
 
 class Player extends GameObject {
-    constructor(x, y, name, socketId) {
+    constructor(x, y, name) {
         super(x, y);
-        this.socketId = socketId;
         this.name = name || 'Tank';
         this.tankType = 'BASIC';
         this.level = 0; // Start at level 0
@@ -475,6 +474,7 @@ class Player extends GameObject {
         this.size = 20;
         this.rotation = 0;
         this.invincible = false; // Invincibility cheat flag
+        this.teamId = null; // Team membership
         this.stats = {
             healthRegen: 0,
             maxHealth: 0,
@@ -506,8 +506,6 @@ class Player extends GameObject {
         this.lastActivityTime = Date.now();
         // Initialize size based on level
         this.updateSize();
-        this.teamId = null;
-        this.teamColor = null;
     }
 
     getStatValue(stat) {
@@ -748,8 +746,20 @@ const polygons = new Map();
 const bullets = new Map();
 const traps = new Map();
 const minions = new Map();
-const teams = new Map();
-const pendingTeamInvites = new Map();
+
+// Team system
+const teams = new Map(); // teamId -> { name, color, members: Set<socketId>, leader: socketId }
+const teamInvites = new Map(); // socketId -> Set<teamId>
+const playerTeams = new Map(); // socketId -> teamId
+let nextTeamId = 1;
+
+function generateTeamColor() {
+    // Generate random colors, avoiding red (#ff4444) and blue (#4444ff)
+    const hue = Math.floor(Math.random() * 360);
+    // Avoid hues around 0 (red) and 240 (blue)
+    const adjustedHue = (hue >= 330 || hue <= 30) ? hue + 60 : (hue >= 210 && hue <= 270) ? hue + 60 : hue;
+    return `hsl(${adjustedHue % 360}, 70%, 50%)`;
+}
 
 function spawnPolygon() {
     if (polygons.size >= GAME_CONFIG.MAX_POLYGONS) return;
@@ -798,140 +808,6 @@ function spawnPolygon() {
 
     const polygon = new Polygon(x, y, sides);
     polygons.set(polygon.id, polygon);
-}
-
-function clearPolygonsAround(x, y, radius) {
-    const radiusSq = radius * radius;
-    let removed = 0;
-    polygons.forEach((poly, id) => {
-        const dx = poly.x - x;
-        const dy = poly.y - y;
-        if ((dx * dx + dy * dy) <= radiusSq) {
-            polygons.delete(id);
-            removed++;
-        }
-    });
-
-    if (removed > 0) {
-        console.log(`Cleared ${removed} polygons within ${radius}px of (${Math.round(x)}, ${Math.round(y)})`);
-    }
-}
-
-const TEAM_COLOR_POOL = ['#FFB347', '#FFD966', '#66FFB3', '#C58BFF', '#FF7AD1', '#9DFF57', '#FFD1DC', '#C4FF4D', '#FFAA7A', '#E0AFFF'];
-const CHAT_PROFANITY_LIST = ['fuck', 'shit', 'bitch', 'asshole', 'bastard'];
-
-function sanitizeTeamName(name) {
-    if (!name || typeof name !== 'string') return '';
-    return name.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 16);
-}
-
-function sanitizePlayerName(name) {
-    if (name === null || name === undefined) return 'Tank';
-    const raw = String(name).trim();
-    if (!raw) return 'Tank';
-    const cleaned = raw.replace(/[^a-zA-Z0-9 _-]/g, '').slice(0, 20);
-    return cleaned || 'Tank';
-}
-
-function generateTeamColor() {
-    return TEAM_COLOR_POOL[Math.floor(Math.random() * TEAM_COLOR_POOL.length)];
-}
-
-function getDisplayName(socketId) {
-    const player = players.get(socketId);
-    if (player) return player.name;
-    const socket = io.sockets.sockets.get(socketId);
-    if (socket && socket.data && socket.data.displayName) {
-        return socket.data.displayName;
-    }
-    return 'Player';
-}
-
-function serializeTeams() {
-    return Array.from(teams.values()).map(team => ({
-        id: team.id,
-        name: team.name,
-        color: team.color,
-        ownerId: team.ownerId,
-        members: Array.from(team.members).map(memberId => ({
-            id: memberId,
-            name: getDisplayName(memberId)
-        }))
-    }));
-}
-
-function emitTeamSnapshot() {
-    io.emit('teamsUpdated', serializeTeams());
-}
-
-function leaveCurrentTeam(socket, silent = false) {
-    if (!socket || !socket.data || !socket.data.teamId) return;
-    const currentTeam = teams.get(socket.data.teamId);
-    if (currentTeam) {
-        currentTeam.members.delete(socket.id);
-        if (currentTeam.ownerId === socket.id) {
-            const nextOwner = currentTeam.members.values().next().value || null;
-            currentTeam.ownerId = nextOwner;
-        }
-        if (currentTeam.members.size === 0) {
-            teams.delete(currentTeam.id);
-        }
-    }
-    socket.data.teamId = null;
-    const player = players.get(socket.id);
-    if (player) {
-        player.teamId = null;
-        player.teamColor = null;
-    }
-    if (!silent) {
-        socket.emit('teamSelfUpdate', { teamId: null });
-    }
-}
-
-function joinTeam(socket, teamId) {
-    if (!socket || !teamId) return false;
-    const team = teams.get(teamId);
-    if (!team) return false;
-    if (socket.data && socket.data.teamId === teamId) {
-        const player = players.get(socket.id);
-        if (player) {
-            player.teamId = team.id;
-            player.teamColor = team.color;
-        }
-        socket.emit('teamSelfUpdate', { teamId: team.id, teamName: team.name, color: team.color });
-        return true;
-    }
-
-    leaveCurrentTeam(socket, true);
-    team.members.add(socket.id);
-    if (team.ownerId == null) {
-        team.ownerId = socket.id;
-    }
-    if (socket.data) {
-        socket.data.teamId = team.id;
-    }
-    const player = players.get(socket.id);
-    if (player) {
-        player.teamId = team.id;
-        player.teamColor = team.color;
-    }
-    socket.emit('teamSelfUpdate', { teamId: team.id, teamName: team.name, color: team.color });
-    return true;
-}
-
-function sanitizeChatMessage(message) {
-    if (!message || typeof message !== 'string') return '';
-    let cleaned = message
-        .replace(/[\r\n]/g, ' ')
-        .replace(/[<>]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    CHAT_PROFANITY_LIST.forEach(word => {
-        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const pattern = new RegExp(safeWord, 'gi');
-        cleaned = cleaned.replace(pattern, '*'.repeat(word.length));
-    });
-    return cleaned.slice(0, 120);
 }
 
 function spawnPolygonCluster() {
@@ -1433,6 +1309,11 @@ function gameLoop() {
         // Bullet vs player
         players.forEach(player => {
             if (player.id !== bullet.owner && player.health > 0) {
+                // Check if players are on the same team
+                const owner = players.get(bullet.owner);
+                const sameTeam = owner && player.teamId && owner.teamId === player.teamId;
+                if (sameTeam) return; // Skip friendly fire
+                
                 // Player hitbox is 85% of visual size
                 if (checkCollision(bullet, player, bullet.size, player.size * 0.85)) {
                     const owner = players.get(bullet.owner);
@@ -1539,6 +1420,11 @@ function gameLoop() {
         // Trap vs player (not owner)
         players.forEach(player => {
             if (player.id !== trap.owner && player.health > 0) {
+                // Check if players are on the same team
+                const owner = players.get(trap.owner);
+                const sameTeam = owner && player.teamId && owner.teamId === player.teamId;
+                if (sameTeam) return; // Skip friendly fire
+                
                 // Player hitbox is 85% of visual size
                 if (checkCollision(trap, player, trap.size, player.size * 0.85)) {
                     const owner = players.get(trap.owner);
@@ -1637,6 +1523,10 @@ function gameLoop() {
             // Minion vs player (not owner)
             players.forEach(player => {
                 if (player.id !== minion.owner && player.health > 0) {
+                    // Check if players are on the same team
+                    const sameTeam = owner && player.teamId && owner.teamId === player.teamId;
+                    if (sameTeam) return; // Skip friendly fire
+                    
                     // Player hitbox is 85% of visual size
                     if (checkCollision(minion, player, minion.size, player.size * 0.85)) {
                         player.takeDamage(minion.damage / 2, {
@@ -1785,26 +1675,28 @@ function gameLoop() {
     const gameState = {
         players: Array.from(players.values())
             .filter(p => p.health > 0) // Only send alive players
-            .map(p => ({
-                id: p.id,
-                socketId: p.socketId,
-                name: p.name,
-                x: p.x,
-                y: p.y,
-                rotation: p.rotation,
-                size: p.size,
-                health: p.health,
-                maxHealth: p.getMaxHealth(),
-                level: p.level,
-                xp: p.xp,
-                tankType: p.tankType,
-                score: p.score,
-                stats: p.stats,
-                upgradePoints: p.upgradePoints,
-                gunRecoils: p.gunRecoils,
-                teamId: p.teamId || null,
-                teamColor: p.teamColor || null
-        })),
+            .map(p => {
+                const teamId = p.teamId;
+                const team = teamId ? teams.get(teamId) : null;
+                return {
+                    id: p.id,
+                    name: p.name,
+                    x: p.x,
+                    y: p.y,
+                    rotation: p.rotation,
+                    size: p.size,
+                    health: p.health,
+                    maxHealth: p.getMaxHealth(),
+                    level: p.level,
+                    xp: p.xp,
+                    tankType: p.tankType,
+                    score: p.score,
+                    stats: p.stats,
+                    upgradePoints: p.upgradePoints,
+                    gunRecoils: p.gunRecoils,
+                    teamColor: team ? team.color : null
+                };
+            }),
         polygons: Array.from(polygons.values()).map(p => ({
             id: p.id,
             x: p.x,
@@ -1896,54 +1788,11 @@ io.on('connection', (socket) => {
     const timestamp = new Date().toLocaleTimeString();
     console.log(`[${timestamp}] ✅ Player connected: ${socket.id} | Total players: ${players.size + 1}`);
 
-    socket.data = socket.data || {};
-    socket.data.teamId = null;
-    socket.data.displayName = 'Tank';
-    socket.emit('teamsUpdated', serializeTeams());
-    socket.emit('teamSelfUpdate', { teamId: null });
-
-    socket.on('joinGame', (payload) => {
-        let joinName = 'Tank';
-        let adminOptions = null;
-
-        if (typeof payload === 'string') {
-            joinName = payload || 'Tank';
-        } else if (payload && typeof payload === 'object') {
-            joinName = payload.name || 'Tank';
-            if (payload.adminOptions && typeof payload.adminOptions === 'object') {
-                adminOptions = payload.adminOptions;
-            }
-        }
-
-        joinName = sanitizePlayerName(joinName);
-
+    socket.on('joinGame', (name) => {
         const spawnPos = findSafeSpawnPosition();
-        const player = new Player(spawnPos.x, spawnPos.y, joinName, socket.id);
+        const player = new Player(spawnPos.x, spawnPos.y, name || 'Tank');
         player.id = socket.id; // Set player ID to socket ID so client can find itself
         players.set(socket.id, player);
-        socket.data.displayName = player.name;
-
-        if (socket.data.teamId) {
-            const existingTeam = teams.get(socket.data.teamId);
-            if (existingTeam) {
-                player.teamId = existingTeam.id;
-                player.teamColor = existingTeam.color;
-                existingTeam.members.add(socket.id);
-            } else {
-                socket.data.teamId = null;
-                socket.emit('teamSelfUpdate', { teamId: null });
-            }
-        }
-
-        if (adminOptions && adminPlayers.has(socket.id)) {
-            if (adminOptions.autoInvincibility) {
-                player.invincible = true;
-            }
-            if (adminOptions.safeSpawn) {
-                const clearRadius = Math.max(100, Math.min(parseInt(adminOptions.clearRadius, 10) || 500, 1500));
-                clearPolygonsAround(player.x, player.y, clearRadius);
-            }
-        }
         
         // Start game loop if this is the first player
         if (players.size === 1 && !isServerActive) {
@@ -1964,85 +1813,6 @@ io.on('connection', (socket) => {
         
         const timestamp = new Date().toLocaleTimeString();
         console.log(`[${timestamp}] 🎮 Player joined game: "${player.name}" (${socket.id})`);
-    });
-
-    socket.on('createTeam', (data = {}) => {
-        const teamName = sanitizeTeamName(data.name);
-        if (!teamName) {
-            socket.emit('teamError', 'Team name required');
-            return;
-        }
-        if (socket.data.teamId) {
-            socket.emit('teamError', 'Already in a team');
-            return;
-        }
-
-        const teamId = `team_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const newTeam = {
-            id: teamId,
-            name: teamName,
-            color: generateTeamColor(),
-            ownerId: socket.id,
-            members: new Set()
-        };
-        teams.set(teamId, newTeam);
-        joinTeam(socket, teamId);
-        emitTeamSnapshot();
-    });
-
-    socket.on('leaveTeam', () => {
-        if (!socket.data.teamId) return;
-        leaveCurrentTeam(socket);
-        emitTeamSnapshot();
-    });
-
-    socket.on('inviteToTeam', (data = {}) => {
-        const { teamId, targetId } = data;
-        if (!teamId || !targetId) return;
-        if (targetId === socket.id) return;
-        const team = teams.get(teamId);
-        if (!team || !team.members.has(socket.id)) return;
-        if (team.members.has(targetId)) return;
-        const targetSocket = io.sockets.sockets.get(targetId);
-        if (!targetSocket) return;
-
-        const invite = {
-            teamId: team.id,
-            teamName: team.name,
-            color: team.color,
-            fromId: socket.id,
-            fromName: getDisplayName(socket.id)
-        };
-        const invites = pendingTeamInvites.get(targetId) || [];
-        if (!invites.some(inv => inv.teamId === invite.teamId && inv.fromId === invite.fromId)) {
-            invites.push(invite);
-            pendingTeamInvites.set(targetId, invites);
-            targetSocket.emit('teamInvite', invite);
-        }
-    });
-
-    socket.on('respondTeamInvite', (data = {}) => {
-        const { teamId, accept } = data;
-        if (!teamId) return;
-        const invites = pendingTeamInvites.get(socket.id) || [];
-        const inviteIndex = invites.findIndex(inv => inv.teamId === teamId);
-        if (inviteIndex === -1) return;
-        const [invite] = invites.splice(inviteIndex, 1);
-        if (invites.length === 0) {
-            pendingTeamInvites.delete(socket.id);
-        } else {
-            pendingTeamInvites.set(socket.id, invites);
-        }
-
-        if (!accept) {
-            return;
-        }
-
-        const team = teams.get(teamId);
-        if (!team) return;
-        if (joinTeam(socket, teamId)) {
-            emitTeamSnapshot();
-        }
     });
 
     socket.on('playerInput', (input) => {
@@ -2166,11 +1936,17 @@ io.on('connection', (socket) => {
     socket.on('chatMessage', (message) => {
         const player = players.get(socket.id);
         if (player && message && typeof message === 'string') {
-            const sanitizedMessage = sanitizeChatMessage(message);
+            // Sanitize message: remove HTML tags, limit length, trim whitespace
+            let sanitizedMessage = message
+                .replace(/<[^>]*>/g, '') // Remove HTML tags
+                .replace(/[<>]/g, '') // Remove < and > characters
+                .trim()
+                .substring(0, 100);
+            
             if (sanitizedMessage.length > 0) {
-                const safeName = (player.name || 'Player').replace(/[<>]/g, '');
+                // Broadcast to all players
                 io.emit('chatMessage', {
-                    name: safeName,
+                    name: player.name.replace(/<[^>]*>/g, '').substring(0, 20), // Sanitize name too
                     message: sanitizedMessage
                 });
             }
@@ -2285,6 +2061,22 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('cheatClearBlocks', () => {
+        if (!adminPlayers.has(socket.id)) return;
+        const player = players.get(socket.id);
+        if (player) {
+            // Clear all blocks in a radius around the player
+            const clearRadius = 500;
+            blocks = blocks.filter(block => {
+                const dx = block.x - player.x;
+                const dy = block.y - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                return distance > clearRadius;
+            });
+            console.log(`Cleared blocks around ${player.name}`);
+        }
+    });
+
     socket.on('cheatTeleportPlayers', (data) => {
         if (!adminPlayers.has(socket.id)) return;
         const { x, y, mode } = data;
@@ -2366,6 +2158,163 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Team system handlers
+    function serializeTeam(team) {
+        return {
+            id: team.id,
+            name: team.name,
+            color: team.color,
+            members: Array.from(team.members).map(id => {
+                const p = players.get(id);
+                return { id, name: p ? p.name : 'Unknown' };
+            }),
+            isLeader: team.leader === socket.id
+        };
+    }
+
+    socket.on('createTeam', (teamName) => {
+        const player = players.get(socket.id);
+        if (!player) return;
+        
+        // Leave current team if in one
+        const currentTeamId = playerTeams.get(socket.id);
+        if (currentTeamId) {
+            socket.emit('teamError', 'You are already in a team');
+            return;
+        }
+        
+        const teamId = nextTeamId++;
+        const team = {
+            id: teamId,
+            name: teamName || `Team ${teamId}`,
+            color: generateTeamColor(),
+            members: new Set([socket.id]),
+            leader: socket.id
+        };
+        
+        teams.set(teamId, team);
+        playerTeams.set(socket.id, teamId);
+        player.teamId = teamId;
+        
+        socket.emit('teamCreated', { team: serializeTeam(team) });
+        socket.emit('teamUpdate', { team: serializeTeam(team) });
+        console.log(`Team created: ${team.name} by ${player.name}`);
+    });
+
+    socket.on('inviteToTeam', (targetSocketId) => {
+        const player = players.get(socket.id);
+        const teamId = playerTeams.get(socket.id);
+        const team = teamId ? teams.get(teamId) : null;
+        
+        if (!player || !team || team.leader !== socket.id) {
+            socket.emit('teamError', 'Only team leaders can invite players');
+            return;
+        }
+        
+        const targetPlayer = players.get(targetSocketId);
+        if (!targetPlayer) {
+            socket.emit('teamError', 'Player not found');
+            return;
+        }
+        
+        if (playerTeams.has(targetSocketId)) {
+            socket.emit('teamError', 'Player is already in a team');
+            return;
+        }
+        
+        // Add invite
+        if (!teamInvites.has(targetSocketId)) {
+            teamInvites.set(targetSocketId, new Set());
+        }
+        teamInvites.get(targetSocketId).add(teamId);
+        
+        io.to(targetSocketId).emit('teamInvite', {
+            teamId,
+            teamName: team.name,
+            inviterName: player.name
+        });
+        
+        socket.emit('teamInviteSent', { targetName: targetPlayer.name });
+    });
+
+    socket.on('respondToTeamInvite', ({ teamId, accept }) => {
+        const player = players.get(socket.id);
+        if (!player) return;
+        
+        const invites = teamInvites.get(socket.id);
+        if (!invites || !invites.has(teamId)) {
+            socket.emit('teamError', 'Invalid invite');
+            return;
+        }
+        
+        invites.delete(teamId);
+        if (invites.size === 0) teamInvites.delete(socket.id);
+        
+        if (accept) {
+            const team = teams.get(teamId);
+            if (!team) {
+                socket.emit('teamError', 'Team no longer exists');
+                return;
+            }
+            
+            if (playerTeams.has(socket.id)) {
+                socket.emit('teamError', 'You are already in a team');
+                return;
+            }
+            
+            // Join team
+            team.members.add(socket.id);
+            playerTeams.set(socket.id, teamId);
+            player.teamId = teamId;
+            
+            // Notify all team members
+            team.members.forEach(memberId => {
+                io.to(memberId).emit('teamUpdate', { team: serializeTeam(team) });
+            });
+            
+            socket.emit('teamJoined', { team: serializeTeam(team) });
+            console.log(`${player.name} joined team ${team.name}`);
+        }
+    });
+
+    socket.on('leaveTeam', () => {
+        const teamId = playerTeams.get(socket.id);
+        if (!teamId) return;
+        
+        const team = teams.get(teamId);
+        if (!team) return;
+        
+        team.members.delete(socket.id);
+        playerTeams.delete(socket.id);
+        const player = players.get(socket.id);
+        if (player) player.teamId = null;
+        
+        if (team.members.size === 0) {
+            teams.delete(teamId);
+        } else {
+            if (team.leader === socket.id) {
+                team.leader = Array.from(team.members)[0];
+                io.to(team.leader).emit('teamLeaderUpdate', { isLeader: true });
+            }
+            // Notify remaining members
+            team.members.forEach(memberId => {
+                io.to(memberId).emit('teamUpdate', { team: serializeTeam(team) });
+            });
+        }
+        
+        socket.emit('teamLeft');
+    });
+
+    socket.on('getOnlinePlayers', () => {
+        const onlinePlayers = [];
+        players.forEach((p, id) => {
+            if (id !== socket.id && !playerTeams.has(id)) {
+                onlinePlayers.push({ id, name: p.name });
+            }
+        });
+        socket.emit('onlinePlayersList', onlinePlayers);
+    });
+
     socket.on('disconnect', () => {
         const timestamp = new Date().toLocaleTimeString();
         const player = players.get(socket.id);
@@ -2373,24 +2322,30 @@ io.on('connection', (socket) => {
         
         console.log(`[${timestamp}] ❌ Player disconnected: "${playerName}" (${socket.id}) | Remaining: ${players.size - 1}`);
         
+        // Handle team cleanup
+        const teamId = playerTeams.get(socket.id);
+        if (teamId) {
+            const team = teams.get(teamId);
+            if (team) {
+                team.members.delete(socket.id);
+                if (team.members.size === 0) {
+                    teams.delete(teamId); // Delete empty team
+                } else if (team.leader === socket.id) {
+                    // Transfer leadership to another member
+                    team.leader = Array.from(team.members)[0];
+                    io.to(team.leader).emit('teamLeaderUpdate', { isLeader: true });
+                }
+                // Notify team members
+                team.members.forEach(memberId => {
+                    io.to(memberId).emit('teamUpdate', { team: serializeTeam(team) });
+                });
+            }
+            playerTeams.delete(socket.id);
+        }
+        teamInvites.delete(socket.id);
+        
         players.delete(socket.id);
         adminPlayers.delete(socket.id); // Remove from admin list
-
-        const wasInTeam = !!(socket.data && socket.data.teamId);
-        leaveCurrentTeam(socket, true);
-        if (wasInTeam) {
-            emitTeamSnapshot();
-        }
-
-        pendingTeamInvites.delete(socket.id);
-        pendingTeamInvites.forEach((invites, targetId) => {
-            const filtered = invites.filter(inv => inv.fromId !== socket.id);
-            if (filtered.length === 0) {
-                pendingTeamInvites.delete(targetId);
-            } else if (filtered.length !== invites.length) {
-                pendingTeamInvites.set(targetId, filtered);
-            }
-        });
         
         // Remove player's bullets, traps, and minions
         bullets.forEach((bullet, id) => {

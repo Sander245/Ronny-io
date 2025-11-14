@@ -466,25 +466,7 @@
             <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
             <br>
             <button id="playButton">PLAY</button>
-            <div id="adminMenuActions" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px; width: 100%;">
-                <button id="adminSafeSpawnBtn" style="padding: 10px 20px; font-size: 14px; font-weight: bold; background: #ff7b00; color: white; border: none; border-radius: 4px; cursor: pointer;">Admin Safe Spawn</button>
-                <button id="adminClearBlocksBtn" style="padding: 8px 20px; font-size: 13px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear All Blocks</button>
-                <button id="adminAutoInvincBtn" style="padding: 8px 20px; font-size: 13px; background: #227aef; color: white; border: none; border-radius: 4px; cursor: pointer;">Auto Invincibility: OFF</button>
-            </div>
-            <div id="teamPanel" style="margin-top: 15px; width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; color: #eee;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="font-weight: bold; letter-spacing: 1px;">TEAM MANAGER</div>
-                    <button id="leaveTeamBtn" style="display: none; padding: 4px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">Leave Team</button>
-                </div>
-                <div id="teamStatusText" style="font-size: 13px; margin-bottom: 10px;">Not in a team</div>
-                <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-                    <input type="text" id="teamNameInput" placeholder="Team name" maxlength="16" style="flex: 1; padding: 6px 8px; border-radius: 3px; border: 1px solid #444; background: rgba(0,0,0,0.4); color: white;">
-                    <button id="createTeamBtn" style="padding: 6px 12px; background: #44ff44; color: black; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">Create</button>
-                </div>
-                <div id="teamInviteContainer" style="margin-bottom: 10px; max-height: 80px; overflow-y: auto;"></div>
-                <div style="font-size: 12px; text-transform: uppercase; color: #bbb; margin-bottom: 4px;">Players Online</div>
-                <div id="teamPlayerList" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
-            </div>
+            <button id="adminSpawnButton" style="display: none; margin-top: 10px; padding: 10px 30px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;">⚡ ADMIN SPAWN ⚡</button>
         </div>
     </div>
 
@@ -615,17 +597,7 @@
                 
                 <!-- FOV -->
                 <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Field of View (FOV):</label>
-                <input type="number" id="tankFovInput" min="0.5" max="3" step="0.1" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
-
-                <!-- Tank bonuses -->
-                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Extra Health Multiplier:</label>
-                <input type="number" id="tankHealthBonusInput" min="0.5" max="5" step="0.1" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
-
-                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Extra Speed Multiplier:</label>
-                <input type="number" id="tankSpeedBonusInput" min="0.5" max="3" step="0.1" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px;">
-
-                <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Body Damage Multiplier:</label>
-                <input type="number" id="tankBodyDamageBonusInput" min="0.5" max="5" step="0.1" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 15px;">
+                <input type="number" id="tankFovInput" min="0.5" max="2" step="0.1" value="1" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 15px;">
                 
                 <!-- Base Shape Mode -->
                 <label style="display: block; margin-bottom: 5px; color: #aaa; font-size: 13px;">Base Mode:</label>
@@ -754,16 +726,6 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const adminMenuActions = document.getElementById('adminMenuActions');
-        const adminSafeSpawnBtn = document.getElementById('adminSafeSpawnBtn');
-        const adminClearBlocksBtn = document.getElementById('adminClearBlocksBtn');
-        const adminAutoInvincBtn = document.getElementById('adminAutoInvincBtn');
-        const teamStatusText = document.getElementById('teamStatusText');
-        const teamNameInput = document.getElementById('teamNameInput');
-        const createTeamBtn = document.getElementById('createTeamBtn');
-        const leaveTeamBtn = document.getElementById('leaveTeamBtn');
-        const teamInviteContainer = document.getElementById('teamInviteContainer');
-        const teamPlayerList = document.getElementById('teamPlayerList');
         
         // Server URL - Codespace forwarded URL
         // When running in Codespace: https://CODESPACE_NAME-3000.app.github.dev
@@ -777,11 +739,6 @@
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             reconnectionAttempts: Infinity
-        });
-
-        socket.on('connect', () => {
-            selfSocketId = socket.id;
-            // Don't auto-verify admin - require code entry each session
         });
         
         // Set canvas size
@@ -813,252 +770,6 @@
         let keysPressed = {}; // Track which keys are currently pressed
         let lastKnownLevel = 0; // Track level to detect level ups
         let showAllHealthBars = false; // Toggle for showing all health bars (N key)
-        const ADMIN_CODE = 'ronnyisskibidi';
-        let adminUnlocked = false; // Always start locked - require code entry each session
-        let adminAutoInvincibility = localStorage.getItem('ronnyio_adminAutoInvinc') === 'true';
-        let adminAccessGranted = false;
-        let teamSnapshot = [];
-        let pendingTeamInvites = [];
-        let myTeamId = null;
-        let myTeamColor = null;
-        let selfSocketId = null;
-        let activeInviteToasts = [];
-        let nextTeamPanelUpdate = 0;
-
-        function updateAdminAutoInvincButton() {
-            if (!adminAutoInvincBtn) return;
-            adminAutoInvincBtn.textContent = `Auto Invincibility: ${adminAutoInvincibility ? 'ON' : 'OFF'}`;
-            adminAutoInvincBtn.style.background = adminAutoInvincibility ? '#44ff44' : '#227aef';
-        }
-
-        function updateAdminMenuVisibility() {
-            if (!adminMenuActions) return;
-            if (adminUnlocked) {
-                adminMenuActions.style.display = 'flex';
-                updateAdminAutoInvincButton();
-            } else {
-                adminMenuActions.style.display = 'none';
-            }
-        }
-
-        updateAdminMenuVisibility();
-
-        function respondToTeamInvite(teamId, accept) {
-            socket.emit('respondTeamInvite', { teamId, accept });
-            pendingTeamInvites = pendingTeamInvites.filter(inv => inv.teamId !== teamId);
-            renderTeamPanel();
-            removeInviteToastByTeam(teamId);
-        }
-
-        function repositionInviteToasts() {
-            activeInviteToasts.forEach((toast, index) => {
-                toast.style.bottom = `${20 + index * 80}px`;
-            });
-        }
-
-        function removeInviteToastByTeam(teamId) {
-            activeInviteToasts = activeInviteToasts.filter(toast => {
-                if (toast.dataset && toast.dataset.teamId === teamId) {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                    return false;
-                }
-                return true;
-            });
-            repositionInviteToasts();
-        }
-
-        function showTeamInviteToast(invite) {
-            const toast = document.createElement('div');
-            toast.dataset.teamId = invite.teamId;
-            toast.style.cssText = 'position:fixed; right:20px; bottom:20px; background:rgba(0,0,0,0.85); color:white; padding:12px 14px; border-radius:8px; width:220px; box-shadow:0 4px 12px rgba(0,0,0,0.4); font-size:13px; z-index:5000; display:flex; flex-direction:column; gap:8px;';
-            const inviteHeader = document.createElement('div');
-            const teamNameEl = document.createElement('strong');
-            teamNameEl.style.color = invite.color;
-            teamNameEl.textContent = invite.teamName;
-            inviteHeader.appendChild(teamNameEl);
-            inviteHeader.appendChild(document.createTextNode(' invited you'));
-            toast.appendChild(inviteHeader);
-
-            const buttons = document.createElement('div');
-            buttons.style.display = 'flex';
-            buttons.style.gap = '6px';
-
-            const acceptBtn = document.createElement('button');
-            acceptBtn.textContent = 'Accept';
-            acceptBtn.style.cssText = 'flex:1; padding:4px 0; border:none; border-radius:4px; background:#44ff44; color:black; cursor:pointer; font-weight:bold;';
-            acceptBtn.addEventListener('click', () => {
-                respondToTeamInvite(invite.teamId, true);
-                removeToast();
-            });
-
-            const declineBtn = document.createElement('button');
-            declineBtn.textContent = 'Decline';
-            declineBtn.style.cssText = 'flex:1; padding:4px 0; border:none; border-radius:4px; background:#ff5555; color:white; cursor:pointer;';
-            declineBtn.addEventListener('click', () => {
-                respondToTeamInvite(invite.teamId, false);
-                removeToast();
-            });
-
-            buttons.appendChild(acceptBtn);
-            buttons.appendChild(declineBtn);
-            toast.appendChild(buttons);
-
-            document.body.appendChild(toast);
-            activeInviteToasts.push(toast);
-            repositionInviteToasts();
-
-            function removeToast() {
-                removeInviteToastByTeam(invite.teamId);
-            }
-
-            setTimeout(() => {
-                if (document.body.contains(toast)) {
-                    removeToast();
-                }
-            }, 15000);
-        }
-
-        function renderTeamPanel() {
-            if (!teamStatusText || !teamInviteContainer || !teamPlayerList) return;
-
-            if (myTeamId) {
-                const currentTeam = teamSnapshot.find(team => team.id === myTeamId);
-                const teamName = currentTeam ? currentTeam.name : 'Team';
-                const color = currentTeam ? currentTeam.color : '#eee';
-                teamStatusText.textContent = `In team: ${teamName}`;
-                teamStatusText.style.color = color;
-                if (leaveTeamBtn) {
-                    leaveTeamBtn.style.display = 'inline-block';
-                }
-            } else {
-                teamStatusText.textContent = 'Not in a team';
-                teamStatusText.style.color = '#eee';
-                if (leaveTeamBtn) {
-                    leaveTeamBtn.style.display = 'none';
-                }
-            }
-
-            teamInviteContainer.innerHTML = '';
-            if (pendingTeamInvites.length === 0) {
-                const empty = document.createElement('div');
-                empty.style.fontSize = '12px';
-                empty.style.color = '#bbb';
-                empty.textContent = 'No team invites';
-                teamInviteContainer.appendChild(empty);
-            } else {
-                pendingTeamInvites.forEach(invite => {
-                    const row = document.createElement('div');
-                    row.style.display = 'flex';
-                    row.style.alignItems = 'center';
-                    row.style.justifyContent = 'space-between';
-                    row.style.gap = '6px';
-                    row.style.marginBottom = '4px';
-                    const info = document.createElement('div');
-                    info.style.fontSize = '12px';
-                    const nameSpan = document.createElement('span');
-                    nameSpan.style.color = invite.color;
-                    nameSpan.style.fontWeight = 'bold';
-                    nameSpan.textContent = invite.teamName;
-                    const textSpan = document.createElement('span');
-                    textSpan.textContent = ` invited by ${invite.fromName}`;
-                    info.appendChild(nameSpan);
-                    info.appendChild(textSpan);
-                    row.appendChild(info);
-
-                    const buttonsWrap = document.createElement('div');
-                    buttonsWrap.style.display = 'flex';
-                    buttonsWrap.style.gap = '4px';
-
-                    const acceptBtn = document.createElement('button');
-                    acceptBtn.textContent = 'Accept';
-                    acceptBtn.style.cssText = 'padding:2px 6px; background:#44ff44; border:none; border-radius:3px; font-size:11px; cursor:pointer;';
-                    acceptBtn.addEventListener('click', () => respondToTeamInvite(invite.teamId, true));
-
-                    const declineBtn = document.createElement('button');
-                    declineBtn.textContent = 'Decline';
-                    declineBtn.style.cssText = 'padding:2px 6px; background:#ff5555; border:none; border-radius:3px; font-size:11px; cursor:pointer;';
-                    declineBtn.addEventListener('click', () => respondToTeamInvite(invite.teamId, false));
-
-                    buttonsWrap.appendChild(acceptBtn);
-                    buttonsWrap.appendChild(declineBtn);
-                    row.appendChild(buttonsWrap);
-                    teamInviteContainer.appendChild(row);
-                });
-            }
-
-            teamPlayerList.innerHTML = '';
-            const playersList = (gameState && gameState.players) ? [...gameState.players] : [];
-            if (playersList.length === 0) {
-                const emptyPlayers = document.createElement('div');
-                emptyPlayers.style.fontSize = '12px';
-                emptyPlayers.style.color = '#bbb';
-                emptyPlayers.textContent = 'No active players';
-                teamPlayerList.appendChild(emptyPlayers);
-                return;
-            }
-
-            playersList.sort((a, b) => b.score - a.score);
-
-            playersList.forEach(player => {
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.alignItems = 'center';
-                row.style.justifyContent = 'space-between';
-                row.style.gap = '6px';
-                row.style.background = 'rgba(0,0,0,0.2)';
-                row.style.padding = '4px 6px';
-                row.style.borderRadius = '3px';
-
-                const info = document.createElement('div');
-                info.style.display = 'flex';
-                info.style.alignItems = 'center';
-                info.style.gap = '6px';
-                const swatch = document.createElement('span');
-                swatch.style.display = 'inline-block';
-                swatch.style.width = '10px';
-                swatch.style.height = '10px';
-                swatch.style.borderRadius = '2px';
-                swatch.style.background = player.teamColor || '#666';
-                info.appendChild(swatch);
-
-                const label = document.createElement('span');
-                label.style.fontSize = '12px';
-                label.textContent = player.name;
-                info.appendChild(label);
-
-                row.appendChild(info);
-
-                const actions = document.createElement('div');
-                if (myTeamId && player.socketId !== selfSocketId && player.teamId !== myTeamId) {
-                    const inviteBtn = document.createElement('button');
-                    inviteBtn.textContent = 'Invite';
-                    inviteBtn.style.cssText = 'padding:2px 6px; background:#4a9eff; border:none; border-radius:3px; font-size:11px; cursor:pointer;';
-                    inviteBtn.addEventListener('click', () => {
-                        socket.emit('inviteToTeam', { teamId: myTeamId, targetId: player.socketId });
-                    });
-                    actions.appendChild(inviteBtn);
-                } else {
-                    const status = document.createElement('span');
-                    status.style.fontSize = '11px';
-                    status.style.color = '#bbb';
-                    if (!myTeamId) {
-                        status.textContent = 'Create a team';
-                    } else if (player.socketId === selfSocketId) {
-                        status.textContent = 'You';
-                    } else {
-                        status.textContent = 'Teammate';
-                    }
-                    actions.appendChild(status);
-                }
-
-                row.appendChild(actions);
-                teamPlayerList.appendChild(row);
-            });
-        }
-
-        renderTeamPanel();
         
         // Cheat code tracking
         let cheatCodeBuffer = '';
@@ -1198,88 +909,33 @@
             return { radius: player.size, faceAngle: angle };
         }
 
-        function startGameFromMenu(options = {}) {
-            const nameInput = document.getElementById('nameInput');
-            const playerName = String(nameInput.value || 'Tank').trim() || 'Tank';
-            const payload = { name: String(playerName) };
-
-            if (adminUnlocked) {
-                const adminOptions = {};
-                const shouldAutoInvinc = options.forceInvincibility || adminAutoInvincibility;
-                if (shouldAutoInvinc) {
-                    adminOptions.autoInvincibility = true;
-                }
-                if (options.safeSpawn) {
-                    adminOptions.safeSpawn = true;
-                    if (options.clearRadius) {
-                        adminOptions.clearRadius = options.clearRadius;
-                    }
-                }
-                if (Object.keys(adminOptions).length > 0) {
-                    payload.adminOptions = adminOptions;
-                }
-            }
-
-            socket.emit('joinGame', payload);
-            document.getElementById('startMenu').classList.add('hidden');
-            document.getElementById('hud').classList.add('visible');
-        }
-
         // Event listeners
         document.getElementById('playButton').addEventListener('click', () => {
-            startGameFromMenu();
+            const name = document.getElementById('nameInput').value || 'Tank';
+            socket.emit('joinGame', name);
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('hud').classList.add('visible');
+        });
+
+        document.getElementById('adminSpawnButton').addEventListener('click', () => {
+            const name = document.getElementById('nameInput').value || 'Tank';
+            socket.emit('joinGame', name);
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('hud').classList.add('visible');
+            // Auto-enable invincibility and clear blocks on spawn
+            setTimeout(() => {
+                if (playerId && cheatPanelActive) {
+                    socket.emit('cheatToggleInvincibility');
+                    socket.emit('cheatClearBlocks');
+                }
+            }, 100);
         });
 
         document.getElementById('nameInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                startGameFromMenu();
+                document.getElementById('playButton').click();
             }
         });
-
-        if (adminSafeSpawnBtn) {
-            adminSafeSpawnBtn.addEventListener('click', () => {
-                startGameFromMenu({ safeSpawn: true, forceInvincibility: true, clearRadius: 600 });
-            });
-        }
-
-        if (adminClearBlocksBtn) {
-            adminClearBlocksBtn.addEventListener('click', () => {
-                if (adminUnlocked) {
-                    socket.emit('cheatClearPolygons');
-                }
-            });
-        }
-
-        if (adminAutoInvincBtn) {
-            adminAutoInvincBtn.addEventListener('click', () => {
-                adminAutoInvincibility = !adminAutoInvincibility;
-                localStorage.setItem('ronnyio_adminAutoInvinc', adminAutoInvincibility ? 'true' : 'false');
-                updateAdminAutoInvincButton();
-            });
-        }
-
-        if (createTeamBtn) {
-            createTeamBtn.addEventListener('click', () => {
-                if (!teamNameInput) return;
-                const teamName = teamNameInput.value.trim();
-                if (!teamName) {
-                    alert('Enter a team name first');
-                    return;
-                }
-                if (myTeamId) {
-                    alert('Leave your current team before creating a new one.');
-                    return;
-                }
-                socket.emit('createTeam', { name: teamName });
-                teamNameInput.value = '';
-            });
-        }
-
-        if (leaveTeamBtn) {
-            leaveTeamBtn.addEventListener('click', () => {
-                socket.emit('leaveTeam');
-            });
-        }
 
         window.addEventListener('keydown', (e) => {
             // Only allow cheat code detection when in game
@@ -1293,7 +949,7 @@
                 }
                 if (cheatCodeBuffer.includes('ronnyisskibidisigma')) {
                     // Send verification to server
-                    socket.emit('verifyAdminCode', ADMIN_CODE);
+                    socket.emit('verifyAdminCode', 'ronnyisskibidi');
                     cheatCodeBuffer = '';
                 }
             }
@@ -1609,20 +1265,10 @@
             console.log('Player joined with ID:', playerId);
             console.log('Tank types loaded:', Object.keys(tankTypes).length);
             console.log('Tank upgrades loaded:', Object.keys(tankUpgrades).length);
-
-            if (adminAccessGranted) {
-                cheatPanelActive = true;
-                document.getElementById('cheatPanel').style.display = 'block';
-            }
         });
 
         socket.on('gameState', (state) => {
             gameState = state;
-            const now = Date.now();
-            if (now >= nextTeamPanelUpdate) {
-                renderTeamPanel();
-                nextTeamPanelUpdate = now + 1000;
-            }
             
             // Auto-show upgrade menu on level up if player has upgrade points
             if (playerId) {
@@ -1630,14 +1276,6 @@
                 if (player) {
                     // Track which tanks the player has used
                     usedTanks.add(player.tankType);
-
-                    const latestTeamId = player.teamId || null;
-                    const latestTeamColor = player.teamColor || null;
-                    if (latestTeamId !== myTeamId || latestTeamColor !== myTeamColor) {
-                        myTeamId = latestTeamId;
-                        myTeamColor = latestTeamColor;
-                        renderTeamPanel();
-                    }
                     
                     if (player.level > lastKnownLevel && player.upgradePoints > 0) {
                         upgradeMenuVisible = true;
@@ -1663,43 +1301,13 @@
         // Handle admin verification response
         socket.on('adminVerified', (verified) => {
             if (verified) {
-                adminAccessGranted = true;
-                adminUnlocked = true;
-                // Don't persist to localStorage - session only
                 cheatPanelActive = true;
                 document.getElementById('cheatPanel').style.display = 'block';
-                updateAdminMenuVisibility();
+                document.getElementById('adminSpawnButton').style.display = 'block';
                 console.log('Admin access granted!');
             } else {
-                adminAccessGranted = false;
-                adminUnlocked = false;
-                cheatPanelActive = false;
-                document.getElementById('cheatPanel').style.display = 'none';
-                updateAdminMenuVisibility();
                 console.log('Admin access denied - incorrect code');
             }
-        });
-
-        socket.on('teamSelfUpdate', (data) => {
-            myTeamId = data.teamId || null;
-            myTeamColor = data.color || null;
-            renderTeamPanel();
-        });
-
-        socket.on('teamsUpdated', (teams) => {
-            teamSnapshot = Array.isArray(teams) ? teams : [];
-            renderTeamPanel();
-        });
-
-        socket.on('teamInvite', (invite) => {
-            pendingTeamInvites.push(invite);
-            renderTeamPanel();
-            showTeamInviteToast(invite);
-        });
-
-        socket.on('teamError', (message) => {
-            console.warn('Team error:', message);
-            alert(message);
         });
 
         // Handle player death
@@ -2014,9 +1622,7 @@
             const list = document.getElementById('leaderboardList');
             
             list.innerHTML = sorted.slice(0, 10).map((player, i) => {
-                const entryColor = player.teamColor || (player.id === playerId ? '#00B2E1' : '#F14E54');
-                const safeName = escapeHtml(player.name);
-                return `<div class="leaderboard-entry" style="color:${entryColor};">${i + 1}. ${safeName} - ${Math.floor(player.score)}</div>`;
+                return `<div class="leaderboard-entry">${i + 1}. ${player.name} - ${Math.floor(player.score)}</div>`;
             }).join('');
         }
 
@@ -2639,70 +2245,6 @@
             return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
         }
 
-        function escapeHtml(str) {
-            if (str === null || str === undefined) return '';
-            // Convert to string first, handling objects/arrays/etc
-            const safe = typeof str === 'string' ? str : (str.toString ? str.toString() : String(str));
-            if (typeof safe !== 'string') return '';
-            return safe
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function pointInPolygon(x, y, vertices) {
-            let inside = false;
-            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-                const xi = vertices[i].x;
-                const yi = vertices[i].y;
-                const xj = vertices[j].x;
-                const yj = vertices[j].y;
-                const doesIntersect = ((yi > y) !== (yj > y)) &&
-                    (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi);
-                if (doesIntersect) inside = !inside;
-            }
-            return inside;
-        }
-
-        function isPointInBaseBlock(baseBlock, worldX, worldY) {
-            const dx = worldX - (baseBlock.x || 0);
-            const dy = worldY - (baseBlock.y || 0);
-            const rotation = (baseBlock.rotation || 0) * Math.PI / 180;
-            const cos = Math.cos(-rotation);
-            const sin = Math.sin(-rotation);
-            const localX = dx * cos - dy * sin;
-            const localY = dx * sin + dy * cos;
-
-            // Circle
-            if (baseBlock.shape === 0) {
-                const radius = (baseBlock.size || 0) + (baseBlock.width || 0);
-                return (localX * localX + localY * localY) <= radius * radius;
-            }
-
-            // Rectangle block
-            if (baseBlock.shape === 4 && (baseBlock.width || baseBlock.height)) {
-                const totalWidth = (baseBlock.size || 0) + (baseBlock.width || 0);
-                const totalHeight = (baseBlock.size || 0) + (baseBlock.height || 0);
-                return Math.abs(localX) <= totalWidth / 2 && Math.abs(localY) <= totalHeight / 2;
-            }
-
-            // General polygon (regular)
-            const sides = Math.max(3, baseBlock.shape || 3);
-            const radiusX = (baseBlock.size || 0) + (baseBlock.width || 0);
-            const radiusY = (baseBlock.size || 0) + (baseBlock.height || 0);
-            const vertices = [];
-            for (let i = 0; i < sides; i++) {
-                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
-                vertices.push({
-                    x: Math.cos(angle) * radiusX,
-                    y: Math.sin(angle) * radiusY
-                });
-            }
-            return pointInPolygon(localX, localY, vertices);
-        }
-
         function drawTank(player) {
             // Don't draw if tank types haven't loaded yet
             if (!tankTypes) return;
@@ -2788,17 +2330,6 @@
             });
 
             ctx.restore();
-
-            if (player.teamColor) {
-                ctx.save();
-                ctx.strokeStyle = player.teamColor;
-                ctx.globalAlpha = 0.75;
-                ctx.lineWidth = 5 * camera.zoom;
-                ctx.beginPath();
-                ctx.arc(screen.x, screen.y, size + 8 * camera.zoom, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.restore();
-            }
 
             // Name and health bar (outside rotation)
             ctx.font = `${14 * camera.zoom}px Arial`;
@@ -3503,9 +3034,6 @@
             lastMousePos: { x: 0, y: 0 },
             level: 1,
             fov: 1,
-            healthBonus: 1,
-            speedBonus: 1,
-            bodyDamageBonus: 1,
             baseMode: 'none', // none, simple, advanced
             baseSides: 4, // for simple mode
             baseBlocks: [], // for advanced mode: {id, shape, size, x, y, width, height, rotation, layer}
@@ -4803,7 +4331,11 @@
                 if (!clickedItem) {
                     for (let i = editorState.baseBlocks.length - 1; i >= 0; i--) {
                         const baseBlock = editorState.baseBlocks[i];
-                        if (isPointInBaseBlock(baseBlock, worldX, worldY)) {
+                        const baseBlockDist = Math.sqrt(worldX ** 2 + worldY ** 2);
+                        
+                        // Hit detection based on base block size
+                        const totalSize = baseBlock.size + Math.max(baseBlock.width || 0, baseBlock.height || 0);
+                        if (baseBlockDist < totalSize) {
                             clickedItem = baseBlock;
                             clickedType = 'baseBlock';
                             break;
@@ -4908,27 +4440,7 @@
         });
 
         document.getElementById('tankFovInput').addEventListener('input', (e) => {
-            const value = Math.max(0.5, Math.min(3, parseFloat(e.target.value) || 1));
-            editorState.fov = value;
-            e.target.value = value;
-        });
-
-        document.getElementById('tankHealthBonusInput').addEventListener('input', (e) => {
-            const value = Math.max(0.5, Math.min(5, parseFloat(e.target.value) || 1));
-            editorState.healthBonus = value;
-            e.target.value = value;
-        });
-
-        document.getElementById('tankSpeedBonusInput').addEventListener('input', (e) => {
-            const value = Math.max(0.5, Math.min(3, parseFloat(e.target.value) || 1));
-            editorState.speedBonus = value;
-            e.target.value = value;
-        });
-
-        document.getElementById('tankBodyDamageBonusInput').addEventListener('input', (e) => {
-            const value = Math.max(0.5, Math.min(5, parseFloat(e.target.value) || 1));
-            editorState.bodyDamageBonus = value;
-            e.target.value = value;
+            editorState.fov = Math.max(0.5, Math.min(2, parseFloat(e.target.value) || 1));
         });
 
         // Add Blade Button
@@ -4965,9 +4477,6 @@
                 editorState.baseBlocks = importedData.baseBlocks || [];
                 editorState.level = importedData.level || 1;
                 editorState.fov = importedData.fov || 1;
-                editorState.healthBonus = typeof importedData.healthBonus === 'number' ? importedData.healthBonus : 1;
-                editorState.speedBonus = typeof importedData.speedBonus === 'number' ? importedData.speedBonus : 1;
-                editorState.bodyDamageBonus = typeof importedData.bodyDamageBonus === 'number' ? importedData.bodyDamageBonus : 1;
                 editorState.baseMode = importedData.baseShape === 'advanced' ? 'advanced' : 
                                        (typeof importedData.baseShape === 'number' && importedData.baseShape >= 3) ? 'simple' : 'none';
                 editorState.baseSides = typeof importedData.baseShape === 'number' ? importedData.baseShape : 4;
@@ -4980,9 +4489,6 @@
                 // Update UI
                 document.getElementById('tankLevelInput').value = editorState.level;
                 document.getElementById('tankFovInput').value = editorState.fov;
-                document.getElementById('tankHealthBonusInput').value = editorState.healthBonus;
-                document.getElementById('tankSpeedBonusInput').value = editorState.speedBonus;
-                document.getElementById('tankBodyDamageBonusInput').value = editorState.bodyDamageBonus;
                 document.getElementById('baseModeSelect').value = editorState.baseMode;
                 document.getElementById('baseSidesInput').value = editorState.baseSides;
                 
@@ -5077,24 +4583,11 @@
                     lastMousePos: { x: 0, y: 0 },
                     level: 1,
                     fov: 1,
-                    healthBonus: 1,
-                    speedBonus: 1,
-                    bodyDamageBonus: 1,
                     baseMode: 'none',
                     baseSides: 4,
                     baseBlocks: [],
-                    blades: [],
-                    debugPerimeter: null,
-                    showPerimeterDebug: false,
-                    freezeDebug: false,
-                    frozenDebugData: null,
-                    debugScaleDivisor: 2
+                    blades: []
                 };
-                document.getElementById('tankLevelInput').value = editorState.level;
-                document.getElementById('tankFovInput').value = editorState.fov;
-                document.getElementById('tankHealthBonusInput').value = editorState.healthBonus;
-                document.getElementById('tankSpeedBonusInput').value = editorState.speedBonus;
-                document.getElementById('tankBodyDamageBonusInput').value = editorState.bodyDamageBonus;
                 updateCurrentBlocksList();
                 updateBladesList();
                 updateBaseBlocksList();
@@ -5250,16 +4743,6 @@
                 tankConfig.fov = editorState.fov;
             }
 
-            if (editorState.healthBonus && editorState.healthBonus !== 1) {
-                tankConfig.healthBonus = editorState.healthBonus;
-            }
-            if (editorState.speedBonus && editorState.speedBonus !== 1) {
-                tankConfig.speedBonus = editorState.speedBonus;
-            }
-            if (editorState.bodyDamageBonus && editorState.bodyDamageBonus !== 1) {
-                tankConfig.bodyDamageBonus = editorState.bodyDamageBonus;
-            }
-
             const upgradePaths = upgradesFrom ? upgradesFrom.split(',').map(s => s.trim().toUpperCase()) : [];
 
             console.log('Saving tank:', tankConfig);
@@ -5288,33 +4771,11 @@
             editorState = {
                 blocks: [],
                 selectedBlock: null,
-                selectedBlade: null,
-                selectedBaseBlock: null,
-                selectedType: null,
                 rotation: 0,
                 zoom: 1,
                 dragging: false,
-                lastMousePos: { x: 0, y: 0 },
-                level: 1,
-                fov: 1,
-                healthBonus: 1,
-                speedBonus: 1,
-                bodyDamageBonus: 1,
-                baseMode: 'none',
-                baseSides: 4,
-                baseBlocks: [],
-                blades: [],
-                debugPerimeter: null,
-                showPerimeterDebug: false,
-                freezeDebug: false,
-                frozenDebugData: null,
-                debugScaleDivisor: 2
+                lastMousePos: { x: 0, y: 0 }
             };
-            document.getElementById('tankLevelInput').value = editorState.level;
-            document.getElementById('tankFovInput').value = editorState.fov;
-            document.getElementById('tankHealthBonusInput').value = editorState.healthBonus;
-            document.getElementById('tankSpeedBonusInput').value = editorState.speedBonus;
-            document.getElementById('tankBodyDamageBonusInput').value = editorState.bodyDamageBonus;
         });
 
         // Export to JSON button - Copy tank config to clipboard
@@ -5357,16 +4818,6 @@
                 fov: editorState.fov || 1,
                 upgrades: []
             };
-
-            if (editorState.healthBonus && editorState.healthBonus !== 1) {
-                tankConfig.healthBonus = editorState.healthBonus;
-            }
-            if (editorState.speedBonus && editorState.speedBonus !== 1) {
-                tankConfig.speedBonus = editorState.speedBonus;
-            }
-            if (editorState.bodyDamageBonus && editorState.bodyDamageBonus !== 1) {
-                tankConfig.bodyDamageBonus = editorState.bodyDamageBonus;
-            }
             
             // Add advanced base blocks if in advanced mode
             if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
@@ -5464,16 +4915,6 @@
                 fov: editorState.fov || 1,
                 hideFromTree: true
             };
-
-            if (editorState.healthBonus && editorState.healthBonus !== 1) {
-                testTankConfig.healthBonus = editorState.healthBonus;
-            }
-            if (editorState.speedBonus && editorState.speedBonus !== 1) {
-                testTankConfig.speedBonus = editorState.speedBonus;
-            }
-            if (editorState.bodyDamageBonus && editorState.bodyDamageBonus !== 1) {
-                testTankConfig.bodyDamageBonus = editorState.bodyDamageBonus;
-            }
             
             // Add advanced base blocks if in advanced mode
             if (editorState.baseMode === 'advanced' && editorState.baseBlocks.length > 0) {
