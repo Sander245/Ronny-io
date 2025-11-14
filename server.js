@@ -463,8 +463,9 @@ class Minion extends GameObject {
 }
 
 class Player extends GameObject {
-    constructor(x, y, name) {
+    constructor(x, y, name, socketId) {
         super(x, y);
+        this.socketId = socketId;
         this.name = name || 'Tank';
         this.tankType = 'BASIC';
         this.level = 0; // Start at level 0
@@ -1786,6 +1787,7 @@ function gameLoop() {
             .filter(p => p.health > 0) // Only send alive players
             .map(p => ({
                 id: p.id,
+                socketId: p.socketId,
                 name: p.name,
                 x: p.x,
                 y: p.y,
@@ -1916,7 +1918,7 @@ io.on('connection', (socket) => {
         joinName = sanitizePlayerName(joinName);
 
         const spawnPos = findSafeSpawnPosition();
-        const player = new Player(spawnPos.x, spawnPos.y, joinName);
+        const player = new Player(spawnPos.x, spawnPos.y, joinName, socket.id);
         player.id = socket.id; // Set player ID to socket ID so client can find itself
         players.set(socket.id, player);
         socket.data.displayName = player.name;

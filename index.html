@@ -781,9 +781,7 @@
 
         socket.on('connect', () => {
             selfSocketId = socket.id;
-            if (adminUnlocked) {
-                socket.emit('verifyAdminCode', ADMIN_CODE);
-            }
+            // Don't auto-verify admin - require code entry each session
         });
         
         // Set canvas size
@@ -816,7 +814,7 @@
         let lastKnownLevel = 0; // Track level to detect level ups
         let showAllHealthBars = false; // Toggle for showing all health bars (N key)
         const ADMIN_CODE = 'ronnyisskibidi';
-        let adminUnlocked = localStorage.getItem('ronnyio_adminUnlocked') === 'true';
+        let adminUnlocked = false; // Always start locked - require code entry each session
         let adminAutoInvincibility = localStorage.getItem('ronnyio_adminAutoInvinc') === 'true';
         let adminAccessGranted = false;
         let teamSnapshot = [];
@@ -1033,12 +1031,12 @@
                 row.appendChild(info);
 
                 const actions = document.createElement('div');
-                if (myTeamId && player.id !== playerId && player.teamId !== myTeamId) {
+                if (myTeamId && player.socketId !== selfSocketId && player.teamId !== myTeamId) {
                     const inviteBtn = document.createElement('button');
                     inviteBtn.textContent = 'Invite';
                     inviteBtn.style.cssText = 'padding:2px 6px; background:#4a9eff; border:none; border-radius:3px; font-size:11px; cursor:pointer;';
                     inviteBtn.addEventListener('click', () => {
-                        socket.emit('inviteToTeam', { teamId: myTeamId, targetId: player.id });
+                        socket.emit('inviteToTeam', { teamId: myTeamId, targetId: player.socketId });
                     });
                     actions.appendChild(inviteBtn);
                 } else {
@@ -1047,7 +1045,7 @@
                     status.style.color = '#bbb';
                     if (!myTeamId) {
                         status.textContent = 'Create a team';
-                    } else if (player.id === playerId) {
+                    } else if (player.socketId === selfSocketId) {
                         status.textContent = 'You';
                     } else {
                         status.textContent = 'Teammate';
@@ -1667,7 +1665,7 @@
             if (verified) {
                 adminAccessGranted = true;
                 adminUnlocked = true;
-                localStorage.setItem('ronnyio_adminUnlocked', 'true');
+                // Don't persist to localStorage - session only
                 cheatPanelActive = true;
                 document.getElementById('cheatPanel').style.display = 'block';
                 updateAdminMenuVisibility();
@@ -1675,7 +1673,6 @@
             } else {
                 adminAccessGranted = false;
                 adminUnlocked = false;
-                localStorage.removeItem('ronnyio_adminUnlocked');
                 cheatPanelActive = false;
                 document.getElementById('cheatPanel').style.display = 'none';
                 updateAdminMenuVisibility();
